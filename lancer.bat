@@ -38,54 +38,22 @@ if %ERRORLEVEL% neq 0 (
     echo [OK] Regle pare-feu deja presente.
 )
 
-:: ── IP locale ──────────────────────────────────────────────────────────────
-set LOCAL_IP=localhost
-for /f "tokens=2 delims=:" %%A in ('ipconfig ^| findstr /c:"Adresse IPv4" /c:"IPv4 Address"') do (
-    set RAW=%%A
-    set RAW=!RAW: =!
-    if not "!RAW!"=="" set LOCAL_IP=!RAW!
-)
-
-:: ── Serveur HTTP Python ────────────────────────────────────────────────────
+:: ── Serveur HTTP (PowerShell natif, aucune installation requise) ────────────
 netstat -an | findstr ":8080" | findstr "LISTENING" >nul 2>&1
 if %ERRORLEVEL% equ 0 (
     echo [OK] Serveur HTTP deja actif sur le port 8080.
-    goto :show_urls
+    goto :open
 )
 
-python --version >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    echo [INFO] Demarrage du serveur HTTP sur le port 8080...
-    start "" /B python -m http.server 8080 --directory "%~dp0"
-    timeout /t 1 /nobreak >nul
-    goto :show_urls
-)
+echo [INFO] Demarrage du serveur HTTP...
+start "EspanolAI - Serveur" powershell -ExecutionPolicy Bypass -File "%~dp0serveur.ps1"
+timeout /t 2 /nobreak >nul
 
-python3 --version >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    echo [INFO] Demarrage du serveur HTTP sur le port 8080...
-    start "" /B python3 -m http.server 8080 --directory "%~dp0"
-    timeout /t 1 /nobreak >nul
-    goto :show_urls
-)
-
-echo [INFO] Python non detecte - ouverture locale uniquement (sans acces mobile).
-echo [INFO] Pour activer l'acces mobile, installe Python sur https://python.org
-start "" "%~dp0index.html"
-goto :end
-
-:show_urls
-echo.
-echo  ============================================================
-echo   Ce PC         : http://localhost:8080
-echo   Telephone     : http://%LOCAL_IP%:8080
-echo   (meme Wi-Fi requis)
-echo  ============================================================
-echo.
+:open
+echo [INFO] Ouverture de l'application...
 start "" "http://localhost:8080"
-echo  Appuie sur une touche pour fermer cette fenetre.
-echo  (l'app continue de tourner en arriere-plan)
+echo.
+echo  [OK] Application lancee. Tu peux fermer cette fenetre.
 pause >nul
 
-:end
 endlocal
