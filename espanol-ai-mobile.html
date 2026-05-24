@@ -254,33 +254,62 @@ function speak(text, onEnd) {
 }
 
 // ══════════════════════════════════════════════════════
-//  STT
+//  STT  — fresh instance every time (iOS Safari requirement)
 // ══════════════════════════════════════════════════════
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, recActive = false;
+let recActive = false;
 
-function initRec(onResult, onNoSpeech) {
-  if (!SR) return;
-  rec = new SR();
-  rec.lang = 'es-ES';
-  rec.interimResults = false;
-  rec.maxAlternatives = 1;
-  let got = false;
-  rec.onresult = e => { got = true; onResult(e.results[0][0].transcript); };
-  rec.onerror  = () => { recActive = false; };
-  rec.onend    = () => { recActive = false; if (!got) onNoSpeech(); got = false; };
+function setMicActive(on) {
+  recActive = on;
+  micEl.classList.toggle('on', on);
+  bigMicEl.classList.toggle('on', on);
+  if (oralMode) setWave(on ? 'listening' : '');
 }
 
 function startRec() {
-  if (!rec || recActive) return;
+  if (!SR || recActive || busy) return;
   speechSynthesis.cancel();
-  recActive = true;
-  try { rec.start(); } catch { recActive = false; }
-}
 
-function stopRec() {
-  if (!rec || !recActive) return;
-  try { rec.stop(); } catch {}
+  const r = new SR();
+  r.lang = 'es-ES';
+  r.interimResults = false;
+  r.maxAlternatives = 1;
+
+  let got = false;
+
+  r.onresult = e => {
+    got = true;
+    const transcript = e.results[0][0].transcript;
+    setMicActive(false);
+    if (oralMode) {
+      handleInput(transcript);
+    } else {
+      txtEl.value = transcript;
+      setTimeout(() => {
+        if (txtEl.value.trim() === transcript.trim()) {
+          txtEl.value = '';
+          handleInput(transcript);
+        }
+      }, 700);
+    }
+  };
+
+  r.onerror = e => {
+    setMicActive(false);
+    if (e.error !== 'no-speech') console.warn('STT:', e.error);
+  };
+
+  r.onend = () => {
+    setMicActive(false);
+  };
+
+  try {
+    r.start();
+    setMicActive(true);
+  } catch (err) {
+    setMicActive(false);
+    console.warn('STT start failed:', err);
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -451,37 +480,11 @@ txtEl.addEventListener('keydown', e => {
   }
 });
 
-initRec(
-  transcript => {
-    micEl.classList.remove('on');
-    bigMicEl.classList.remove('on');
-    if (oralMode) {
-      handleInput(transcript);
-    } else {
-      txtEl.value = transcript;
-      txtEl.focus();
-      setTimeout(() => {
-        if (txtEl.value.trim() === transcript.trim()) {
-          txtEl.value = '';
-          handleInput(transcript);
-        }
-      }, 700);
-    }
-  },
-  () => {
-    micEl.classList.remove('on');
-    bigMicEl.classList.remove('on');
-    setWave('');
-  }
-);
+// Tap to start — auto-stops after silence (text mode)
+micEl.addEventListener('click', () => { if (!recActive) startRec(); });
 
-// Push-to-talk (text mode)
-micEl.addEventListener('pointerdown', e => { e.preventDefault(); micEl.classList.add('on'); startRec(); });
-micEl.addEventListener('pointerup',   () => { micEl.classList.remove('on'); stopRec(); });
-
-// Push-to-talk (oral mode)
-bigMicEl.addEventListener('pointerdown', e => { e.preventDefault(); bigMicEl.classList.add('on'); setWave('listening'); startRec(); });
-bigMicEl.addEventListener('pointerup',   () => { bigMicEl.classList.remove('on'); stopRec(); });
+// Tap to start — auto-stops after silence (oral mode)
+bigMicEl.addEventListener('click', () => { if (!recActive) startRec(); });
 
 // ══════════════════════════════════════════════════════
 //  MODE TOGGLE
