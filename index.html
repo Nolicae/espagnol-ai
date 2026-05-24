@@ -2,66 +2,557 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>EspañolAI</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#c8384a">
-  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="EspañolAI">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+      --accent: #c8384a; --text: #e8eaf0; --text-muted: #7a7e95;
+      --green: #4caf50; --red: #f44336;
+      --bubble-user: #1e3a5f; --bubble-ai: #1e2030;
+      --fix-bg: #0d2010; --fix-border: #1e4a1e;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, system-ui, sans-serif; font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+    /* ── Setup screen ── */
+    #setup {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 32px 24px; gap: 24px; text-align: center;
+    }
+    #setup h1 { font-size: 2rem; }
+    #setup p  { color: var(--text-muted); line-height: 1.6; max-width: 340px; }
+    #setup ol { text-align: left; max-width: 340px; color: var(--text-muted); line-height: 2; padding-left: 20px; }
+    #setup ol a { color: var(--accent); }
+    #setup input {
+      width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 1rem; outline: none;
+    }
+    #setup input:focus { border-color: var(--accent); }
+    #setup-save {
+      width: 100%; max-width: 340px; background: var(--accent); color: #fff; border: none;
+      border-radius: 12px; padding: 16px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+    #setup-error { color: var(--red); font-size: 0.85rem; min-height: 20px; }
+
+    /* ── App ── */
+    #app { display: none; flex-direction: column; height: 100vh; }
+    #app.visible { display: flex; }
+
+    #header {
+      display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+      background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    #header-title { font-weight: 700; flex: 1; }
+    #mode-btn {
+      background: rgba(200,56,74,0.15); color: var(--accent); border: 1px solid var(--accent);
+      padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+    }
+    #logout-btn { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; padding: 4px; }
+
+    /* ── Text mode ── */
+    #text-mode { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    #messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+    .msg { display: flex; flex-direction: column; max-width: 88%; }
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.ai   { align-self: flex-start; }
+    .msg-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 3px; }
+    .bubble { padding: 12px 14px; border-radius: 18px; line-height: 1.5; font-size: 0.95rem; word-break: break-word; }
+    .msg.user .bubble { background: var(--bubble-user); border-bottom-right-radius: 4px; }
+    .msg.ai   .bubble { background: var(--bubble-ai); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .thinking { color: var(--text-muted); letter-spacing: 4px; }
+
+    .fixes { margin-top: 6px; background: var(--fix-bg); border: 1px solid var(--fix-border); border-radius: 10px; overflow: hidden; }
+    .fixes-toggle { width: 100%; text-align: left; padding: 7px 12px; background: none; border: none; color: var(--green); font-size: 0.78rem; cursor: pointer; }
+    .fixes-body { padding: 4px 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+    .fixes-body.hidden { display: none; }
+    .fix { font-size: 0.8rem; }
+    .fix-orig { color: var(--red); text-decoration: line-through; }
+    .fix-ok   { color: var(--green); font-weight: 600; }
+    .fix-why  { color: var(--text-muted); font-style: italic; font-size: 0.76rem; }
+
+    #bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    #txt { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 24px; padding: 10px 16px; color: var(--text); font-size: 0.95rem; outline: none; }
+    #txt:focus { border-color: var(--accent); }
+    #mic, #send { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+    #mic  { background: var(--surface); border: 1px solid var(--border); transition: background 0.2s; }
+    #mic.on { background: var(--accent); }
+    #send { background: var(--accent); color: #fff; }
+
+    /* ── Oral mode ── */
+    #oral-mode { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 28px; padding: 32px; }
+    #oral-mode.visible { display: flex; }
+    #waves { display: flex; align-items: center; gap: 5px; height: 52px; }
+    #waves span { display: block; width: 6px; border-radius: 3px; background: var(--accent); animation: idle 1.2s ease-in-out infinite; }
+    #waves span:nth-child(1) { height: 14px; animation-delay: 0s; }
+    #waves span:nth-child(2) { height: 26px; animation-delay: 0.1s; }
+    #waves span:nth-child(3) { height: 40px; animation-delay: 0.2s; }
+    #waves span:nth-child(4) { height: 26px; animation-delay: 0.1s; }
+    #waves span:nth-child(5) { height: 14px; animation-delay: 0s; }
+    #waves.listening span { animation-name: listen; }
+    #waves.speaking  span { animation-name: speak; }
+    #oral-label { color: var(--text-muted); font-size: 0.9rem; }
+    #fixes-badge { background: var(--fix-bg); border: 1px solid var(--fix-border); color: var(--green); padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; display: none; }
+    #fixes-panel { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; max-height: 38vh; overflow-y: auto; display: none; }
+    #big-mic { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); border: none; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 28px rgba(200,56,74,0.45); -webkit-tap-highlight-color: transparent; }
+    #big-mic.on { animation: pulse 1s infinite; }
+    #new-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0; margin: 0 14px 10px; }
+
+    @keyframes pulse { 0%,100% { transform: scale(1); }   50% { transform: scale(1.09); } }
+    @keyframes idle  { 0%,100% { transform: scaleY(0.55); } 50% { transform: scaleY(1); } }
+    @keyframes listen{ 0%,100% { transform: scaleY(0.7); }  50% { transform: scaleY(1.3); } }
+    @keyframes speak { 0%,100% { transform: scaleY(0.25); } 50% { transform: scaleY(1.5); } }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <header id="header">
-      <span id="app-title">🇪🇸 EspañolAI</span>
-      <div id="status-indicator">
-        <span id="status-dot"></span>
-        <span id="status-text">Vérification...</span>
-      </div>
-      <button id="mode-toggle" aria-label="Changer de mode">Mode Oral</button>
-      <button id="settings-btn" aria-label="Paramètres">⚙️</button>
-    </header>
 
-    <div id="settings-panel" hidden>
-      <label for="groq-key-input">Clé API Groq (gratuit sur groq.com)</label>
-      <div id="settings-row">
-        <input type="password" id="groq-key-input" placeholder="gsk_…" autocomplete="off">
-        <button id="groq-key-save">Enregistrer</button>
-      </div>
-      <p id="settings-hint">Utilisée uniquement quand Ollama n'est pas disponible (ex : sur téléphone sans PC).</p>
-    </div>
+<!-- ── Setup ──────────────────────────────────────────── -->
+<div id="setup">
+  <div style="font-size:3rem">🇪🇸</div>
+  <h1>EspañolAI</h1>
+  <p>Ton interlocuteur natif en espagnol, disponible partout, gratuitement.</p>
+  <ol>
+    <li>Crée un compte gratuit sur <a href="https://console.groq.com" target="_blank">console.groq.com</a></li>
+    <li>Va dans <strong>API Keys</strong> → <strong>Create API Key</strong></li>
+    <li>Copie la clé et colle-la ci-dessous</li>
+  </ol>
+  <input type="password" id="setup-key" placeholder="gsk_…" autocomplete="off">
+  <p id="setup-error"></p>
+  <button id="setup-save">Commencer →</button>
+  <p style="font-size:0.75rem;color:var(--text-muted)">⚠️ Utilise Safari sur iPhone (pas Chrome) pour la reconnaissance vocale</p>
+</div>
 
-    <!-- Mode Texte+Oral -->
-    <main id="text-mode">
-      <div id="chat-container">
-        <div id="chat-messages"></div>
-      </div>
-      <div id="input-area">
-        <button id="mic-btn" aria-label="Maintenir pour parler">🎤</button>
-        <input type="text" id="text-input" placeholder="Escribe en español..." autocomplete="off">
-        <button id="send-btn" aria-label="Envoyer">→</button>
-      </div>
-    </main>
-
-    <!-- Mode Oral -->
-    <main id="oral-mode" hidden>
-      <div id="wave-container">
-        <div id="wave-animation">
-          <span></span><span></span><span></span><span></span><span></span>
-        </div>
-        <p id="oral-state-label">Listo para escuchar</p>
-      </div>
-      <button id="corrections-btn" hidden>📋 <span id="corrections-count">0</span> correcciones</button>
-      <div id="corrections-panel" hidden></div>
-      <button id="oral-mic-btn" aria-label="Mantener para hablar">🎤</button>
-    </main>
-
-    <button id="new-conversation-btn">Nueva conversación</button>
+<!-- ── App ────────────────────────────────────────────── -->
+<div id="app">
+  <div id="header">
+    <span id="header-title">🇪🇸 EspañolAI</span>
+    <button id="mode-btn">Mode Oral</button>
+    <button id="logout-btn" title="Changer de clé">⚙️</button>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Text+Oral mode -->
+  <div id="text-mode">
+    <div id="messages"></div>
+    <div id="bar">
+      <button id="mic">🎤</button>
+      <input type="text" id="txt" placeholder="Escribe en español…" autocomplete="off" autocorrect="off">
+      <button id="send">→</button>
+    </div>
+  </div>
+
+  <!-- Oral mode -->
+  <div id="oral-mode">
+    <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
+    <p id="oral-label">Listo para escuchar</p>
+    <button id="fixes-badge">📋 <span id="fixes-count">0</span> correcciones</button>
+    <div id="fixes-panel"></div>
+    <button id="big-mic">🎤</button>
+  </div>
+
+  <button id="new-btn">Nueva conversación</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════════
+const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.1-8b-instant';
+const HISTORY_MAX = 10;
+
+const SYSTEM_PROMPT = `Eres un hablante nativo de español con fluidez perfecta.
+Habla ÚNICAMENTE en español, sin excepción, sea cual sea el idioma del usuario.
+Responde de forma natural, cálida y conversacional como un amigo nativo.
+Tras cada mensaje del usuario, devuelve SOLO este JSON (sin texto adicional):
+{"reply":"tu respuesta aquí","fixes":[{"orig":"error del usuario","ok":"forma correcta","why":"explicación breve en español"}]}
+Si no hay errores, fixes debe ser [].`;
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let history = [];
+let oralMode = false;
+let oralFixes = [];
+let busy = false;
+
+// ══════════════════════════════════════════════════════
+//  KEY MANAGEMENT
+// ══════════════════════════════════════════════════════
+const getKey = () => localStorage.getItem('groq_key') || '';
+const saveKey = k => localStorage.setItem('groq_key', k.trim());
+
+// ══════════════════════════════════════════════════════
+//  GROQ API
+// ══════════════════════════════════════════════════════
+async function askGroq(userText) {
+  history.push({ role: 'user', content: userText });
+  if (history.length > HISTORY_MAX * 2)
+    history = history.slice(-HISTORY_MAX * 2);
+
+  const res = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getKey()}`
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history]
+    })
+  });
+
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    if (res.status === 401) throw new Error('Clé Groq invalide. Appuie sur ⚙️ pour en entrer une nouvelle.');
+    throw new Error(e.error?.message || `Erreur ${res.status}`);
+  }
+
+  const data = await res.json();
+  const raw  = data.choices?.[0]?.message?.content ?? '';
+  history.push({ role: 'assistant', content: raw });
+  return parse(raw);
+}
+
+function parse(raw) {
+  try {
+    const m = raw.match(/\{[\s\S]*\}/);
+    if (!m) throw 0;
+    const p = JSON.parse(m[0]);
+    return {
+      reply: String(p.reply ?? raw),
+      fixes: Array.isArray(p.fixes) ? p.fixes : []
+    };
+  } catch {
+    return { reply: raw, fixes: [] };
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  TTS
+// ══════════════════════════════════════════════════════
+let voice = null;
+function loadVoice() {
+  const vv = speechSynthesis.getVoices();
+  voice = vv.find(v => v.lang === 'es-ES')
+       || vv.find(v => v.lang === 'es-MX')
+       || vv.find(v => v.lang.startsWith('es'))
+       || null;
+}
+speechSynthesis.addEventListener('voiceschanged', loadVoice);
+loadVoice();
+
+function speak(text, onEnd) {
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES'; u.rate = 0.92; u.pitch = 1;
+  if (voice) u.voice = voice;
+  if (onEnd) u.onend = onEnd;
+  speechSynthesis.speak(u);
+}
+
+// ══════════════════════════════════════════════════════
+//  STT
+// ══════════════════════════════════════════════════════
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recActive = false;
+
+function initRec(onResult, onNoSpeech) {
+  if (!SR) return;
+  rec = new SR();
+  rec.lang = 'es-ES';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  let got = false;
+  rec.onresult = e => { got = true; onResult(e.results[0][0].transcript); };
+  rec.onerror  = () => { recActive = false; };
+  rec.onend    = () => { recActive = false; if (!got) onNoSpeech(); got = false; };
+}
+
+function startRec() {
+  if (!rec || recActive) return;
+  speechSynthesis.cancel();
+  recActive = true;
+  try { rec.start(); } catch { recActive = false; }
+}
+
+function stopRec() {
+  if (!rec || !recActive) return;
+  try { rec.stop(); } catch {}
+}
+
+// ══════════════════════════════════════════════════════
+//  DOM
+// ══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const setupEl = $('setup'), setupKey = $('setup-key'), setupSave = $('setup-save'), setupErr = $('setup-error');
+const appEl = $('app'), textModeEl = $('text-mode'), oralModeEl = $('oral-mode');
+const messagesEl = $('messages'), txtEl = $('txt'), micEl = $('mic'), sendEl = $('send');
+const modeBtnEl = $('mode-btn'), logoutEl = $('logout-btn'), newBtnEl = $('new-btn');
+const wavesEl = $('waves'), oralLblEl = $('oral-label');
+const fixesBadgeEl = $('fixes-badge'), fixesPanelEl = $('fixes-panel'), fixesCountEl = $('fixes-count');
+const bigMicEl = $('big-mic');
+
+// ══════════════════════════════════════════════════════
+//  SETUP SCREEN
+// ══════════════════════════════════════════════════════
+function showSetup() {
+  setupEl.style.display = 'flex';
+  appEl.classList.remove('visible');
+  setupKey.value = '';
+  setupErr.textContent = '';
+}
+
+function showApp() {
+  setupEl.style.display = 'none';
+  appEl.classList.add('visible');
+}
+
+setupSave.addEventListener('click', async () => {
+  const k = setupKey.value.trim();
+  if (!k.startsWith('gsk_')) {
+    setupErr.textContent = 'La clé doit commencer par "gsk_"';
+    return;
+  }
+  setupSave.textContent = 'Vérification…';
+  setupSave.disabled = true;
+  setupErr.textContent = '';
+  try {
+    // Quick test call
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${k}` },
+      body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role: 'user', content: 'hi' }], max_tokens: 5 })
+    });
+    if (!res.ok) throw new Error();
+    saveKey(k);
+    showApp();
+    startConversation();
+  } catch {
+    setupErr.textContent = 'Clé invalide ou erreur réseau. Vérifie la clé et ta connexion.';
+  } finally {
+    setupSave.textContent = 'Commencer →';
+    setupSave.disabled = false;
+  }
+});
+
+logoutEl.addEventListener('click', showSetup);
+
+// ══════════════════════════════════════════════════════
+//  CHAT UI
+// ══════════════════════════════════════════════════════
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderFixes(fixes) {
+  if (!fixes.length) return '';
+  const items = fixes.map(f => `
+    <div class="fix">
+      <span class="fix-orig">${esc(f.orig)}</span> →
+      <span class="fix-ok">${esc(f.ok)}</span>
+      <div class="fix-why">${esc(f.why)}</div>
+    </div>`).join('');
+  return `<div class="fixes">
+    <button class="fixes-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      ✔ ${fixes.length} corrección${fixes.length>1?'es':''}
+    </button>
+    <div class="fixes-body hidden">${items}</div>
+  </div>`;
+}
+
+function addMsg(role, text, fixes=[]) {
+  const d = document.createElement('div');
+  d.className = `msg ${role}`;
+  d.innerHTML = `<span class="msg-label">${role==='user'?'Tú':'EspañolAI'}</span>
+    <div class="bubble">${esc(text)}</div>
+    ${role==='user' ? renderFixes(fixes) : ''}`;
+  messagesEl.appendChild(d);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return d;
+}
+
+function addThinking() {
+  const d = document.createElement('div');
+  d.className = 'msg ai';
+  d.innerHTML = `<div class="bubble thinking">•••</div>`;
+  messagesEl.appendChild(d);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return d;
+}
+
+// ══════════════════════════════════════════════════════
+//  WAVE / ORAL MODE STATE
+// ══════════════════════════════════════════════════════
+function setWave(state) {
+  wavesEl.className = state;
+  oralLblEl.textContent = {
+    '': 'Listo para escuchar',
+    listening: 'Escuchando…',
+    speaking: 'Hablando…'
+  }[state] ?? '';
+}
+
+function updateBadge() {
+  const n = oralFixes.length;
+  fixesCountEl.textContent = n;
+  fixesBadgeEl.style.display = n ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════════════════
+//  HANDLE INPUT
+// ══════════════════════════════════════════════════════
+async function handleInput(text) {
+  if (!text.trim() || busy) return;
+  busy = true;
+
+  const thinking = addThinking();
+  try {
+    const { reply, fixes } = await askGroq(text);
+    thinking.remove();
+
+    if (oralMode) {
+      oralFixes.push(...fixes);
+      updateBadge();
+      setWave('speaking');
+      speak(reply, () => setWave(''));
+    } else {
+      addMsg('user', text, fixes);
+      addMsg('ai', reply);
+      speak(reply);
+    }
+  } catch (err) {
+    thinking.remove();
+    addMsg('ai', `⚠️ ${err.message}`);
+  } finally {
+    busy = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  TEXT MODE CONTROLS
+// ══════════════════════════════════════════════════════
+sendEl.addEventListener('click', () => {
+  const v = txtEl.value.trim();
+  if (!v) return;
+  txtEl.value = '';
+  handleInput(v);
+});
+
+txtEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const v = txtEl.value.trim();
+    if (!v) return;
+    txtEl.value = '';
+    handleInput(v);
+  }
+});
+
+initRec(
+  transcript => {
+    micEl.classList.remove('on');
+    bigMicEl.classList.remove('on');
+    if (oralMode) {
+      handleInput(transcript);
+    } else {
+      txtEl.value = transcript;
+      txtEl.focus();
+      setTimeout(() => {
+        if (txtEl.value.trim() === transcript.trim()) {
+          txtEl.value = '';
+          handleInput(transcript);
+        }
+      }, 700);
+    }
+  },
+  () => {
+    micEl.classList.remove('on');
+    bigMicEl.classList.remove('on');
+    setWave('');
+  }
+);
+
+// Push-to-talk (text mode)
+micEl.addEventListener('pointerdown', e => { e.preventDefault(); micEl.classList.add('on'); startRec(); });
+micEl.addEventListener('pointerup',   () => { micEl.classList.remove('on'); stopRec(); });
+
+// Push-to-talk (oral mode)
+bigMicEl.addEventListener('pointerdown', e => { e.preventDefault(); bigMicEl.classList.add('on'); setWave('listening'); startRec(); });
+bigMicEl.addEventListener('pointerup',   () => { bigMicEl.classList.remove('on'); stopRec(); });
+
+// ══════════════════════════════════════════════════════
+//  MODE TOGGLE
+// ══════════════════════════════════════════════════════
+modeBtnEl.addEventListener('click', () => {
+  oralMode = !oralMode;
+  textModeEl.style.display = oralMode ? 'none' : 'flex';
+  oralModeEl.classList.toggle('visible', oralMode);
+  modeBtnEl.textContent = oralMode ? 'Mode Texte' : 'Mode Oral';
+  speechSynthesis.cancel();
+  if (oralMode) setWave('');
+});
+
+// ══════════════════════════════════════════════════════
+//  FIXES PANEL (oral mode)
+// ══════════════════════════════════════════════════════
+fixesBadgeEl.addEventListener('click', () => {
+  const open = fixesPanelEl.style.display === 'block';
+  fixesPanelEl.style.display = open ? 'none' : 'block';
+  if (!open) {
+    fixesPanelEl.innerHTML = oralFixes.length
+      ? oralFixes.map(f => `<div class="fix" style="margin-bottom:10px">
+          <span class="fix-orig">${esc(f.orig)}</span> →
+          <span class="fix-ok">${esc(f.ok)}</span>
+          <div class="fix-why">${esc(f.why)}</div>
+        </div>`).join('')
+      : '<p style="color:var(--text-muted);font-size:0.85rem">No hay correcciones.</p>';
+  }
+});
+
+// ══════════════════════════════════════════════════════
+//  NEW CONVERSATION
+// ══════════════════════════════════════════════════════
+newBtnEl.addEventListener('click', () => {
+  history = []; oralFixes = [];
+  messagesEl.innerHTML = '';
+  updateBadge();
+  fixesPanelEl.style.display = 'none';
+  speechSynthesis.cancel();
+  startConversation();
+});
+
+// ══════════════════════════════════════════════════════
+//  START
+// ══════════════════════════════════════════════════════
+async function startConversation() {
+  busy = true;
+  const t = addThinking();
+  try {
+    const { reply } = await askGroq('Saluda brevemente al usuario en español y pregúntale de qué quiere hablar hoy.');
+    t.remove();
+    history = []; // don't keep the greeting in context
+    addMsg('ai', reply);
+    speak(reply);
+  } catch {
+    t.remove();
+    addMsg('ai', '¡Hola! ¿De qué quieres hablar hoy?');
+  } finally {
+    busy = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+if (getKey()) {
+  showApp();
+  startConversation();
+} else {
+  showSetup();
+}
+</script>
 </body>
 </html>
