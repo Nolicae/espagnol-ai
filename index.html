@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EspañolAI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <span id="app-title">🇪🇸 EspañolAI</span>
+      <div id="status-indicator">
+        <span id="status-dot"></span>
+        <span id="status-text">Vérification...</span>
+      </div>
+      <button id="mode-toggle" aria-label="Changer de mode">Mode Oral</button>
+    </header>
+
+    <!-- Mode Texte+Oral -->
+    <main id="text-mode">
+      <div id="chat-container">
+        <div id="chat-messages"></div>
+      </div>
+      <div id="input-area">
+        <button id="mic-btn" aria-label="Maintenir pour parler">🎤</button>
+        <input type="text" id="text-input" placeholder="Escribe en español..." autocomplete="off">
+        <button id="send-btn" aria-label="Envoyer">→</button>
+      </div>
+    </main>
+
+    <!-- Mode Oral -->
+    <main id="oral-mode" hidden>
+      <div id="wave-container">
+        <div id="wave-animation">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p id="oral-state-label">Listo para escuchar</p>
+      </div>
+      <button id="corrections-btn" hidden>📋 <span id="corrections-count">0</span> correcciones</button>
+      <div id="corrections-panel" hidden></div>
+      <button id="oral-mic-btn" aria-label="Mantener para hablar">🎤</button>
+    </main>
+
+    <button id="new-conversation-btn">Nueva conversación</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
