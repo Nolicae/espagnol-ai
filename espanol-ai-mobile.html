@@ -218,9 +218,23 @@ IMPORTANTE: devuelve SOLO el JSON, sin texto adicional antes o después.`;
     }
 
     async function sendToAI(userMessage) {
-      if (activeBackend === 'ollama') return sendToOllama(userMessage);
-      if (activeBackend === 'groq')   return sendToGroq(userMessage);
-      throw new Error('Aucun backend actif. Ouvre ⚙️ et entre ta clé Groq.');
+      if (activeBackend === 'ollama') {
+        try {
+          return await sendToOllama(userMessage);
+        } catch {
+          if (getGroqKey()) {
+            // Ollama failed (model not installed?) — fall back to Groq silently
+            history.pop(); // rollback user msg added by sendToOllama before it threw
+            activeBackend = 'groq';
+            statusDot.className = 'cloud';
+            statusText.textContent = 'Groq (cloud)';
+            return await sendToGroq(userMessage);
+          }
+          throw new Error('Modèle Ollama introuvable. Lance "ollama pull llama3.1:8b" ou configure Groq dans ⚙️');
+        }
+      }
+      if (activeBackend === 'groq') return sendToGroq(userMessage);
+      throw new Error('Ouvre ⚙️ et entre ta clé Groq (gratuit sur groq.com).');
     }
 
     function parseResponse(raw) {
@@ -329,9 +343,14 @@ IMPORTANTE: devuelve SOLO el JSON, sin texto adicional antes o después.`;
       if (!SR) return null;
       recognition = new SR();
       recognition.lang = 'es-ES'; recognition.interimResults = false; recognition.maxAlternatives = 1;
-      recognition.onresult = e => onResult(e.results[0][0].transcript);
+      let gotResult = false;
+      recognition.onresult = e => { gotResult = true; onResult(e.results[0][0].transcript); };
       recognition.onerror  = e => { isListening = false; onError(e.error); };
-      recognition.onend    = () => { isListening = false; };
+      recognition.onend    = () => {
+        isListening = false;
+        if (!gotResult) onError('no-speech');
+        gotResult = false;
+      };
       return recognition;
     }
     function startListening() { if (!recognition || isListening) return; stopSpeaking(); isListening = true; recognition.start(); }
@@ -371,8 +390,31 @@ IMPORTANTE: devuelve SOLO el JSON, sin texto adicional antes o después.`;
     const oralMicBtn= document.getElementById('oral-mic-btn');
 
     initSTT(
-      t => { micBtn.classList.remove('listening'); oralMicBtn.classList.remove('listening'); handleUserInput(t); },
-      e => { micBtn.classList.remove('listening'); oralMicBtn.classList.remove('listening'); console.warn('STT:', e); }
+      t => {
+        micBtn.classList.remove('listening');
+        oralMicBtn.classList.remove('listening');
+        if (isOralMode) {
+          handleUserInput(t);
+        } else {
+          // Show transcript in field so user sees it was captured, then send
+          textInput.value = t;
+          textInput.focus();
+          setTimeout(() => {
+            if (textInput.value.trim() === t.trim()) {
+              textInput.value = '';
+              handleUserInput(t);
+            }
+          }, 800);
+        }
+      },
+      e => {
+        micBtn.classList.remove('listening');
+        oralMicBtn.classList.remove('listening');
+        if (e === 'no-speech') {
+          textInput.placeholder = 'Rien capturé — réessaie';
+          setTimeout(() => { textInput.placeholder = 'Escribe en español...'; }, 2000);
+        }
+      }
     );
 
     micBtn.addEventListener('mousedown', () => { micBtn.classList.add('listening'); startListening(); });
