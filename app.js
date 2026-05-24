@@ -1,12 +1,15 @@
 // === State (declared early — used across multiple tasks) ===
 let isOralMode = false;
 let pendingCorrections = [];
+let activeBackend = 'none'; // 'ollama' | 'groq' | 'none'
 function setWaveState() {} // stub — real impl below
 
 // === Configuration ===
 const CONFIG = {
   ollamaUrl: `http://${window.location.hostname}:11434`,
   model: 'llama3.1:8b',
+  groqUrl: 'https://api.groq.com/openai/v1/chat/completions',
+  groqModel: 'llama-3.1-8b-instant',
   historyLimit: 10,
 };
 
@@ -70,15 +73,56 @@ function parseOllamaResponse(raw) {
   }
 }
 
+// === Groq API ===
+function getGroqKey() { return localStorage.getItem('groq_api_key') || ''; }
+function setGroqKey(key) { localStorage.setItem('groq_api_key', key.trim()); }
+
+async function sendToGroq(userMessage) {
+  const key = getGroqKey();
+  if (!key) throw new Error('Clé Groq manquante');
+  addToHistory('user', userMessage);
+  const messages = [{ role: 'system', content: SYSTEM_PROMPT }, ...history];
+  const res = await fetch(CONFIG.groqUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({ model: CONFIG.groqModel, messages }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Groq error: ${res.status}`);
+  }
+  const data = await res.json();
+  const raw = data.choices[0]?.message?.content ?? '';
+  addToHistory('assistant', raw);
+  return parseOllamaResponse(raw);
+}
+
+async function sendToAI(userMessage) {
+  if (activeBackend === 'ollama') return sendToOllama(userMessage);
+  if (activeBackend === 'groq') return sendToGroq(userMessage);
+  throw new Error('Aucun backend actif. Ouvre les paramètres ⚙️ et entre ta clé Groq.');
+}
+
 // === Status indicator ===
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 
 async function updateStatus() {
-  const online = await checkOllamaStatus();
-  statusDot.className = online ? 'online' : 'offline';
-  statusText.textContent = online ? 'En ligne' : 'Ollama hors ligne';
-  return online;
+  const ollamaOnline = await checkOllamaStatus();
+  if (ollamaOnline) {
+    activeBackend = 'ollama';
+    statusDot.className = 'online';
+    statusText.textContent = 'Ollama (local)';
+  } else if (getGroqKey()) {
+    activeBackend = 'groq';
+    statusDot.className = 'cloud';
+    statusText.textContent = 'Groq (cloud)';
+  } else {
+    activeBackend = 'none';
+    statusDot.className = 'offline';
+    statusText.textContent = 'Hors ligne';
+  }
+  return activeBackend !== 'none';
 }
 
 setInterval(updateStatus, 15000);
@@ -243,7 +287,7 @@ async function handleUserInput(text) {
   const thinkingEl = appendThinkingIndicator();
 
   try {
-    const { reply, corrections } = await sendToOllama(text);
+    const { reply, corrections } = await sendToAI(text);
     thinkingEl.remove();
 
     if (isOralMode) {
@@ -377,13 +421,30 @@ correctionsBtn.addEventListener('click', () => {
   renderOralCorrectionsPanel();
 });
 
+// === Settings panel ===
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings-panel');
+const groqKeyInput = document.getElementById('groq-key-input');
+const groqKeySave = document.getElementById('groq-key-save');
+
+settingsBtn.addEventListener('click', () => {
+  settingsPanel.hidden = !settingsPanel.hidden;
+  if (!settingsPanel.hidden) groqKeyInput.value = getGroqKey();
+});
+
+groqKeySave.addEventListener('click', async () => {
+  setGroqKey(groqKeyInput.value);
+  settingsPanel.hidden = true;
+  await updateStatus();
+});
+
 // === Init ===
 async function init() {
   const online = await updateStatus();
   if (online) {
     const thinkingEl = appendThinkingIndicator();
     try {
-      const { reply } = await sendToOllama('Saluda al usuario y pregúntale de qué quiere hablar hoy. Sé breve y amigable.');
+      const { reply } = await sendToAI('Saluda al usuario y pregúntale de qué quiere hablar hoy. Sé breve y amigable.');
       thinkingEl.remove();
       appendAiMessage(reply);
       speak(reply);
@@ -394,7 +455,7 @@ async function init() {
       speak('¡Hola! ¿De qué quieres hablar hoy?');
     }
   } else {
-    appendAiMessage('⚠️ Ollama no está en línea. Ejecuta lancer.bat para iniciarlo.');
+    appendAiMessage('⚠️ Sin conexión a Ollama ni clave Groq. Abre los ajustes ⚙️ para configurar Groq, o ejecuta lancer.bat si estás en tu PC.');
   }
 }
 

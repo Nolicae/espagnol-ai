@@ -22,7 +22,17 @@
         <span id="status-text">Vérification...</span>
       </div>
       <button id="mode-toggle" aria-label="Changer de mode">Mode Oral</button>
+      <button id="settings-btn" aria-label="Paramètres">⚙️</button>
     </header>
+
+    <div id="settings-panel" hidden>
+      <label for="groq-key-input">Clé API Groq (gratuit sur groq.com)</label>
+      <div id="settings-row">
+        <input type="password" id="groq-key-input" placeholder="gsk_…" autocomplete="off">
+        <button id="groq-key-save">Enregistrer</button>
+      </div>
+      <p id="settings-hint">Utilisée uniquement quand Ollama n'est pas disponible (ex : sur téléphone sans PC).</p>
+    </div>
 
     <!-- Mode Texte+Oral -->
     <main id="text-mode">

@@ -32,12 +32,37 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 #status-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); }
 #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; transition: background 0.3s; }
 #status-dot.online { background: #4caf50; }
+#status-dot.cloud { background: #ff9800; }
 #status-dot.offline { background: #f44336; }
 #mode-toggle {
   background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent);
   padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; white-space: nowrap;
 }
 #mode-toggle:hover { background: var(--accent); color: #fff; }
+#settings-btn {
+  background: none; border: none; font-size: 1.1rem; cursor: pointer;
+  padding: 4px; border-radius: 6px; flex-shrink: 0;
+}
+#settings-btn:hover { background: var(--border); }
+
+/* Settings panel */
+#settings-panel {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+}
+#settings-panel label { font-size: 0.8rem; color: var(--text-muted); }
+#settings-row { display: flex; gap: 8px; }
+#groq-key-input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 12px; color: var(--text); font-size: 0.9rem; outline: none;
+}
+#groq-key-input:focus { border-color: #ff9800; }
+#groq-key-save {
+  background: #ff9800; color: #000; border: none; border-radius: var(--radius-sm);
+  padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+}
+#groq-key-save:hover { opacity: 0.85; }
+#settings-hint { font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
 
 /* === Text+Oral mode === */
 #text-mode { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
