@@ -246,6 +246,10 @@ function parse(raw) {
 //  TTS
 // ══════════════════════════════════════════════════════
 let voice = null;
+let pendingTranscript = null;
+let oralPrimerRunning = false;
+let oralPrimerCount   = 0;
+let oralReplyPending  = null;
 
 function loadVoices() {
   const all = speechSynthesis.getVoices();
@@ -285,6 +289,41 @@ function speak(text, onEnd) {
 }
 
 // ══════════════════════════════════════════════════════
+//  ORAL PRIMER LOOP — iOS TTS fix
+//  speak(reply) est appelé depuis p.onend (speech event chain)
+//  et non depuis un callback async brut → iOS l'autorise.
+// ══════════════════════════════════════════════════════
+function runPrimerLoop() {
+  if (!oralPrimerRunning) return;
+  if (++oralPrimerCount > 500) { oralPrimerRunning = false; return; }
+  if (oralReplyPending) {
+    const { text, cb } = oralReplyPending;
+    oralReplyPending = null;
+    oralPrimerRunning = false;
+    speak(text, cb);
+    return;
+  }
+  const p = new SpeechSynthesisUtterance(' ');
+  p.lang = 'es-ES'; p.volume = 0.1; p.rate = 10;
+  p.onend = runPrimerLoop;
+  p.onerror = runPrimerLoop;
+  speechSynthesis.speak(p);
+}
+
+function startOralPrimer() {
+  speechSynthesis.cancel();
+  oralPrimerRunning = true;
+  oralPrimerCount   = 0;
+  oralReplyPending  = null;
+  runPrimerLoop();
+}
+
+function stopOralPrimer() {
+  oralPrimerRunning = false;
+  oralReplyPending  = null;
+}
+
+// ══════════════════════════════════════════════════════
 //  STT  — push-to-talk, fresh instance each recording
 // ══════════════════════════════════════════════════════
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -306,24 +345,28 @@ function startRec() {
   rec.maxAlternatives = 1;
 
   rec.onresult = e => {
-    const transcript = e.results[0][0].transcript;
+    pendingTranscript = e.results[0][0].transcript;
     setMicActive(false);
+    if (oralMode) oralSubEl.textContent = `"${pendingTranscript}"`;
+    else          txtEl.value = pendingTranscript;
+  };
+
+  rec.onerror = () => { setMicActive(false); pendingTranscript = null; rec = null; };
+
+  rec.onend = () => {
+    setMicActive(false);
+    const t = pendingTranscript;
+    pendingTranscript = null;
+    rec = null;
+    if (!t) return;
     if (oralMode) {
-      oralSubEl.textContent = `"${transcript}"`;
-      handleInput(transcript);
+      handleInput(t);
     } else {
-      txtEl.value = transcript;
       setTimeout(() => {
-        if (txtEl.value.trim() === transcript.trim()) {
-          txtEl.value = '';
-          handleInput(transcript);
-        }
+        if (txtEl.value.trim() === t.trim()) { txtEl.value = ''; handleInput(t); }
       }, 700);
     }
   };
-
-  rec.onerror = () => { setMicActive(false); rec = null; };
-  rec.onend   = () => { setMicActive(false); rec = null; };
 
   try {
     rec.start();
@@ -477,7 +520,12 @@ async function handleInput(text) {
       updateBadge();
       oralSubEl.textContent = reply;
       setWave('speaking');
-      speak(reply, () => { setWave(''); oralSubEl.textContent = ''; });
+      const cb = () => { setWave(''); oralSubEl.textContent = ''; };
+      if (oralPrimerRunning) {
+        oralReplyPending = { text: reply, cb };
+      } else {
+        speak(reply, cb);
+      }
     } else {
       addMsg('user', text, fixes);
       addMsg('ai', reply);
@@ -525,6 +573,7 @@ let stopTimer = null;
 bigMicEl.addEventListener('pointerdown', e => {
   e.preventDefault();
   clearTimeout(stopTimer);
+  startOralPrimer();  // démarre la chaîne TTS depuis le geste (fix iOS)
   startRec();
 });
 bigMicEl.addEventListener('pointerup', () => {
@@ -544,12 +593,8 @@ modeBtnEl.addEventListener('click', () => {
   oralModeEl.classList.toggle('visible', oralMode);
   modeBtnEl.textContent = oralMode ? 'Mode Texte' : 'Mode Oral';
   speechSynthesis.cancel();
-  if (oralMode) {
-    setWave('');
-    const ready = new SpeechSynthesisUtterance('Listo');
-    ready.lang = 'es-ES'; if (voice) ready.voice = voice;
-    speechSynthesis.speak(ready);
-  }
+  stopOralPrimer();
+  if (oralMode) setWave('');
 });
 
 // ══════════════════════════════════════════════════════
@@ -578,6 +623,7 @@ newBtnEl.addEventListener('click', () => {
   updateBadge();
   fixesPanelEl.style.display = 'none';
   speechSynthesis.cancel();
+  stopOralPrimer();
   startConversation();
 });
 
