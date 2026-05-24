@@ -264,9 +264,10 @@ function speak(text, onEnd) {
 }
 
 // ══════════════════════════════════════════════════════
-//  STT  — fresh instance every time (iOS Safari requirement)
+//  STT  — push-to-talk, fresh instance each recording
 // ══════════════════════════════════════════════════════
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
 let recActive = false;
 
 function setMicActive(on) {
@@ -280,15 +281,12 @@ function startRec() {
   if (!SR || recActive || busy) return;
   speechSynthesis.cancel();
 
-  const r = new SR();
-  r.lang = 'es-ES';
-  r.interimResults = false;
-  r.maxAlternatives = 1;
+  rec = new SR();
+  rec.lang = 'es-ES';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
 
-  let got = false;
-
-  r.onresult = e => {
-    got = true;
+  rec.onresult = e => {
     const transcript = e.results[0][0].transcript;
     setMicActive(false);
     if (oralMode) {
@@ -305,22 +303,21 @@ function startRec() {
     }
   };
 
-  r.onerror = e => {
-    setMicActive(false);
-    if (e.error !== 'no-speech') console.warn('STT:', e.error);
-  };
-
-  r.onend = () => {
-    setMicActive(false);
-  };
+  rec.onerror = () => { setMicActive(false); rec = null; };
+  rec.onend   = () => { setMicActive(false); rec = null; };
 
   try {
-    r.start();
+    rec.start();
     setMicActive(true);
-  } catch (err) {
+  } catch {
     setMicActive(false);
-    console.warn('STT start failed:', err);
+    rec = null;
   }
+}
+
+function stopRec() {
+  if (!rec) return;
+  try { rec.stop(); } catch {}
 }
 
 // ══════════════════════════════════════════════════════
@@ -511,11 +508,24 @@ txtEl.addEventListener('keydown', e => {
   }
 });
 
-// Tap to start — auto-stops after silence (text mode)
+// Text mode mic — tap to start, auto-stops after silence
 micEl.addEventListener('click', () => { if (!recActive) startRec(); });
 
-// Tap to start — auto-stops after silence (oral mode)
-bigMicEl.addEventListener('click', () => { if (!recActive) startRec(); });
+// Oral mode — push-to-talk
+// iOS needs ~500ms after pointerup to flush the audio buffer before rec.stop()
+let stopTimer = null;
+bigMicEl.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  clearTimeout(stopTimer);
+  startRec();
+});
+bigMicEl.addEventListener('pointerup', () => {
+  stopTimer = setTimeout(stopRec, 500);
+});
+bigMicEl.addEventListener('pointercancel', () => {
+  clearTimeout(stopTimer);
+  stopRec();
+});
 
 // ══════════════════════════════════════════════════════
 //  MODE TOGGLE
