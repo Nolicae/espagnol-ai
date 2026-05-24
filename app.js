@@ -399,3 +399,8 @@ async function init() {
 }
 
 init();
+
+// === Service Worker (PWA install) ===
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
