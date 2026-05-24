@@ -6,7 +6,7 @@ function setWaveState() {} // stub — real impl below
 
 // === Configuration ===
 const CONFIG = {
-  ollamaUrl: `http://${window.location.hostname}:11434`,
+  ollamaUrl: 'http://localhost:11434',
   model: 'llama3.1:8b',
   groqUrl: 'https://api.groq.com/openai/v1/chat/completions',
   groqModel: 'llama-3.1-8b-instant',
