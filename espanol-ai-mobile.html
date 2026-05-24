@@ -103,6 +103,7 @@
     #big-mic { width: 88px; height: 88px; border-radius: 50%; background: var(--accent); border: none; font-size: 2.2rem; cursor: pointer; box-shadow: 0 4px 28px rgba(200,56,74,0.4); -webkit-tap-highlight-color: transparent; transition: background 0.2s, opacity 0.2s; }
     #big-mic.listening { background: #ff4757; animation: sonar 1.2s ease-out infinite; }
     #big-mic.busy { opacity: 0.35; pointer-events: none; }
+    #voice-sel { background: var(--surface); border: 1px solid var(--border); color: var(--text-muted); border-radius: 20px; padding: 6px 12px; font-size: 0.78rem; cursor: pointer; max-width: 220px; }
     #new-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0; margin: 0 14px 10px; }
 
     @keyframes pulse { 0%,100% { transform: scale(1); }   50% { transform: scale(1.09); } }
@@ -160,6 +161,7 @@
     <div id="fixes-panel"></div>
     <div id="oral-sub"></div>
     <button id="big-mic">🎤</button>
+    <select id="voice-sel" title="Choisir la voix"></select>
   </div>
 
   <button id="new-btn">Nueva conversación</button>
@@ -244,15 +246,29 @@ function parse(raw) {
 //  TTS
 // ══════════════════════════════════════════════════════
 let voice = null;
-function loadVoice() {
-  const vv = speechSynthesis.getVoices();
-  voice = vv.find(v => v.lang === 'es-ES')
-       || vv.find(v => v.lang === 'es-MX')
-       || vv.find(v => v.lang.startsWith('es'))
-       || null;
+
+function loadVoices() {
+  const all = speechSynthesis.getVoices();
+  const esp = all.filter(v => v.lang.startsWith('es'));
+  if (!esp.length) return;
+  // Populate voice selector (element exists in DOM when this runs)
+  const sel = document.getElementById('voice-sel');
+  if (sel && sel.options.length === 0) {
+    esp.forEach((v, i) => {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = `${v.name} (${v.lang})`;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', () => {
+      const fresh = speechSynthesis.getVoices().filter(v => v.lang.startsWith('es'));
+      voice = fresh[parseInt(sel.value)] || fresh[0] || null;
+    });
+  }
+  voice = esp[0] || null;
 }
-speechSynthesis.addEventListener('voiceschanged', loadVoice);
-loadVoice();
+speechSynthesis.addEventListener('voiceschanged', loadVoices);
+loadVoices();
 
 function speak(text, onEnd) {
   speechSynthesis.cancel();
@@ -280,6 +296,12 @@ function setMicActive(on) {
 function startRec() {
   if (!SR || recActive || busy) return;
   speechSynthesis.cancel();
+  // iOS Safari bloque speechSynthesis depuis les callbacks async.
+  // Jouer une amorce muette ICI (dans le gestionnaire de geste) déverrouille
+  // l'audio pour tous les appels suivants de la session.
+  const _p = new SpeechSynthesisUtterance(' ');
+  _p.volume = 0; _p.rate = 10;
+  speechSynthesis.speak(_p);
 
   rec = new SR();
   rec.lang = 'es-ES';
@@ -579,7 +601,8 @@ async function startConversation() {
     t.remove();
     history = []; // don't keep the greeting in context
     addMsg('ai', reply);
-    speak(reply);
+    // Ne pas parler au chargement de page : iOS bloquerait et empoisonnerait
+    // le contexte audio pour toute la session. On parlera après le premier geste.
   } catch {
     t.remove();
     addMsg('ai', '¡Hola! ¿De qué quieres hablar hoy?');
