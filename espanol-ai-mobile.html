@@ -86,25 +86,34 @@
     #oral-mode { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 28px; padding: 32px; }
     #oral-mode.visible { display: flex; }
     #waves { display: flex; align-items: center; gap: 5px; height: 52px; }
-    #waves span { display: block; width: 6px; border-radius: 3px; background: var(--accent); animation: idle 1.2s ease-in-out infinite; }
+    #waves span { display: block; width: 7px; border-radius: 4px; background: var(--accent); animation: idle 1.4s ease-in-out infinite; opacity: 0.3; transition: opacity 0.25s, background 0.25s; }
     #waves span:nth-child(1) { height: 14px; animation-delay: 0s; }
-    #waves span:nth-child(2) { height: 26px; animation-delay: 0.1s; }
-    #waves span:nth-child(3) { height: 40px; animation-delay: 0.2s; }
-    #waves span:nth-child(4) { height: 26px; animation-delay: 0.1s; }
+    #waves span:nth-child(2) { height: 26px; animation-delay: 0.12s; }
+    #waves span:nth-child(3) { height: 40px; animation-delay: 0.24s; }
+    #waves span:nth-child(4) { height: 26px; animation-delay: 0.12s; }
     #waves span:nth-child(5) { height: 14px; animation-delay: 0s; }
-    #waves.listening span { animation-name: listen; }
-    #waves.speaking  span { animation-name: speak; }
-    #oral-label { color: var(--text-muted); font-size: 0.9rem; }
+    #waves.listening span { animation-name: listen; opacity: 1; background: #ff4757; }
+    #waves.speaking  span { animation-name: speak;  opacity: 0.85; background: #ffaa00; }
+    #oral-label { font-size: 1.05rem; font-weight: 700; min-height: 1.5em; letter-spacing: 0.02em; transition: color 0.2s; color: var(--text-muted); }
+    #oral-label.listening { color: #ff4757; }
+    #oral-label.speaking  { color: #ffaa00; }
+    #oral-sub { text-align: center; font-size: 0.82rem; color: var(--text-muted); font-style: italic; max-width: 300px; min-height: 2.6em; line-height: 1.5; }
     #fixes-badge { background: var(--fix-bg); border: 1px solid var(--fix-border); color: var(--green); padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; display: none; }
     #fixes-panel { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; max-height: 38vh; overflow-y: auto; display: none; }
-    #big-mic { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); border: none; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 28px rgba(200,56,74,0.45); -webkit-tap-highlight-color: transparent; }
-    #big-mic.on { animation: pulse 1s infinite; }
+    #big-mic { width: 88px; height: 88px; border-radius: 50%; background: var(--accent); border: none; font-size: 2.2rem; cursor: pointer; box-shadow: 0 4px 28px rgba(200,56,74,0.4); -webkit-tap-highlight-color: transparent; transition: background 0.2s, opacity 0.2s; }
+    #big-mic.listening { background: #ff4757; animation: sonar 1.2s ease-out infinite; }
+    #big-mic.busy { opacity: 0.35; pointer-events: none; }
     #new-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-size: 0.8rem; flex-shrink: 0; margin: 0 14px 10px; }
 
     @keyframes pulse { 0%,100% { transform: scale(1); }   50% { transform: scale(1.09); } }
     @keyframes idle  { 0%,100% { transform: scaleY(0.55); } 50% { transform: scaleY(1); } }
-    @keyframes listen{ 0%,100% { transform: scaleY(0.7); }  50% { transform: scaleY(1.3); } }
-    @keyframes speak { 0%,100% { transform: scaleY(0.25); } 50% { transform: scaleY(1.5); } }
+    @keyframes listen{ 0%,100% { transform: scaleY(0.6); }  50% { transform: scaleY(1.5); } }
+    @keyframes speak { 0%,100% { transform: scaleY(0.2); }  50% { transform: scaleY(1.7); } }
+    @keyframes sonar {
+      0%   { box-shadow: 0 0 0 0    rgba(255,71,87,0.8); }
+      70%  { box-shadow: 0 0 0 28px rgba(255,71,87,0);   }
+      100% { box-shadow: 0 0 0 0    rgba(255,71,87,0);   }
+    }
   </style>
 </head>
 <body>
@@ -149,6 +158,7 @@
     <p id="oral-label">Listo para escuchar</p>
     <button id="fixes-badge">📋 <span id="fixes-count">0</span> correcciones</button>
     <div id="fixes-panel"></div>
+    <div id="oral-sub"></div>
     <button id="big-mic">🎤</button>
   </div>
 
@@ -262,7 +272,7 @@ let recActive = false;
 function setMicActive(on) {
   recActive = on;
   micEl.classList.toggle('on', on);
-  bigMicEl.classList.toggle('on', on);
+  bigMicEl.classList.toggle('listening', on);
   if (oralMode) setWave(on ? 'listening' : '');
 }
 
@@ -282,6 +292,7 @@ function startRec() {
     const transcript = e.results[0][0].transcript;
     setMicActive(false);
     if (oralMode) {
+      oralSubEl.textContent = `"${transcript}"`;
       handleInput(transcript);
     } else {
       txtEl.value = transcript;
@@ -320,9 +331,21 @@ const setupEl = $('setup'), setupKey = $('setup-key'), setupSave = $('setup-save
 const appEl = $('app'), textModeEl = $('text-mode'), oralModeEl = $('oral-mode');
 const messagesEl = $('messages'), txtEl = $('txt'), micEl = $('mic'), sendEl = $('send');
 const modeBtnEl = $('mode-btn'), logoutEl = $('logout-btn'), newBtnEl = $('new-btn');
-const wavesEl = $('waves'), oralLblEl = $('oral-label');
+const wavesEl = $('waves'), oralLblEl = $('oral-label'), oralSubEl = $('oral-sub');
 const fixesBadgeEl = $('fixes-badge'), fixesPanelEl = $('fixes-panel'), fixesCountEl = $('fixes-count');
 const bigMicEl = $('big-mic');
+
+// iOS Safari blocks speechSynthesis from async callbacks unless it was first
+// called inside a user-gesture. One silent utterance on the first tap unlocks it.
+let audioUnlocked = false;
+document.addEventListener('pointerdown', function unlock() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  const u = new SpeechSynthesisUtterance('');
+  u.volume = 0;
+  speechSynthesis.speak(u);
+  document.removeEventListener('pointerdown', unlock);
+}, { passive: true });
 
 // ══════════════════════════════════════════════════════
 //  SETUP SCREEN
@@ -417,11 +440,13 @@ function addThinking() {
 // ══════════════════════════════════════════════════════
 function setWave(state) {
   wavesEl.className = state;
+  oralLblEl.className = state;
   oralLblEl.textContent = {
-    '': 'Listo para escuchar',
-    listening: 'Escuchando…',
-    speaking: 'Hablando…'
+    '': 'Toca para hablar',
+    listening: '🔴 Escuchando…',
+    speaking: '🔊 Hablando…'
   }[state] ?? '';
+  bigMicEl.classList.toggle('busy', state === 'speaking');
 }
 
 function updateBadge() {
@@ -445,8 +470,9 @@ async function handleInput(text) {
     if (oralMode) {
       oralFixes.push(...fixes);
       updateBadge();
+      oralSubEl.textContent = reply;
       setWave('speaking');
-      speak(reply, () => setWave(''));
+      speak(reply, () => { setWave(''); oralSubEl.textContent = ''; });
     } else {
       addMsg('user', text, fixes);
       addMsg('ai', reply);
@@ -454,7 +480,12 @@ async function handleInput(text) {
     }
   } catch (err) {
     thinking.remove();
-    addMsg('ai', `⚠️ ${err.message}`);
+    if (oralMode) {
+      oralSubEl.textContent = `⚠️ ${err.message}`;
+      setWave('');
+    } else {
+      addMsg('ai', `⚠️ ${err.message}`);
+    }
   } finally {
     busy = false;
   }
