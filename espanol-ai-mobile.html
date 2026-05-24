@@ -247,9 +247,6 @@ function parse(raw) {
 // ══════════════════════════════════════════════════════
 let voice = null;
 let pendingTranscript = null;
-let oralPrimerRunning = false;
-let oralPrimerCount   = 0;
-let oralReplyPending  = null;
 
 function loadVoices() {
   const all = speechSynthesis.getVoices();
@@ -288,40 +285,6 @@ function speak(text, onEnd) {
   speechSynthesis.speak(u);
 }
 
-// ══════════════════════════════════════════════════════
-//  ORAL PRIMER LOOP — iOS TTS fix
-//  speak(reply) est appelé depuis p.onend (speech event chain)
-//  et non depuis un callback async brut → iOS l'autorise.
-// ══════════════════════════════════════════════════════
-function runPrimerLoop() {
-  if (!oralPrimerRunning) return;
-  if (++oralPrimerCount > 500) { oralPrimerRunning = false; return; }
-  if (oralReplyPending) {
-    const { text, cb } = oralReplyPending;
-    oralReplyPending = null;
-    oralPrimerRunning = false;
-    speak(text, cb);
-    return;
-  }
-  const p = new SpeechSynthesisUtterance(' ');
-  p.lang = 'es-ES'; p.volume = 0.1; p.rate = 10;
-  p.onend = runPrimerLoop;
-  p.onerror = runPrimerLoop;
-  speechSynthesis.speak(p);
-}
-
-function startOralPrimer() {
-  speechSynthesis.cancel();
-  oralPrimerRunning = true;
-  oralPrimerCount   = 0;
-  oralReplyPending  = null;
-  runPrimerLoop();
-}
-
-function stopOralPrimer() {
-  oralPrimerRunning = false;
-  oralReplyPending  = null;
-}
 
 // ══════════════════════════════════════════════════════
 //  STT  — push-to-talk, fresh instance each recording
@@ -521,11 +484,7 @@ async function handleInput(text) {
       oralSubEl.textContent = reply;
       setWave('speaking');
       const cb = () => { setWave(''); oralSubEl.textContent = ''; };
-      if (oralPrimerRunning) {
-        oralReplyPending = { text: reply, cb };
-      } else {
-        speak(reply, cb);
-      }
+      speak(reply, cb);
     } else {
       addMsg('user', text, fixes);
       addMsg('ai', reply);
@@ -573,10 +532,14 @@ let stopTimer = null;
 bigMicEl.addEventListener('pointerdown', e => {
   e.preventDefault();
   clearTimeout(stopTimer);
-  startOralPrimer();  // démarre la chaîne TTS depuis le geste (fix iOS)
   startRec();
 });
 bigMicEl.addEventListener('pointerup', () => {
+  speechSynthesis.cancel();
+  const ph = new SpeechSynthesisUtterance('...');
+  ph.lang = 'es-ES'; ph.rate = 0.3; ph.volume = 0.05;
+  if (voice) ph.voice = voice;
+  speechSynthesis.speak(ph);
   stopTimer = setTimeout(stopRec, 500);
 });
 bigMicEl.addEventListener('pointercancel', () => {
@@ -593,7 +556,6 @@ modeBtnEl.addEventListener('click', () => {
   oralModeEl.classList.toggle('visible', oralMode);
   modeBtnEl.textContent = oralMode ? 'Mode Texte' : 'Mode Oral';
   speechSynthesis.cancel();
-  stopOralPrimer();
   if (oralMode) setWave('');
 });
 
@@ -623,7 +585,6 @@ newBtnEl.addEventListener('click', () => {
   updateBadge();
   fixesPanelEl.style.display = 'none';
   speechSynthesis.cancel();
-  stopOralPrimer();
   startConversation();
 });
 
