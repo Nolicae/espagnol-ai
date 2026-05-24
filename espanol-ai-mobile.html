@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EspañolAI</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EspañolAI">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+      --accent: #c8384a; --accent-soft: #3d1a20;
+      --text: #e8eaf0; --text-muted: #7a7e95;
+      --bubble-user: #1e3a5f; --bubble-ai: #1a1d27;
+      --correction-bg: #1a2a1a; --correction-border: #2d5a2d;
+      --radius: 16px; --radius-sm: 8px;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; font-size: 16px; }
+    #app { display: flex; flex-direction: column; height: 100vh; max-width: 680px; margin: 0 auto; }
+    #header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    #app-title { font-weight: 700; font-size: 1.1rem; flex: 1; }
+    #status-indicator { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); }
+    #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; transition: background 0.3s; }
+    #status-dot.online { background: #4caf50; }
+    #status-dot.cloud  { background: #ff9800; }
+    #status-dot.offline{ background: #f44336; }
+    #mode-toggle { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.8rem; white-space: nowrap; }
+    #mode-toggle:hover { background: var(--accent); color: #fff; }
+    #settings-btn { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 4px; border-radius: 6px; flex-shrink: 0; }
+    #settings-btn:hover { background: var(--border); }
+    #settings-panel { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    #settings-panel label { font-size: 0.8rem; color: var(--text-muted); }
+    #settings-row { display: flex; gap: 8px; }
+    #groq-key-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text); font-size: 0.9rem; outline: none; }
+    #groq-key-input:focus { border-color: #ff9800; }
+    #groq-key-save { background: #ff9800; color: #000; border: none; border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    #settings-hint { font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
+    #text-mode { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    #chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .message { display: flex; flex-direction: column; max-width: 85%; }
+    .message.user { align-self: flex-end; align-items: flex-end; }
+    .message.ai   { align-self: flex-start; align-items: flex-start; }
+    .bubble { padding: 12px 16px; border-radius: var(--radius); line-height: 1.5; font-size: 0.95rem; }
+    .message.user .bubble { background: var(--bubble-user); border-bottom-right-radius: 4px; }
+    .message.ai   .bubble { background: var(--bubble-ai); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .message-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px; }
+    .corrections-block { margin-top: 6px; background: var(--correction-bg); border: 1px solid var(--correction-border); border-radius: var(--radius-sm); overflow: hidden; max-width: 100%; }
+    .corrections-toggle { width: 100%; text-align: left; padding: 8px 12px; background: none; border: none; color: #4caf50; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .corrections-toggle:hover { background: rgba(76,175,80,0.1); }
+    .corrections-list { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .corrections-list.hidden { display: none; }
+    .correction-item { font-size: 0.82rem; color: var(--text); }
+    .correction-original { color: #f44336; text-decoration: line-through; }
+    .correction-arrow { color: var(--text-muted); margin: 0 4px; }
+    .correction-corrected { color: #4caf50; font-weight: 600; }
+    .correction-explanation { color: var(--text-muted); font-style: italic; margin-top: 2px; }
+    #input-area { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    #text-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 24px; padding: 10px 16px; color: var(--text); font-size: 0.95rem; outline: none; }
+    #text-input:focus { border-color: var(--accent); }
+    #mic-btn, #send-btn { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    #mic-btn { background: var(--surface); border: 1px solid var(--border); }
+    #mic-btn.listening { background: var(--accent); animation: pulse 1s infinite; }
+    #send-btn { background: var(--accent); color: #fff; }
+    #oral-mode { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 32px; padding: 32px; }
+    #oral-mode.active { display: flex; }
+    #wave-container { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    #wave-animation { display: flex; align-items: center; gap: 4px; height: 48px; }
+    #wave-animation span { display: block; width: 6px; border-radius: 3px; background: var(--accent); animation: wave-idle 1.2s ease-in-out infinite; transform-origin: bottom; }
+    #wave-animation span:nth-child(1) { animation-delay: 0s;   height: 16px; }
+    #wave-animation span:nth-child(2) { animation-delay: 0.1s; height: 28px; }
+    #wave-animation span:nth-child(3) { animation-delay: 0.2s; height: 40px; }
+    #wave-animation span:nth-child(4) { animation-delay: 0.1s; height: 28px; }
+    #wave-animation span:nth-child(5) { animation-delay: 0s;   height: 16px; }
+    #wave-animation.speaking span  { animation-name: wave-speak; }
+    #wave-animation.listening span { animation-name: wave-listen; }
+    #oral-state-label { color: var(--text-muted); font-size: 0.9rem; }
+    #corrections-btn { background: var(--correction-bg); border: 1px solid var(--correction-border); color: #4caf50; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; }
+    #corrections-panel { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; max-height: 40vh; overflow-y: auto; }
+    #oral-mic-btn { width: 80px; height: 80px; border-radius: 50%; background: var(--accent); border: none; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 24px rgba(200,56,74,0.4); }
+    #oral-mic-btn.listening { animation: pulse 1s infinite; }
+    #new-conversation-btn { margin: 8px 16px; padding: 10px; background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.8rem; flex-shrink: 0; }
+    #new-conversation-btn:hover { border-color: var(--accent); color: var(--accent); }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @keyframes wave-idle    { 0%,100% { transform: scaleY(0.6); } 50% { transform: scaleY(1);   } }
+    @keyframes wave-speak   { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1.4); } }
+    @keyframes wave-listen  { 0%,100% { transform: scaleY(0.8); } 50% { transform: scaleY(1.2); } }
+    @media (max-width: 480px) {
+      #app-title { font-size: 1rem; }
+      #mode-toggle { font-size: 0.75rem; padding: 5px 10px; }
+      .message { max-width: 92%; }
+      #oral-mic-btn { width: 70px; height: 70px; font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <span id="app-title">🇪🇸 EspañolAI</span>
+      <div id="status-indicator">
+        <span id="status-dot"></span>
+        <span id="status-text">Vérification...</span>
+      </div>
+      <button id="mode-toggle">Mode Oral</button>
+      <button id="settings-btn" aria-label="Paramètres">⚙️</button>
+    </header>
+
+    <div id="settings-panel" hidden>
+      <label for="groq-key-input">Clé API Groq (gratuit sur groq.com)</label>
+      <div id="settings-row">
+        <input type="password" id="groq-key-input" placeholder="gsk_…" autocomplete="off">
+        <button id="groq-key-save">Enregistrer</button>
+      </div>
+      <p id="settings-hint">Crée un compte gratuit sur groq.com → API Keys → Create API Key</p>
+    </div>
+
+    <main id="text-mode">
+      <div id="chat-container"><div id="chat-messages"></div></div>
+      <div id="input-area">
+        <button id="mic-btn">🎤</button>
+        <input type="text" id="text-input" placeholder="Escribe en español..." autocomplete="off">
+        <button id="send-btn">→</button>
+      </div>
+    </main>
+
+    <main id="oral-mode" hidden>
+      <div id="wave-container">
+        <div id="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+        <p id="oral-state-label">Listo para escuchar</p>
+      </div>
+      <button id="corrections-btn" hidden>📋 <span id="corrections-count">0</span> correcciones</button>
+      <div id="corrections-panel" hidden></div>
+      <button id="oral-mic-btn">🎤</button>
+    </main>
+
+    <button id="new-conversation-btn">Nueva conversación</button>
+  </div>
+
+  <script>
+    // === State ===
+    let isOralMode = false;
+    let pendingCorrections = [];
+    let activeBackend = 'none';
+    function setWaveState() {}
+
+    // === Config ===
+    const CONFIG = {
+      ollamaUrl: 'http://localhost:11434',
+      model: 'llama3.1:8b',
+      groqUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      groqModel: 'llama-3.1-8b-instant',
+      historyLimit: 10,
+    };
+
+    const SYSTEM_PROMPT = `Eres un hablante nativo de español. Habla ÚNICAMENTE en español, sin excepción.
+Responde de forma natural y conversacional.
+Después de cada mensaje del usuario, analiza sus errores gramaticales o de vocabulario
+y devuelve tu respuesta en este formato JSON exacto:
+{"reply":"tu respuesta natural aquí","corrections":[{"original":"lo que dijo el usuario","corrected":"la forma correcta","explanation":"breve explicación en español"}]}
+Si no hay errores, devuelve corrections como array vacío [].
+IMPORTANTE: devuelve SOLO el JSON, sin texto adicional antes o después.`;
+
+    // === History ===
+    let history = [];
+    function addToHistory(role, content) {
+      history.push({ role, content });
+      if (history.length > CONFIG.historyLimit * 2)
+        history = history.slice(-CONFIG.historyLimit * 2);
+    }
+
+    // === Ollama ===
+    async function checkOllamaStatus() {
+      try {
+        const res = await fetch(`${CONFIG.ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(3000) });
+        return res.ok;
+      } catch { return false; }
+    }
+
+    async function sendToOllama(userMessage) {
+      addToHistory('user', userMessage);
+      const messages = [{ role: 'system', content: SYSTEM_PROMPT }, ...history];
+      const res = await fetch(`${CONFIG.ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: CONFIG.model, messages, stream: false }),
+      });
+      if (!res.ok) throw new Error(`Ollama error: ${res.status}`);
+      const data = await res.json();
+      const raw = data.message?.content ?? '';
+      addToHistory('assistant', raw);
+      return parseResponse(raw);
+    }
+
+    // === Groq ===
+    function getGroqKey() { return localStorage.getItem('groq_api_key') || ''; }
+    function setGroqKey(key) { localStorage.setItem('groq_api_key', key.trim()); }
+
+    async function sendToGroq(userMessage) {
+      const key = getGroqKey();
+      if (!key) throw new Error('Clé Groq manquante — ouvre ⚙️');
+      addToHistory('user', userMessage);
+      const messages = [{ role: 'system', content: SYSTEM_PROMPT }, ...history];
+      const res = await fetch(CONFIG.groqUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ model: CONFIG.groqModel, messages }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || `Groq error: ${res.status}`);
+      }
+      const data = await res.json();
+      const raw = data.choices[0]?.message?.content ?? '';
+      addToHistory('assistant', raw);
+      return parseResponse(raw);
+    }
+
+    async function sendToAI(userMessage) {
+      if (activeBackend === 'ollama') return sendToOllama(userMessage);
+      if (activeBackend === 'groq')   return sendToGroq(userMessage);
+      throw new Error('Aucun backend actif. Ouvre ⚙️ et entre ta clé Groq.');
+    }
+
+    function parseResponse(raw) {
+      try {
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (!m) throw new Error();
+        const p = JSON.parse(m[0]);
+        return { reply: p.reply ?? raw, corrections: Array.isArray(p.corrections) ? p.corrections : [] };
+      } catch { return { reply: raw, corrections: [] }; }
+    }
+
+    // === Status ===
+    const statusDot  = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+
+    async function updateStatus() {
+      const ollamaOnline = await checkOllamaStatus();
+      if (ollamaOnline) {
+        activeBackend = 'ollama'; statusDot.className = 'online'; statusText.textContent = 'Ollama (local)';
+      } else if (getGroqKey()) {
+        activeBackend = 'groq';   statusDot.className = 'cloud';  statusText.textContent = 'Groq (cloud)';
+      } else {
+        activeBackend = 'none';   statusDot.className = 'offline'; statusText.textContent = 'Hors ligne';
+      }
+      return activeBackend !== 'none';
+    }
+    setInterval(updateStatus, 15000);
+
+    // === Chat UI ===
+    const chatMessages = document.getElementById('chat-messages');
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function renderCorrections(corrections) {
+      if (!corrections.length) return '';
+      const items = corrections.map(c => `
+        <div class="correction-item">
+          <span class="correction-original">${escapeHtml(c.original)}</span>
+          <span class="correction-arrow">→</span>
+          <span class="correction-corrected">${escapeHtml(c.corrected)}</span>
+          <div class="correction-explanation">${escapeHtml(c.explanation)}</div>
+        </div>`).join('');
+      return `<div class="corrections-block">
+        <button class="corrections-toggle" onclick="toggleCorrections(this)">✔ ${corrections.length} corrección${corrections.length>1?'es':''}</button>
+        <div class="corrections-list hidden">${items}</div>
+      </div>`;
+    }
+
+    function toggleCorrections(btn) {
+      const list = btn.nextElementSibling;
+      list.classList.toggle('hidden');
+      btn.textContent = list.classList.contains('hidden')
+        ? `✔ ${list.children.length} corrección${list.children.length>1?'es':''}`
+        : '▲ Ocultar correcciones';
+    }
+
+    function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+
+    function appendUserMessage(text, corrections) {
+      const div = document.createElement('div');
+      div.className = 'message user';
+      div.innerHTML = `<span class="message-label">Tú</span><div class="bubble">${escapeHtml(text)}</div>${renderCorrections(corrections)}`;
+      chatMessages.appendChild(div); scrollToBottom();
+    }
+
+    function appendAiMessage(text) {
+      const div = document.createElement('div');
+      div.className = 'message ai';
+      div.innerHTML = `<span class="message-label">EspañolAI</span><div class="bubble">${escapeHtml(text)}</div>`;
+      chatMessages.appendChild(div); scrollToBottom(); return div;
+    }
+
+    function appendThinkingIndicator() {
+      const div = document.createElement('div');
+      div.className = 'message ai'; div.id = 'thinking';
+      div.innerHTML = `<div class="bubble" style="color:var(--text-muted)">...</div>`;
+      chatMessages.appendChild(div); scrollToBottom(); return div;
+    }
+
+    // === TTS ===
+    let ttsVoice = null;
+    function loadSpanishVoice() {
+      const v = speechSynthesis.getVoices();
+      ttsVoice = v.find(x=>x.lang==='es-ES') || v.find(x=>x.lang==='es-MX') || v.find(x=>x.lang.startsWith('es')) || null;
+    }
+    speechSynthesis.addEventListener('voiceschanged', loadSpanishVoice);
+    loadSpanishVoice();
+
+    function speak(text, { onEnd } = {}) {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'es-ES'; u.rate = 0.95; u.pitch = 1;
+      if (ttsVoice) u.voice = ttsVoice;
+      if (onEnd) u.onend = onEnd;
+      speechSynthesis.speak(u);
+    }
+    function stopSpeaking() { speechSynthesis.cancel(); }
+
+    // === STT ===
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null, isListening = false;
+
+    function initSTT(onResult, onError) {
+      if (!SR) return null;
+      recognition = new SR();
+      recognition.lang = 'es-ES'; recognition.interimResults = false; recognition.maxAlternatives = 1;
+      recognition.onresult = e => onResult(e.results[0][0].transcript);
+      recognition.onerror  = e => { isListening = false; onError(e.error); };
+      recognition.onend    = () => { isListening = false; };
+      return recognition;
+    }
+    function startListening() { if (!recognition || isListening) return; stopSpeaking(); isListening = true; recognition.start(); }
+    function stopListening()  { if (!recognition || !isListening) return; recognition.stop(); isListening = false; }
+
+    // === Core ===
+    let isProcessing = false;
+
+    async function handleUserInput(text) {
+      if (!text.trim() || isProcessing) return;
+      isProcessing = true;
+      const thinkingEl = appendThinkingIndicator();
+      try {
+        const { reply, corrections } = await sendToAI(text);
+        thinkingEl.remove();
+        if (isOralMode) {
+          pendingCorrections.push(...corrections);
+          updateCorrectionsCount();
+          setWaveState('speaking');
+          speak(reply, { onEnd: () => setWaveState('idle') });
+        } else {
+          appendUserMessage(text, corrections);
+          appendAiMessage(reply);
+          speak(reply);
+        }
+      } catch (err) {
+        thinkingEl.remove();
+        appendAiMessage(`[Error: ${err.message}]`);
+      } finally { isProcessing = false; }
+    }
+
+    // === Controls ===
+    const micBtn    = document.getElementById('mic-btn');
+    const textInput = document.getElementById('text-input');
+    const sendBtn   = document.getElementById('send-btn');
+    const newConvBtn= document.getElementById('new-conversation-btn');
+    const oralMicBtn= document.getElementById('oral-mic-btn');
+
+    initSTT(
+      t => { micBtn.classList.remove('listening'); oralMicBtn.classList.remove('listening'); handleUserInput(t); },
+      e => { micBtn.classList.remove('listening'); oralMicBtn.classList.remove('listening'); console.warn('STT:', e); }
+    );
+
+    micBtn.addEventListener('mousedown', () => { micBtn.classList.add('listening'); startListening(); });
+    micBtn.addEventListener('touchstart', e => { e.preventDefault(); micBtn.classList.add('listening'); startListening(); }, { passive: false });
+    micBtn.addEventListener('mouseup',  () => stopListening());
+    micBtn.addEventListener('touchend', () => stopListening());
+
+    sendBtn.addEventListener('click', () => { const v = textInput.value.trim(); if (!v) return; textInput.value=''; handleUserInput(v); });
+    textInput.addEventListener('keydown', e => {
+      if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); const v=textInput.value.trim(); if (!v) return; textInput.value=''; handleUserInput(v); }
+    });
+
+    newConvBtn.addEventListener('click', () => { history=[]; pendingCorrections=[]; chatMessages.innerHTML=''; updateCorrectionsCount(); stopSpeaking(); });
+
+    oralMicBtn.addEventListener('mousedown', () => { oralMicBtn.classList.add('listening'); setWaveState('listening'); startListening(); });
+    oralMicBtn.addEventListener('touchstart', e => { e.preventDefault(); oralMicBtn.classList.add('listening'); setWaveState('listening'); startListening(); }, { passive: false });
+    oralMicBtn.addEventListener('mouseup',  () => { oralMicBtn.classList.remove('listening'); stopListening(); });
+    oralMicBtn.addEventListener('touchend', () => { oralMicBtn.classList.remove('listening'); stopListening(); });
+
+    // === Mode toggle ===
+    const textModeEl    = document.getElementById('text-mode');
+    const oralModeEl    = document.getElementById('oral-mode');
+    const modeToggleBtn = document.getElementById('mode-toggle');
+    const oralStateLbl  = document.getElementById('oral-state-label');
+    const waveEl        = document.getElementById('wave-animation');
+    const correctionsBtn  = document.getElementById('corrections-btn');
+    const correctionsCount= document.getElementById('corrections-count');
+    const correctionsPanel= document.getElementById('corrections-panel');
+
+    setWaveState = function(state) {
+      waveEl.className = state === 'idle' ? '' : state;
+      oralStateLbl.textContent = { idle:'Listo para escuchar', listening:'Escuchando...', speaking:'Hablando...' }[state] ?? '';
+    };
+
+    function updateCorrectionsCount() {
+      const n = pendingCorrections.length;
+      correctionsCount.textContent = n;
+      correctionsBtn.hidden = n === 0;
+    }
+
+    modeToggleBtn.addEventListener('click', () => {
+      isOralMode = !isOralMode;
+      textModeEl.hidden = isOralMode; oralModeEl.hidden = !isOralMode;
+      oralModeEl.classList.toggle('active', isOralMode);
+      modeToggleBtn.textContent = isOralMode ? 'Mode Texte' : 'Mode Oral';
+      stopSpeaking();
+      if (isOralMode) setWaveState('idle');
+    });
+
+    correctionsBtn.addEventListener('click', () => {
+      const hidden = correctionsPanel.hidden;
+      correctionsPanel.hidden = !hidden;
+      if (!hidden) return;
+      correctionsPanel.innerHTML = pendingCorrections.length
+        ? pendingCorrections.map(c=>`<div class="correction-item" style="margin-bottom:10px">
+            <span class="correction-original">${escapeHtml(c.original)}</span>
+            <span class="correction-arrow">→</span>
+            <span class="correction-corrected">${escapeHtml(c.corrected)}</span>
+            <div class="correction-explanation">${escapeHtml(c.explanation)}</div>
+          </div>`).join('')
+        : '<p style="color:var(--text-muted);font-size:0.85rem">No hay correcciones por ahora.</p>';
+    });
+
+    // === Settings ===
+    const settingsBtn   = document.getElementById('settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const groqKeyInput  = document.getElementById('groq-key-input');
+    const groqKeySave   = document.getElementById('groq-key-save');
+
+    settingsBtn.addEventListener('click', () => {
+      settingsPanel.hidden = !settingsPanel.hidden;
+      if (!settingsPanel.hidden) groqKeyInput.value = getGroqKey();
+    });
+    groqKeySave.addEventListener('click', async () => {
+      setGroqKey(groqKeyInput.value);
+      settingsPanel.hidden = true;
+      await updateStatus();
+    });
+
+    // === Init ===
+    async function init() {
+      const online = await updateStatus();
+      if (online) {
+        const t = appendThinkingIndicator();
+        try {
+          const { reply } = await sendToAI('Saluda al usuario y pregúntale de qué quiere hablar hoy. Sé breve y amigable.');
+          t.remove(); appendAiMessage(reply); speak(reply); history = [];
+        } catch {
+          t.remove();
+          appendAiMessage('¡Hola! ¿De qué quieres hablar hoy?');
+          speak('¡Hola! ¿De qué quieres hablar hoy?');
+        }
+      } else {
+        appendAiMessage('⚠️ Clé Groq non configurée. Ouvre ⚙️ pour l\'ajouter (groq.com, gratuit).');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
