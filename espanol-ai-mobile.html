@@ -278,8 +278,8 @@ function speak(text, onEnd) {
   if (onEnd) {
     let done = false;
     const finish = () => { if (!done) { done = true; onEnd(); } };
-    u.onend = finish; u.onerror = finish;
-    setTimeout(finish, Math.max(text.length * 120, 5000));
+    u.onend = finish;
+    setTimeout(finish, Math.max(text.length * 150, 8000));
   }
   speechSynthesis.speak(u);
 }
@@ -300,7 +300,6 @@ function setMicActive(on) {
 
 function startRec() {
   if (!SR || recActive || busy) return;
-  speechSynthesis.cancel();
   rec = new SR();
   rec.lang = 'es-ES';
   rec.interimResults = false;
