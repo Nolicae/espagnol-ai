@@ -5,7 +5,7 @@ function setWaveState() {} // stub — real impl below
 
 // === Configuration ===
 const CONFIG = {
-  ollamaUrl: 'http://localhost:11434',
+  ollamaUrl: `http://${window.location.hostname}:11434`,
   model: 'llama3.1:8b',
   historyLimit: 10,
 };
