@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -296,13 +296,6 @@ function setMicActive(on) {
 function startRec() {
   if (!SR || recActive || busy) return;
   speechSynthesis.cancel();
-  // iOS Safari bloque speechSynthesis depuis les callbacks async.
-  // Jouer une amorce muette ICI (dans le gestionnaire de geste) déverrouille
-  // l'audio pour tous les appels suivants de la session.
-  const _p = new SpeechSynthesisUtterance(' ');
-  _p.volume = 0; _p.rate = 10;
-  speechSynthesis.speak(_p);
-
   rec = new SR();
   rec.lang = 'es-ES';
   rec.interimResults = false;
@@ -354,17 +347,6 @@ const wavesEl = $('waves'), oralLblEl = $('oral-label'), oralSubEl = $('oral-sub
 const fixesBadgeEl = $('fixes-badge'), fixesPanelEl = $('fixes-panel'), fixesCountEl = $('fixes-count');
 const bigMicEl = $('big-mic');
 
-// iOS Safari blocks speechSynthesis from async callbacks unless it was first
-// called inside a user-gesture. One silent utterance on the first tap unlocks it.
-let audioUnlocked = false;
-document.addEventListener('pointerdown', function unlock() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-  const u = new SpeechSynthesisUtterance('');
-  u.volume = 0;
-  speechSynthesis.speak(u);
-  document.removeEventListener('pointerdown', unlock);
-}, { passive: true });
 
 // ══════════════════════════════════════════════════════
 //  SETUP SCREEN
@@ -558,7 +540,12 @@ modeBtnEl.addEventListener('click', () => {
   oralModeEl.classList.toggle('visible', oralMode);
   modeBtnEl.textContent = oralMode ? 'Mode Texte' : 'Mode Oral';
   speechSynthesis.cancel();
-  if (oralMode) setWave('');
+  if (oralMode) {
+    setWave('');
+    const _q = new SpeechSynthesisUtterance(' ');
+    _q.volume = 0; _q.rate = 10;
+    speechSynthesis.speak(_q);
+  }
 });
 
 // ══════════════════════════════════════════════════════
