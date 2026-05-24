@@ -83,6 +83,9 @@ echo   (meme Wi-Fi requis)
 echo  ============================================================
 echo.
 start "" "http://localhost:8080"
+echo  Appuie sur une touche pour fermer cette fenetre.
+echo  (l'app continue de tourner en arriere-plan)
+pause >nul
 
 :end
 endlocal
