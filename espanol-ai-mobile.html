@@ -496,19 +496,23 @@ IMPORTANTE: devuelve SOLO el JSON, sin texto adicional antes o después.`;
 
     // === Init ===
     async function init() {
-      const online = await updateStatus();
-      if (online) {
-        const t = appendThinkingIndicator();
-        try {
-          const { reply } = await sendToAI('Saluda al usuario y pregúntale de qué quiere hablar hoy. Sé breve y amigable.');
-          t.remove(); appendAiMessage(reply); speak(reply); history = [];
-        } catch {
-          t.remove();
-          appendAiMessage('¡Hola! ¿De qué quieres hablar hoy?');
-          speak('¡Hola! ¿De qué quieres hablar hoy?');
-        }
-      } else {
-        appendAiMessage('⚠️ Clé Groq non configurée. Ouvre ⚙️ pour l\'ajouter (groq.com, gratuit).');
+      await updateStatus();
+
+      if (!getGroqKey() && activeBackend !== 'ollama') {
+        // No Groq key and no local Ollama — guide the user to set up
+        settingsPanel.hidden = false;
+        appendAiMessage('👋 Bienvenue ! Pour commencer, entre ta clé Groq dans le panneau ci-dessus (compte gratuit sur groq.com → API Keys).');
+        return;
+      }
+
+      const t = appendThinkingIndicator();
+      try {
+        const { reply } = await sendToAI('Saluda al usuario y pregúntale de qué quiere hablar hoy. Sé breve y amigable.');
+        t.remove(); appendAiMessage(reply); speak(reply); history = [];
+      } catch (err) {
+        t.remove();
+        appendAiMessage('¡Hola! ¿De qué quieres hablar hoy?');
+        speak('¡Hola! ¿De qué quieres hablar hoy?');
       }
     }
 
