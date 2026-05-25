@@ -20,8 +20,6 @@
       font-family: -apple-system, system-ui, sans-serif;
       -webkit-text-size-adjust: 100%; overflow: hidden;
     }
-
-    /* ── App ── */
     #app {
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; height: 100vh; gap: 40px;
@@ -34,7 +32,6 @@
     #state-label.listening { color: var(--red); }
     #state-label.thinking  { color: var(--amber); }
     #state-label.speaking  { color: var(--accent2); }
-
     #waves { display: flex; align-items: center; gap: 6px; height: 64px; }
     #waves span {
       display: block; width: 6px; border-radius: 3px;
@@ -54,7 +51,6 @@
     @keyframes w-listen { 0%,100%{transform:scaleY(.7)} 50%{transform:scaleY(1.4)} }
     @keyframes w-think  { 0%,100%{transform:scaleY(.8)} 50%{transform:scaleY(1.1)} }
     @keyframes w-speak  { 0%,100%{transform:scaleY(.5)} 50%{transform:scaleY(1.5)} }
-
     #mic-btn {
       width: 96px; height: 96px; border-radius: 50%;
       background: var(--accent); border: none; cursor: pointer;
@@ -71,12 +67,10 @@
       70% { box-shadow: 0 0 0 32px rgba(239,68,68,0);  }
       100%{ box-shadow: 0 0 0 0    rgba(239,68,68,0);  }
     }
-
     #subtitle {
       font-size: 0.88rem; color: var(--muted); font-style: italic;
       text-align: center; max-width: 300px; min-height: 2.6em; line-height: 1.6;
     }
-
     #settings-btn {
       position: absolute; top: 20px; right: 20px;
       background: none; border: none; color: var(--muted);
@@ -104,11 +98,13 @@
     .key-group input:focus { border-color: var(--accent); }
     .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
     .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
+    audio { display: none; }
   </style>
 </head>
 <body>
 
 <div id="app">
+  <audio id="audio-el" playsinline webkit-playsinline preload="none"></audio>
   <button id="settings-btn">⚙️</button>
   <div id="state-label">Toca para hablar</div>
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
@@ -119,10 +115,7 @@
     <button id="settings-close">✕</button>
     <h2>⚙️ Paramètres</h2>
     <div class="key-group">
-      <label>Clé Groq (STT + LLM)</label><input id="s-groq" type="password" placeholder="gsk_…">
-    </div>
-    <div class="key-group">
-      <label>Clé HuggingFace (TTS)</label><input id="s-hf" type="password" placeholder="hf_…">
+      <label>Clé Groq</label><input id="s-groq" type="password" placeholder="gsk_…">
     </div>
     <button class="s-save" id="s-save">Sauvegarder</button>
     <button class="s-out"  id="s-out">Réinitialiser</button>
@@ -133,10 +126,12 @@
 'use strict';
 
 // ── Config ───────────────────────────────────────────────────
-const GROQ_URL   = 'https://api.groq.com/openai/v1/audio/transcriptions';
-const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_STT  = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_CHAT = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
-const HIST_MAX   = 10;
+const HIST_MAX  = 10;
+// 44-byte silent WAV — unlocks <audio> element from user gesture on iOS
+const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 const SYSTEM = `Eres un hablante nativo de español muy amigable y conversacional.
 Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
@@ -146,15 +141,14 @@ Si el usuario comete errores gramaticales, corrígelos sutilmente en tu respuest
 const save  = (k,v) => localStorage.setItem(k,v);
 const load  = k     => localStorage.getItem(k) || '';
 const groqK = ()    => load('groq_key');
-const hfK   = ()    => load('hf_key');
 
-// ── Pre-fill keys ────────────────────────────────────────────
+// ── Pre-fill Groq key ────────────────────────────────────────
 function _k(...p) { return p.join(''); }
 if (!groqK()) save('groq_key', _k('gsk_','35Un','VKG4','8PEb','owk6','YTWE','WGdy','b3FY','vcIa','FYQL','E5Jj','OJ6a','sJI8','1CPW'));
-if (!hfK())   save('hf_key',   _k('hf_','oJkF','Nhxw','SAYD','itTz','RYgg','YPNG','QNdP','Zedg','Yi'));
 
 // ── DOM ──────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
+const audioEl  = $('audio-el');
 const stateLbl = $('state-label');
 const wavesEl  = $('waves');
 const micBtn   = $('mic-btn');
@@ -164,7 +158,7 @@ const sPanel   = $('settings-panel');
 // ── State ────────────────────────────────────────────────────
 let appState = 'idle';
 let recorder = null, chunks = [], mimeType = '';
-let audioCtx = null;
+let audioUnlocked = false;
 let history = [];
 
 // ── UI ───────────────────────────────────────────────────────
@@ -178,24 +172,31 @@ function setState(s) {
 }
 const setSub = t => { subEl.textContent = t; };
 
-// ── Web Audio API (iOS-safe) ──────────────────────────────────
+// ── iOS audio unlock ─────────────────────────────────────────
+// Playing any audio on the element from a user gesture permanently unlocks it.
+// All subsequent async .play() calls on the SAME element then work on iOS.
 function unlockAudio() {
-  if (audioCtx) return;
+  if (audioUnlocked) return;
   try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.resume().catch(()=>{});
+    audioEl.src = SILENT_WAV;
+    audioEl.play().then(() => { audioEl.pause(); audioUnlocked = true; }).catch(()=>{});
   } catch(_){}
 }
 
-async function playBlob(blob) {
-  const buf = await blob.arrayBuffer();
-  const decoded = await audioCtx.decodeAudioData(buf);
-  return new Promise((res) => {
-    const src = audioCtx.createBufferSource();
-    src.buffer = decoded;
-    src.connect(audioCtx.destination);
-    src.onended = res;
-    src.start(0);
+// ── TTS via StreamElements (Amazon Polly Lucia Neural) ───────
+// GET request → no CORS preflight, no API key, natural Spanish voice.
+// <audio src="url"> loads cross-origin without CORS enforcement.
+function ttsUrl(text) {
+  return `https://api.streamelements.com/kappa/v2/speech?voice=Lucia&text=${encodeURIComponent(text)}`;
+}
+
+function playUrl(url) {
+  return new Promise((res, rej) => {
+    const onErr = () => rej(new Error(`Audio ${audioEl.error?.code ?? 'err'}`));
+    audioEl.onended = res;
+    audioEl.onerror = onErr;
+    audioEl.src = url;
+    audioEl.play().catch(rej);
   });
 }
 
@@ -216,7 +217,7 @@ async function startRec() {
     recorder.start();
     setState('listening');
   } catch(e) {
-    setSub(`⚠️ Micro bloqué : ${e.message}`);
+    setSub(`⚠️ Micro : ${e.message}`);
     setState('idle');
   }
 }
@@ -247,10 +248,9 @@ async function onStop() {
     history.push({ role: 'assistant', content: reply });
     if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
 
-    const audio = await tts(reply);
     setState('speaking');
     setSub(reply);
-    await playBlob(audio);
+    await playUrl(ttsUrl(reply));
 
   } catch(e) {
     setSub(`⚠️ ${e.message}`);
@@ -266,8 +266,8 @@ async function stt(blob, type) {
   fd.append('model', 'whisper-large-v3');
   fd.append('language', 'es');
   fd.append('response_format', 'json');
-  const r = await fetch(GROQ_URL, { method:'POST', headers:{ Authorization:`Bearer ${groqK()}` }, body: fd });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Groq ${r.status}`); }
+  const r = await fetch(GROQ_STT, { method:'POST', headers:{ Authorization:`Bearer ${groqK()}` }, body: fd });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Groq STT ${r.status}`); }
   return (await r.json()).text || '';
 }
 
@@ -281,21 +281,11 @@ async function llm() {
   return (await r.json()).choices[0]?.message?.content || '';
 }
 
-async function tts(text) {
-  const r = await fetch('https://api-inference.huggingface.co/models/facebook/mms-tts-spa', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${hfK()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ inputs: text })
-  });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error || `HF TTS ${r.status}`); }
-  return r.blob();
-}
-
 // ── Mic events ───────────────────────────────────────────────
 micBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (appState !== 'idle') return;
-  unlockAudio();
+  unlockAudio();   // unlock <audio> element from user gesture — iOS fix
   startRec();
 });
 micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
@@ -303,13 +293,12 @@ micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') s
 
 // ── Settings ─────────────────────────────────────────────────
 $('settings-btn').addEventListener('click', () => {
-  $('s-groq').value = groqK(); $('s-hf').value = hfK();
+  $('s-groq').value = groqK();
   sPanel.classList.add('open');
 });
-$('settings-close').addEventListener('click', () => { sPanel.classList.remove('open'); });
+$('settings-close').addEventListener('click', () => sPanel.classList.remove('open'));
 $('s-save').addEventListener('click', () => {
   save('groq_key', $('s-groq').value.trim());
-  save('hf_key',   $('s-hf').value.trim());
   sPanel.classList.remove('open');
 });
 $('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
