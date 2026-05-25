@@ -127,10 +127,11 @@
 'use strict';
 
 // ── Config ───────────────────────────────────────────────────
-const GROQ_STT  = 'https://api.groq.com/openai/v1/audio/transcriptions';
-const GROQ_CHAT = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_STT   = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
+
 
 const SYSTEM = `Eres un hablante nativo de español muy amigable y conversacional.
 Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
@@ -169,68 +170,41 @@ function setState(s) {
 
 const setSub = t => { subEl.textContent = t; };
 
-// ── TTS ──────────────────────────────────────────────────────
-// Cache voices eagerly; voiceschanged fires asynchronously on Chrome
-let cachedVoices = speechSynthesis.getVoices();
-speechSynthesis.addEventListener('voiceschanged', () => {
-  cachedVoices = speechSynthesis.getVoices();
-});
+// ── Audio context (unlocked by user gesture; stays authorized across async on iOS) ──
+let audioCtx = null;
 
-function bestSpanishVoice() {
-  return cachedVoices.find(v => v.lang === 'es-ES' && v.localService)
-      || cachedVoices.find(v => v.lang === 'es-ES')
-      || cachedVoices.find(v => v.lang.startsWith('es'))
-      || null;
+function unlockAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume().catch(() => {});
 }
 
-// Called from pointerdown so iOS grants TTS permission for this session
-function primeSpeech() {
-  const silent = new SpeechSynthesisUtterance(' ');
-  silent.volume = 0;
-  silent.rate   = 10;
-  speechSynthesis.speak(silent);
+// ── TTS via Vercel proxy → Google Translate TTS → AudioContext ────────────────
+// Google TTS has a ~200 char limit per request, so split at sentence boundaries.
+function splitText(text, max = 180) {
+  const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const chunks = [];
+  let cur = '';
+  for (const p of parts) {
+    if (cur.length + p.length > max && cur) { chunks.push(cur.trim()); cur = p; }
+    else cur += p;
+  }
+  if (cur.trim()) chunks.push(cur.trim());
+  return chunks;
 }
 
-function speak(text) {
-  return new Promise((resolve, reject) => {
-    // Clear any stuck queue (silent priming utterance, previous speech, etc.)
-    speechSynthesis.cancel();
+async function speakChunk(text) {
+  const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+  if (!r.ok) throw new Error(`TTS ${r.status}`);
+  const decoded = await audioCtx.decodeAudioData(await r.arrayBuffer());
+  const src = audioCtx.createBufferSource();
+  src.buffer = decoded;
+  src.connect(audioCtx.destination);
+  return new Promise(resolve => { src.onended = resolve; src.start(0); });
+}
 
-    // Chrome bug: speaking immediately after cancel() triggers a silent onend.
-    // A 100 ms gap lets the engine fully reset before we queue the real utterance.
-    setTimeout(() => {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang   = 'es-ES';
-      u.rate   = 0.92;
-      u.volume = 1;
-      const v  = bestSpanishVoice();
-      if (v) u.voice = v;
-
-      // Chrome silently cuts TTS after ~15 s; pause/resume keeps it alive.
-      const keepAlive = setInterval(() => {
-        if (!speechSynthesis.speaking) { clearInterval(keepAlive); return; }
-        speechSynthesis.pause();
-        speechSynthesis.resume();
-      }, 14000);
-
-      let done = false;
-      const finish = (ok, err) => {
-        if (done) return;
-        done = true;
-        clearInterval(keepAlive);
-        ok ? resolve() : reject(err || new Error('TTS failed'));
-      };
-
-      u.onend  = () => finish(true);
-      u.onerror = e => {
-        // 'interrupted' and 'canceled' are benign — fired when we cancel() externally
-        if (e.error === 'interrupted' || e.error === 'canceled') finish(true);
-        else finish(false, new Error(e.error || 'TTS error'));
-      };
-
-      speechSynthesis.speak(u);
-    }, 100);
-  });
+async function speak(text) {
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  for (const chunk of splitText(text)) await speakChunk(chunk);
 }
 
 // ── MediaRecorder ────────────────────────────────────────────
@@ -328,7 +302,7 @@ async function llm() {
 micBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (appState !== 'idle') return;
-  primeSpeech(); // Must be called from user gesture for iOS TTS permission
+  unlockAudio();
   startRec();
 });
 micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
