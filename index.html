@@ -139,8 +139,8 @@
 
 // ── Config ───────────────────────────────────────────────────
 const GROQ_URL   = 'https://api.groq.com/openai/v1/audio/transcriptions';
-const DS_URL     = 'https://api.deepseek.com/chat/completions';
-const DS_MODEL   = 'deepseek-chat';
+const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const EL_VOICE   = '21m00Tcm4TlvDq8ikWAM';
 const EL_MODEL   = 'eleven_multilingual_v2';
 const HIST_MAX   = 10;
@@ -160,7 +160,6 @@ const elK   = ()    => load('el_key');
 // ── Pre-fill keys ────────────────────────────────────────────
 function _k(...p) { return p.join(''); }
 if (!groqK()) save('groq_key', _k('gsk_','35Un','VKG4','8PEb','owk6','YTWE','WGdy','b3FY','vcIa','FYQL','E5Jj','OJ6a','sJI8','1CPW'));
-if (!dsK())   save('ds_key',   _k('sk-','d11d','1fdc','0ace','4fd3','a01e','6d27','90f2','6d4e'));
 if (!elK())   save('el_key',   _k('sk_','fee0','516f','629c','7e41','c96a','dfd3','df36','ced6','d6db','6039','c190','3890'));
 
 // ── DOM ──────────────────────────────────────────────────────
@@ -281,12 +280,12 @@ async function stt(blob, type) {
 }
 
 async function llm() {
-  const r = await fetch(DS_URL, {
+  const r = await fetch(GROQ_CHAT, {
     method: 'POST',
-    headers: { 'Content-Type':'application/json', Authorization:`Bearer ${dsK()}` },
-    body: JSON.stringify({ model: DS_MODEL, messages: [{ role:'system', content:SYSTEM }, ...history], max_tokens: 200 })
+    headers: { 'Content-Type':'application/json', Authorization:`Bearer ${groqK()}` },
+    body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role:'system', content:SYSTEM }, ...history], max_tokens: 200 })
   });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `DeepSeek ${r.status}`); }
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Groq LLM ${r.status}`); }
   return (await r.json()).choices[0]?.message?.content || '';
 }
 
