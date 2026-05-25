@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="EspañolAI">
+  <link rel="manifest" href="manifest.json">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -80,6 +81,7 @@
       position: absolute; inset: 0; background: var(--bg); z-index: 10;
       display: none; flex-direction: column; align-items: center;
       justify-content: center; padding: 32px 24px; gap: 16px;
+      overflow-y: auto;
     }
     #settings-panel.open { display: flex; }
     #settings-panel h2 { font-size: 1.2rem; margin-bottom: 4px; }
@@ -113,7 +115,8 @@
     <button id="settings-close">✕</button>
     <h2>⚙️ Paramètres</h2>
     <div class="key-group">
-      <label>Clé Groq</label><input id="s-groq" type="password" placeholder="gsk_…">
+      <label>Clé Groq</label>
+      <input id="s-groq" type="password" placeholder="gsk_…">
     </div>
     <button class="s-save" id="s-save">Sauvegarder</button>
     <button class="s-out"  id="s-out">Réinitialiser</button>
@@ -124,8 +127,8 @@
 'use strict';
 
 // ── Config ───────────────────────────────────────────────────
-const GROQ_STT   = 'https://api.groq.com/openai/v1/audio/transcriptions';
-const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_STT  = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_CHAT = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
 
@@ -133,106 +136,106 @@ const SYSTEM = `Eres un hablante nativo de español muy amigable y conversaciona
 Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
 Si el usuario comete errores gramaticales, corrígelos sutilmente en tu respuesta.`;
 
-// ── Storage ──────────────────────────────────────────────────
-const save  = (k,v) => localStorage.setItem(k,v);
-const load  = k     => localStorage.getItem(k) || '';
-const groqK = ()    => load('groq_key');
-
-function _k(...p) { return p.join(''); }
-if (!groqK()) save('groq_key', _k('gsk_','35Un','VKG4','8PEb','owk6','YTWE','WGdy','b3FY','vcIa','FYQL','E5Jj','OJ6a','sJI8','1CPW'));
+// ── Keys ─────────────────────────────────────────────────────
+const groqKey = () => localStorage.getItem('groq_key') || '';
 
 // ── DOM ──────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
+const $        = id => document.getElementById(id);
 const stateLbl = $('state-label');
 const wavesEl  = $('waves');
 const micBtn   = $('mic-btn');
 const subEl    = $('subtitle');
 const sPanel   = $('settings-panel');
 
-// ── State ────────────────────────────────────────────────────
+// ── App state ────────────────────────────────────────────────
 let appState = 'idle';
 let recorder = null, chunks = [], mimeType = '';
-let audioCtx  = null;
-let synthReady = false;
-let history   = [];
+let history  = [];
 
 // ── UI ───────────────────────────────────────────────────────
 function setState(s) {
   appState = s;
-  stateLbl.textContent = { idle:'Toca para hablar', listening:'🔴 Escuchando…', thinking:'💭 Pensando…', speaking:'🔊 Hablando…' }[s] ?? '';
-  stateLbl.className   = s === 'idle' ? '' : s;
-  wavesEl.className    = s === 'idle' ? '' : s;
+  stateLbl.textContent = {
+    idle:      'Toca para hablar',
+    listening: '🔴 Escuchando…',
+    thinking:  '💭 Pensando…',
+    speaking:  '🔊 Hablando…',
+  }[s] ?? '';
+  stateLbl.className = s === 'idle' ? '' : s;
+  wavesEl.className  = s === 'idle' ? '' : s;
   micBtn.classList.toggle('listening', s === 'listening');
   micBtn.classList.toggle('busy',      s === 'thinking' || s === 'speaking');
 }
+
 const setSub = t => { subEl.textContent = t; };
 
-// ── Audio unlock (called from user gesture) ──────────────────
-function unlockAudio() {
-  // 1. Web Audio API context
-  if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      audioCtx.resume().catch(()=>{});
-    } catch(_){}
-  }
-  // 2. Prime speechSynthesis — silent utterance from user gesture unlocks it
-  if (!synthReady && window.speechSynthesis) {
-    try {
-      const p = new SpeechSynthesisUtterance(' ');
-      p.volume = 0; p.rate = 10;
-      p.onend = () => { synthReady = true; };
-      speechSynthesis.speak(p);
-    } catch(_){}
-  }
+// ── TTS ──────────────────────────────────────────────────────
+// Cache voices eagerly; voiceschanged fires asynchronously on Chrome
+let cachedVoices = speechSynthesis.getVoices();
+speechSynthesis.addEventListener('voiceschanged', () => {
+  cachedVoices = speechSynthesis.getVoices();
+});
+
+function bestSpanishVoice() {
+  return cachedVoices.find(v => v.lang === 'es-ES' && v.localService)
+      || cachedVoices.find(v => v.lang === 'es-ES')
+      || cachedVoices.find(v => v.lang.startsWith('es'))
+      || null;
 }
 
-// ── TTS: iOS native speechSynthesis ──
-async function speak(text) {
-  // CRITICAL: Resume audio context before speaking (iOS requires this after recording)
-  try {
-    if (audioCtx && audioCtx.state === 'suspended') {
-      await audioCtx.resume();
-    }
-  } catch(e) {
-    // Ignore audio context errors
-  }
+// Called from pointerdown so iOS grants TTS permission for this session
+function primeSpeech() {
+  const silent = new SpeechSynthesisUtterance(' ');
+  silent.volume = 0;
+  silent.rate   = 10;
+  speechSynthesis.speak(silent);
+}
 
-  return new Promise((res, rej) => {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'es-ES';
-    u.rate = 0.92;
-    u.volume = 1;
+function speak(text) {
+  return new Promise((resolve, reject) => {
+    // Clear any stuck queue (silent priming utterance, previous speech, etc.)
+    speechSynthesis.cancel();
 
-    // Set voice if available (getVoices may be empty initially, that's OK)
-    const voices = speechSynthesis.getVoices();
-    if (voices && voices.length > 0) {
-      const best = voices.find(v => v.lang === 'es-ES' && v.localService)
-                 || voices.find(v => v.lang.startsWith('es'));
-      if (best) u.voice = best;
-    }
+    // Chrome bug: speaking immediately after cancel() triggers a silent onend.
+    // A 100 ms gap lets the engine fully reset before we queue the real utterance.
+    setTimeout(() => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang   = 'es-ES';
+      u.rate   = 0.92;
+      u.volume = 1;
+      const v  = bestSpanishVoice();
+      if (v) u.voice = v;
 
-    let done = false;
-    u.onend = () => {
-      if (!done) {
+      // Chrome silently cuts TTS after ~15 s; pause/resume keeps it alive.
+      const keepAlive = setInterval(() => {
+        if (!speechSynthesis.speaking) { clearInterval(keepAlive); return; }
+        speechSynthesis.pause();
+        speechSynthesis.resume();
+      }, 14000);
+
+      let done = false;
+      const finish = (ok, err) => {
+        if (done) return;
         done = true;
-        res();
-      }
-    };
-    u.onerror = (e) => {
-      if (!done) {
-        done = true;
-        rej(new Error(e.error || 'speak error'));
-      }
-    };
+        clearInterval(keepAlive);
+        ok ? resolve() : reject(err || new Error('TTS failed'));
+      };
 
-    speechSynthesis.speak(u);
+      u.onend  = () => finish(true);
+      u.onerror = e => {
+        // 'interrupted' and 'canceled' are benign — fired when we cancel() externally
+        if (e.error === 'interrupted' || e.error === 'canceled') finish(true);
+        else finish(false, new Error(e.error || 'TTS error'));
+      };
+
+      speechSynthesis.speak(u);
+    }, 100);
   });
 }
 
 // ── MediaRecorder ────────────────────────────────────────────
 function initMime() {
-  for (const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']) {
+  for (const t of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']) {
     if (MediaRecorder.isTypeSupported(t)) { mimeType = t; return; }
   }
 }
@@ -240,13 +243,13 @@ function initMime() {
 async function startRec() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    chunks = [];
+    chunks   = [];
     recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     recorder.onstop = onStop;
     recorder.start();
     setState('listening');
-  } catch(e) {
+  } catch (e) {
     setSub(`⚠️ Micro : ${e.message}`);
     setState('idle');
   }
@@ -282,40 +285,50 @@ async function onStop() {
     setSub(reply);
     await speak(reply);
 
-  } catch(e) {
+  } catch (e) {
     setSub(`⚠️ ${e.message}`);
   } finally {
     setState('idle');
   }
 }
 
+// ── STT ──────────────────────────────────────────────────────
 async function stt(blob, type) {
   const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
-  const fd = new FormData();
+  const fd  = new FormData();
   fd.append('file', blob, `rec.${ext}`);
   fd.append('model', 'whisper-large-v3');
   fd.append('language', 'es');
   fd.append('response_format', 'json');
-  const r = await fetch(GROQ_STT, { method:'POST', headers:{ Authorization:`Bearer ${groqK()}` }, body: fd });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `STT ${r.status}`); }
+  const r = await fetch(GROQ_STT, {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${groqKey()}` },
+    body:    fd,
+  });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `STT ${r.status}`); }
   return (await r.json()).text || '';
 }
 
+// ── LLM ──────────────────────────────────────────────────────
 async function llm() {
   const r = await fetch(GROQ_CHAT, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', Authorization:`Bearer ${groqK()}` },
-    body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role:'system', content:SYSTEM }, ...history], max_tokens: 200 })
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
+    body: JSON.stringify({
+      model:      GROQ_MODEL,
+      max_tokens: 200,
+      messages:   [{ role: 'system', content: SYSTEM }, ...history],
+    }),
   });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `LLM ${r.status}`); }
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `LLM ${r.status}`); }
   return (await r.json()).choices[0]?.message?.content || '';
 }
 
-// ── Mic events ───────────────────────────────────────────────
+// ── Mic button ───────────────────────────────────────────────
 micBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (appState !== 'idle') return;
-  unlockAudio();
+  primeSpeech(); // Must be called from user gesture for iOS TTS permission
   startRec();
 });
 micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
@@ -323,12 +336,12 @@ micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') s
 
 // ── Settings ─────────────────────────────────────────────────
 $('settings-btn').addEventListener('click', () => {
-  $('s-groq').value = groqK();
+  $('s-groq').value = groqKey();
   sPanel.classList.add('open');
 });
 $('settings-close').addEventListener('click', () => sPanel.classList.remove('open'));
 $('s-save').addEventListener('click', () => {
-  save('groq_key', $('s-groq').value.trim());
+  localStorage.setItem('groq_key', $('s-groq').value.trim());
   sPanel.classList.remove('open');
 });
 $('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
