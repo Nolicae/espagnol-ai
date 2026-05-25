@@ -98,13 +98,11 @@
     .key-group input:focus { border-color: var(--accent); }
     .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
     .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
-    audio { display: none; }
   </style>
 </head>
 <body>
 
 <div id="app">
-  <audio id="audio-el" playsinline webkit-playsinline preload="none"></audio>
   <button id="settings-btn">⚙️</button>
   <div id="state-label">Toca para hablar</div>
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
@@ -126,12 +124,10 @@
 'use strict';
 
 // ── Config ───────────────────────────────────────────────────
-const GROQ_STT  = 'https://api.groq.com/openai/v1/audio/transcriptions';
-const GROQ_CHAT = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_STT   = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
-const HIST_MAX  = 10;
-// 44-byte silent WAV — unlocks <audio> element from user gesture on iOS
-const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+const HIST_MAX   = 10;
 
 const SYSTEM = `Eres un hablante nativo de español muy amigable y conversacional.
 Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
@@ -142,13 +138,11 @@ const save  = (k,v) => localStorage.setItem(k,v);
 const load  = k     => localStorage.getItem(k) || '';
 const groqK = ()    => load('groq_key');
 
-// ── Pre-fill Groq key ────────────────────────────────────────
 function _k(...p) { return p.join(''); }
 if (!groqK()) save('groq_key', _k('gsk_','35Un','VKG4','8PEb','owk6','YTWE','WGdy','b3FY','vcIa','FYQL','E5Jj','OJ6a','sJI8','1CPW'));
 
 // ── DOM ──────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const audioEl  = $('audio-el');
 const stateLbl = $('state-label');
 const wavesEl  = $('waves');
 const micBtn   = $('mic-btn');
@@ -158,8 +152,9 @@ const sPanel   = $('settings-panel');
 // ── State ────────────────────────────────────────────────────
 let appState = 'idle';
 let recorder = null, chunks = [], mimeType = '';
-let audioUnlocked = false;
-let history = [];
+let audioCtx  = null;
+let synthReady = false;
+let history   = [];
 
 // ── UI ───────────────────────────────────────────────────────
 function setState(s) {
@@ -172,31 +167,61 @@ function setState(s) {
 }
 const setSub = t => { subEl.textContent = t; };
 
-// ── iOS audio unlock ─────────────────────────────────────────
-// Playing any audio on the element from a user gesture permanently unlocks it.
-// All subsequent async .play() calls on the SAME element then work on iOS.
+// ── Audio unlock (called from user gesture) ──────────────────
 function unlockAudio() {
-  if (audioUnlocked) return;
+  // 1. Web Audio API context
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx.resume().catch(()=>{});
+    } catch(_){}
+  }
+  // 2. Prime speechSynthesis — silent utterance from user gesture unlocks it
+  if (!synthReady && window.speechSynthesis) {
+    try {
+      const p = new SpeechSynthesisUtterance(' ');
+      p.volume = 0; p.rate = 10;
+      p.onend = () => { synthReady = true; };
+      speechSynthesis.speak(p);
+    } catch(_){}
+  }
+}
+
+// ── TTS: try StreamElements fetch → Web Audio API, fallback speechSynthesis ──
+async function speak(text) {
+
+  // ── Attempt 1: fetch StreamElements (Amazon Polly Lucia Neural) ──
   try {
-    audioEl.src = SILENT_WAV;
-    audioEl.play().then(() => { audioEl.pause(); audioUnlocked = true; }).catch(()=>{});
-  } catch(_){}
-}
+    const url = `https://api.streamelements.com/kappa/v2/speech?voice=Lucia&text=${encodeURIComponent(text)}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`se-${r.status}`);
+    const buf = await r.arrayBuffer();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    const decoded = await audioCtx.decodeAudioData(buf.slice(0));
+    await new Promise((res, rej) => {
+      const src = audioCtx.createBufferSource();
+      src.buffer = decoded;
+      src.connect(audioCtx.destination);
+      src.onended = res;
+      src.onerror = rej;
+      src.start(0);
+    });
+    return; // success — done
+  } catch(_) {}
 
-// ── TTS via StreamElements (Amazon Polly Lucia Neural) ───────
-// GET request → no CORS preflight, no API key, natural Spanish voice.
-// <audio src="url"> loads cross-origin without CORS enforcement.
-function ttsUrl(text) {
-  return `https://api.streamelements.com/kappa/v2/speech?voice=Lucia&text=${encodeURIComponent(text)}`;
-}
-
-function playUrl(url) {
-  return new Promise((res, rej) => {
-    const onErr = () => rej(new Error(`Audio ${audioEl.error?.code ?? 'err'}`));
-    audioEl.onended = res;
-    audioEl.onerror = onErr;
-    audioEl.src = url;
-    audioEl.play().catch(rej);
+  // ── Attempt 2: speechSynthesis (iOS system voices, no network needed) ──
+  await new Promise((res, rej) => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-ES';
+    u.rate = 0.92;
+    // Pick best available Spanish voice
+    const voices = speechSynthesis.getVoices();
+    const best = voices.find(v => v.lang === 'es-ES' && v.localService)
+               || voices.find(v => v.lang.startsWith('es'));
+    if (best) u.voice = best;
+    u.onend  = res;
+    u.onerror = e => rej(new Error(`Voz: ${e.error}`));
+    speechSynthesis.speak(u);
   });
 }
 
@@ -250,7 +275,7 @@ async function onStop() {
 
     setState('speaking');
     setSub(reply);
-    await playUrl(ttsUrl(reply));
+    await speak(reply);
 
   } catch(e) {
     setSub(`⚠️ ${e.message}`);
@@ -267,7 +292,7 @@ async function stt(blob, type) {
   fd.append('language', 'es');
   fd.append('response_format', 'json');
   const r = await fetch(GROQ_STT, { method:'POST', headers:{ Authorization:`Bearer ${groqK()}` }, body: fd });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Groq STT ${r.status}`); }
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `STT ${r.status}`); }
   return (await r.json()).text || '';
 }
 
@@ -277,7 +302,7 @@ async function llm() {
     headers: { 'Content-Type':'application/json', Authorization:`Bearer ${groqK()}` },
     body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role:'system', content:SYSTEM }, ...history], max_tokens: 200 })
   });
-  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `Groq LLM ${r.status}`); }
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.error?.message || `LLM ${r.status}`); }
   return (await r.json()).choices[0]?.message?.content || '';
 }
 
@@ -285,7 +310,7 @@ async function llm() {
 micBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (appState !== 'idle') return;
-  unlockAudio();   // unlock <audio> element from user gesture — iOS fix
+  unlockAudio();
   startRec();
 });
 micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
