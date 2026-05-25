@@ -189,17 +189,43 @@ function unlockAudio() {
 
 // ── TTS: iOS native speechSynthesis ──
 async function speak(text) {
+  // CRITICAL: Resume audio context before speaking (iOS requires this after recording)
+  try {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+  } catch(e) {
+    // Ignore audio context errors
+  }
+
   return new Promise((res, rej) => {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'es-ES';
     u.rate = 0.92;
+    u.volume = 1;
+
+    // Set voice if available (getVoices may be empty initially, that's OK)
     const voices = speechSynthesis.getVoices();
-    const best = voices.find(v => v.lang === 'es-ES' && v.localService)
-               || voices.find(v => v.lang.startsWith('es'));
-    if (best) u.voice = best;
-    u.onend  = () => res();
-    u.onerror = (e) => rej(new Error(e.error || 'error'));
-    speechSynthesis.cancel();
+    if (voices && voices.length > 0) {
+      const best = voices.find(v => v.lang === 'es-ES' && v.localService)
+                 || voices.find(v => v.lang.startsWith('es'));
+      if (best) u.voice = best;
+    }
+
+    let done = false;
+    u.onend = () => {
+      if (!done) {
+        done = true;
+        res();
+      }
+    };
+    u.onerror = (e) => {
+      if (!done) {
+        done = true;
+        rej(new Error(e.error || 'speak error'));
+      }
+    };
+
     speechSynthesis.speak(u);
   });
 }
