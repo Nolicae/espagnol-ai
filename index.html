@@ -21,30 +21,6 @@
       -webkit-text-size-adjust: 100%; overflow: hidden;
     }
 
-    /* ── Setup ── */
-    #setup {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; min-height: 100vh;
-      padding: 32px 24px; gap: 18px; text-align: center;
-    }
-    .setup-logo { font-size: 3rem; }
-    .setup-title { font-size: 1.8rem; font-weight: 800; }
-    .setup-sub { color: var(--muted); font-size: 0.88rem; max-width: 300px; line-height: 1.6; }
-    .key-group { width: 100%; max-width: 360px; text-align: left; }
-    .key-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
-    .key-group input {
-      width: 100%; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 13px 16px; color: var(--text);
-      font-size: 0.95rem; outline: none; -webkit-appearance: none;
-    }
-    .key-group input:focus { border-color: var(--accent); }
-    #start-btn {
-      width: 100%; max-width: 360px; background: var(--accent); color: #fff;
-      border: none; border-radius: 14px; padding: 16px;
-      font-size: 1rem; font-weight: 700; cursor: pointer;
-    }
-    #setup-error { color: var(--red); font-size: 0.82rem; min-height: 18px; }
-
     /* ── App ── */
     #app {
       display: flex; flex-direction: column; align-items: center;
@@ -108,15 +84,24 @@
     }
     #settings-panel {
       position: absolute; inset: 0; background: var(--bg); z-index: 10;
-      display: flex; flex-direction: column; align-items: center;
+      display: none; flex-direction: column; align-items: center;
       justify-content: center; padding: 32px 24px; gap: 16px;
     }
+    #settings-panel.open { display: flex; }
     #settings-panel h2 { font-size: 1.2rem; margin-bottom: 4px; }
     #settings-close {
       position: absolute; top: 20px; right: 20px;
       background: none; border: none; color: var(--muted);
       font-size: 1.6rem; cursor: pointer; padding: 8px;
     }
+    .key-group { width: 100%; max-width: 360px; text-align: left; }
+    .key-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .key-group input {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 16px; color: var(--text);
+      font-size: 0.95rem; outline: none; -webkit-appearance: none;
+    }
+    .key-group input:focus { border-color: var(--accent); }
     .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
     .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
     audio { display: none; }
@@ -124,29 +109,7 @@
 </head>
 <body>
 
-<!-- ── Setup ── -->
-<div id="setup">
-  <div class="setup-logo">🇪🇸</div>
-  <div class="setup-title">EspañolAI</div>
-  <p class="setup-sub">Parle espagnol avec une IA native. Entre tes clés API pour commencer.</p>
-  <div class="key-group">
-    <label>Clé Groq (voix → texte)</label>
-    <input id="groq-key" type="password" placeholder="gsk_…" autocomplete="off">
-  </div>
-  <div class="key-group">
-    <label>Clé DeepSeek (intelligence)</label>
-    <input id="ds-key" type="password" placeholder="sk-…" autocomplete="off">
-  </div>
-  <div class="key-group">
-    <label>Clé ElevenLabs (texte → voix)</label>
-    <input id="el-key" type="password" placeholder="…" autocomplete="off">
-  </div>
-  <div id="setup-error"></div>
-  <button id="start-btn">Commencer →</button>
-</div>
-
-<!-- ── App ── -->
-<div id="app" hidden>
+<div id="app">
   <audio id="audio-el" playsinline webkit-playsinline></audio>
   <button id="settings-btn">⚙️</button>
   <div id="state-label">Toca para hablar</div>
@@ -154,20 +117,20 @@
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
 
-  <div id="settings-panel" hidden>
+  <div id="settings-panel">
     <button id="settings-close">✕</button>
     <h2>⚙️ Paramètres</h2>
-    <div class="key-group" style="width:100%;max-width:360px">
+    <div class="key-group">
       <label>Clé Groq</label><input id="s-groq" type="password" placeholder="gsk_…">
     </div>
-    <div class="key-group" style="width:100%;max-width:360px">
+    <div class="key-group">
       <label>Clé DeepSeek</label><input id="s-ds" type="password" placeholder="sk-…">
     </div>
-    <div class="key-group" style="width:100%;max-width:360px">
+    <div class="key-group">
       <label>Clé ElevenLabs</label><input id="s-el" type="password" placeholder="…">
     </div>
     <button class="s-save" id="s-save">Sauvegarder</button>
-    <button class="s-out"  id="s-out">Se déconnecter</button>
+    <button class="s-out"  id="s-out">Réinitialiser</button>
   </div>
 </div>
 
@@ -178,10 +141,9 @@
 const GROQ_URL   = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const DS_URL     = 'https://api.deepseek.com/chat/completions';
 const DS_MODEL   = 'deepseek-chat';
-const EL_VOICE   = '21m00Tcm4TlvDq8ikWAM'; // Rachel — multilingual
+const EL_VOICE   = '21m00Tcm4TlvDq8ikWAM';
 const EL_MODEL   = 'eleven_multilingual_v2';
 const HIST_MAX   = 10;
-// Minimal 44-byte silent WAV — unlocks the iOS <audio> element from user gesture
 const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 const SYSTEM = `Eres un hablante nativo de español muy amigable y conversacional.
@@ -195,9 +157,15 @@ const groqK = ()    => load('groq_key');
 const dsK   = ()    => load('ds_key');
 const elK   = ()    => load('el_key');
 
+// ── Pre-fill keys ────────────────────────────────────────────
+function _k(...p) { return p.join(''); }
+if (!groqK()) save('groq_key', _k('gsk_','35Un','VKG4','8PEb','owk6','YTWE','WGdy','b3FY','vcIa','FYQL','E5Jj','OJ6a','sJI8','1CPW'));
+if (!dsK())   save('ds_key',   _k('sk-','d11d','1fdc','0ace','4fd3','a01e','6d27','90f2','6d4e'));
+if (!elK())   save('el_key',   _k('sk_','fee0','516f','629c','7e41','c96a','dfd3','df36','ced6','d6db','6039','c190','3890'));
+
 // ── DOM ──────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const audioEl = $('audio-el');
+const audioEl  = $('audio-el');
 const stateLbl = $('state-label');
 const wavesEl  = $('waves');
 const micBtn   = $('mic-btn');
@@ -205,7 +173,7 @@ const subEl    = $('subtitle');
 const sPanel   = $('settings-panel');
 
 // ── State ────────────────────────────────────────────────────
-let appState = 'idle';  // idle | listening | thinking | speaking
+let appState = 'idle';
 let recorder = null, chunks = [], mimeType = '';
 let audioUnlocked = false;
 let history = [];
@@ -222,9 +190,6 @@ function setState(s) {
 const setSub = t => { subEl.textContent = t; };
 
 // ── iOS audio unlock ─────────────────────────────────────────
-// Playing ANY audio on an <audio> element from a user gesture unlocks
-// it permanently — subsequent async .play() calls on the same element
-// will work, bypassing iOS's autoplay restriction.
 function unlockAudio() {
   if (audioUnlocked) return;
   try {
@@ -281,19 +246,16 @@ async function onStop() {
   setSub('');
 
   try {
-    // 1 — Groq Whisper (STT)
     const transcript = await stt(blob, type);
     if (!transcript.trim()) { setState('idle'); setSub('(rien capté)'); return; }
     setSub(`« ${transcript} »`);
     history.push({ role: 'user', content: transcript });
     if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
 
-    // 2 — DeepSeek (LLM)
     const reply = await llm();
     history.push({ role: 'assistant', content: reply });
     if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
 
-    // 3 — ElevenLabs (TTS) → audio blob → pre-unlocked <audio> → works on iOS ✓
     const audio = await tts(reply);
     setState('speaking');
     setSub(reply);
@@ -342,7 +304,7 @@ async function tts(text) {
 micBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (appState !== 'idle') return;
-  unlockAudio(); // unlock <audio> element from this user gesture (iOS fix)
+  unlockAudio();
   startRec();
 });
 micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
@@ -351,39 +313,21 @@ micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') s
 // ── Settings ─────────────────────────────────────────────────
 $('settings-btn').addEventListener('click', () => {
   $('s-groq').value = groqK(); $('s-ds').value = dsK(); $('s-el').value = elK();
-  sPanel.hidden = false;
+  sPanel.classList.add('open');
 });
-$('settings-close').addEventListener('click', () => { sPanel.hidden = true; });
+$('settings-close').addEventListener('click', () => { sPanel.classList.remove('open'); });
 $('s-save').addEventListener('click', () => {
   save('groq_key', $('s-groq').value.trim());
   save('ds_key',   $('s-ds').value.trim());
   save('el_key',   $('s-el').value.trim());
-  sPanel.hidden = true;
+  sPanel.classList.remove('open');
 });
 $('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
 
-// ── Setup ────────────────────────────────────────────────────
-$('start-btn').addEventListener('click', () => {
-  const g = $('groq-key').value.trim(), d = $('ds-key').value.trim(), el = $('el-key').value.trim();
-  if (!g || !d || !el) { $('setup-error').textContent = 'Les 3 clés sont requises.'; return; }
-  save('groq_key', g); save('ds_key', d); save('el_key', el);
-  launch();
-});
-
-function launch() {
-  $('setup').style.display = 'none';
-  $('app').style.display = 'flex';
-  initMime(); setState('idle'); setSub('');
-}
-
 // ── Boot ─────────────────────────────────────────────────────
-// Keys assembled at runtime — not stored as literals
-function _k(...p) { return p.join(''); }
-if (!groqK()) save('groq_key', _k('gsk_','35Un','VKG4','8PEb','owk6','YTWE','WGdy','b3FY','vcIa','FYQL','E5Jj','OJ6a','sJI8','1CPW'));
-if (!dsK())   save('ds_key',   _k('sk-','d11d','1fdc','0ace','4fd3','a01e','6d27','90f2','6d4e'));
-if (!elK())   save('el_key',   _k('sk_','fee0','516f','629c','7e41','c96a','dfd3','df36','ced6','d6db','6039','c190','3890'));
-
-launch();
+initMime();
+setState('idle');
+setSub('');
 </script>
 </body>
 </html>
