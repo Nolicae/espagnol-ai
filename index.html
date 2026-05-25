@@ -193,38 +193,13 @@ async function speak(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'es-ES';
     u.rate = 0.92;
-    u.volume = 1;
-
     const voices = speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      const best = voices.find(v => v.lang === 'es-ES' && v.localService)
-                 || voices.find(v => v.lang.startsWith('es'));
-      if (best) u.voice = best;
-    }
-
-    let done = false;
-    const timer = setTimeout(() => {
-      if (!done) {
-        done = true;
-        rej(new Error('timeout'));
-      }
-    }, 20000);
-
-    u.onend = () => {
-      if (!done) {
-        done = true;
-        clearTimeout(timer);
-        res();
-      }
-    };
-    u.onerror = (e) => {
-      if (!done) {
-        done = true;
-        clearTimeout(timer);
-        rej(new Error(e.error || 'error'));
-      }
-    };
-
+    const best = voices.find(v => v.lang === 'es-ES' && v.localService)
+               || voices.find(v => v.lang.startsWith('es'));
+    if (best) u.voice = best;
+    u.onend  = () => res();
+    u.onerror = (e) => rej(new Error(e.error || 'error'));
+    speechSynthesis.cancel();
     speechSynthesis.speak(u);
   });
 }
