@@ -371,7 +371,8 @@ $('start-btn').addEventListener('click', () => {
 });
 
 function launch() {
-  $('setup').hidden = true; $('app').hidden = false;
+  $('setup').style.display = 'none';
+  $('app').style.display = 'flex';
   initMime(); setState('idle'); setSub('');
 }
 
