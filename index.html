@@ -104,13 +104,11 @@
     .key-group input:focus { border-color: var(--accent); }
     .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
     .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
-    audio { display: none; }
   </style>
 </head>
 <body>
 
 <div id="app">
-  <audio id="audio-el" playsinline webkit-playsinline></audio>
   <button id="settings-btn">⚙️</button>
   <div id="state-label">Toca para hablar</div>
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
@@ -139,7 +137,6 @@ const GROQ_URL   = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
-const SILENT_WAV = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
 const SYSTEM = `Eres un hablante nativo de español muy amigable y conversacional.
 Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
@@ -158,7 +155,6 @@ if (!hfK())   save('hf_key',   _k('hf_','oJkF','Nhxw','SAYD','itTz','RYgg','YPNG
 
 // ── DOM ──────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const audioEl  = $('audio-el');
 const stateLbl = $('state-label');
 const wavesEl  = $('waves');
 const micBtn   = $('mic-btn');
@@ -168,7 +164,7 @@ const sPanel   = $('settings-panel');
 // ── State ────────────────────────────────────────────────────
 let appState = 'idle';
 let recorder = null, chunks = [], mimeType = '';
-let audioUnlocked = false;
+let audioCtx = null;
 let history = [];
 
 // ── UI ───────────────────────────────────────────────────────
@@ -182,22 +178,24 @@ function setState(s) {
 }
 const setSub = t => { subEl.textContent = t; };
 
-// ── iOS audio unlock ─────────────────────────────────────────
+// ── Web Audio API (iOS-safe) ──────────────────────────────────
 function unlockAudio() {
-  if (audioUnlocked) return;
+  if (audioCtx) return;
   try {
-    audioEl.src = SILENT_WAV;
-    audioEl.play().then(() => { audioEl.pause(); audioEl.src = ''; audioUnlocked = true; }).catch(()=>{});
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume().catch(()=>{});
   } catch(_){}
 }
 
-function playBlob(blob) {
-  return new Promise((res, rej) => {
-    const url = URL.createObjectURL(blob);
-    audioEl.onended = () => { URL.revokeObjectURL(url); res(); };
-    audioEl.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Lecture impossible')); };
-    audioEl.src = url;
-    audioEl.play().catch(rej);
+async function playBlob(blob) {
+  const buf = await blob.arrayBuffer();
+  const decoded = await audioCtx.decodeAudioData(buf);
+  return new Promise((res) => {
+    const src = audioCtx.createBufferSource();
+    src.buffer = decoded;
+    src.connect(audioCtx.destination);
+    src.onended = res;
+    src.start(0);
   });
 }
 
