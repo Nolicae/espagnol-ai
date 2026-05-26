@@ -191,11 +191,15 @@ let audioCtx = null;
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume().catch(() => {});
-  // iOS: SpeechSynthesis must be triggered inside a user-gesture handler
+  // iOS: keep audio session alive with a slow silent warmup that outlasts network calls
   if (isIOS && window.speechSynthesis) {
-    const u = new SpeechSynthesisUtterance('');
-    u.volume = 0;
-    window.speechSynthesis.speak(u);
+    window.speechSynthesis.cancel();
+    const warmup = new SpeechSynthesisUtterance('preparando la respuesta');
+    warmup.rate   = 0.1; // ~10s — covers STT + LLM round-trip
+    warmup.volume = 0;   // silent but iOS tracks real duration
+    const v = pickSpanishVoice();
+    if (v) { warmup.voice = v; warmup.lang = v.lang; nativeVoice = v; }
+    window.speechSynthesis.speak(warmup);
   }
 }
 
@@ -262,16 +266,25 @@ function speakNativeChunk(text, voice) {
 
     utt.onend   = () => finish();
     utt.onerror = e => finish(new Error(e.error || 'speech-error'));
+
+    // iOS: cancel warmup + speak in same sync tick to transfer the audio session
+    if (isIOS) window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utt);
 
-    // iOS: onend often never fires — poll .speaking state as reliable fallback
+    // Fail fast if speech never starts within 1.5s (iOS session expired)
+    const startTid = setTimeout(() => {
+      if (!window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        finish(new Error('no-start'));
+      }
+    }, 1500);
+
+    // Poll .speaking as reliable onend fallback (iOS onend unreliable)
     let seenSpeaking = false;
     const poll = setInterval(() => {
-      if (window.speechSynthesis.speaking) { seenSpeaking = true; return; }
+      if (window.speechSynthesis.speaking) { seenSpeaking = true; clearTimeout(startTid); return; }
       if (seenSpeaking) finish();
     }, 100);
-
-    setTimeout(() => finish(new Error('timeout')), 30000); // safety cap
   });
 }
 
