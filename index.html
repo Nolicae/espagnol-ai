@@ -106,11 +106,6 @@
     #chrono-btns { display:flex; gap:8px; }
     #chrono-btns button { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:6px 14px; font-size:0.82rem; cursor:pointer; }
     #chrono-btns button:hover { border-color:var(--accent); }
-    /* TTS loading */
-    #tts-loading { display:none; flex-direction:column; align-items:center; gap:6px; width:100%; max-width:280px; }
-    #tts-bar-wrap { width:100%; height:5px; background:var(--surface); border-radius:3px; overflow:hidden; }
-    #tts-bar { height:100%; width:0%; background:var(--accent); border-radius:3px; transition:width 0.3s; }
-    #tts-label { font-size:0.72rem; color:var(--muted); }
   </style>
 </head>
 <body>
@@ -121,10 +116,6 @@
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
-  <div id="tts-loading">
-    <span id="tts-label">Chargement de la voix…</span>
-    <div id="tts-bar-wrap"><div id="tts-bar"></div></div>
-  </div>
   <!-- chrono -->
   <div id="chrono">
     <span id="chrono-display">00:00</span>
@@ -194,44 +185,72 @@ function setState(s) {
 
 const setSub = t => { subEl.textContent = t; };
 
-// ── Audio context ────────────────────────────────────────────
+// ── Audio context (unlocked by user gesture; stays authorized across async on iOS) ──
 let audioCtx = null;
 
 function unlockAudio() {
-  // Créer l'AudioContext dans le contexte du geste (iOS : démarré en état "running")
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  audioCtx.resume().catch(() => {});
 }
 
-// ── TTS — Transformers.js local (Xenova/mms-tts-spa) ─────────
-// Modèle VITS entraîné spécifiquement sur l'espagnol (~50 Mo)
-// Fonctionne en local via WebAssembly — pas de réseau après le premier chargement
-let synthesizer = null;
+// ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
+// Priority list from readium/speech (web-speech-recommended-voices)
+const RECOMMENDED_ES = [
+  // veryHigh — Microsoft Online Natural (Edge)
+  'Microsoft Elvira Online','Microsoft Alvaro Online','Microsoft Dalia Online',
+  'Microsoft Jorge Online','Microsoft Elena Online','Microsoft Tomas Online',
+  'Microsoft Paloma Online','Microsoft Alonso Online','Microsoft Ximena Online',
+  'Microsoft Salome Online','Microsoft Catalina Online','Microsoft Lorenzo Online',
+  // high — Google (Chrome / Android)
+  'Google español','Google español de Estados Unidos',
+  'Google español 1 (Natural)','Google español 2 (Natural)',
+  'Google español 3 (Natural)','Google español 4 (Natural)',
+  'Google español 5 (Natural)',
+  // normal — Microsoft Windows
+  'Microsoft Helena','Microsoft Laura','Microsoft Pablo','Microsoft Sabina','Microsoft Raul',
+  // low — Apple
+  'Marisol','Mónica','Jorge','Angelica','Paulina','Juan','Isabela','Diego',
+  'Francesca','Soledad','Jimena','Carlos',
+];
 
-async function loadTTS() {
-  $('tts-loading').style.display = 'flex';
-  try {
-    const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-    synthesizer = await pipeline('text-to-speech', 'Xenova/mms-tts-spa', {
-      progress_callback: p => {
-        if (p.status === 'progress' && p.total) {
-          const pct = Math.round((p.loaded / p.total) * 100);
-          $('tts-bar').style.width = pct + '%';
-          $('tts-label').textContent = `Chargement de la voix… ${pct}%`;
-        }
-      }
-    });
-  } catch (e) {
-    $('tts-label').textContent = '⚠️ Modèle vocal indisponible';
-    console.error('TTS load error:', e);
-    return;
+let nativeVoice = null; // null=pending, false=none, SpeechSynthesisVoice=ready
+
+function pickSpanishVoice() {
+  const voices = window.speechSynthesis?.getVoices() || [];
+  for (const name of RECOMMENDED_ES) {
+    const v = voices.find(v => v.name.startsWith(name));
+    if (v) return v;
   }
-  $('tts-loading').style.display = 'none';
+  return voices.find(v => v.lang.startsWith('es')) || false;
 }
 
-loadTTS();
+function initNativeVoice() {
+  return new Promise(resolve => {
+    const voices = window.speechSynthesis?.getVoices() || [];
+    if (voices.length) { nativeVoice = pickSpanishVoice(); resolve(nativeVoice); return; }
+    const tid = setTimeout(() => { nativeVoice = false; resolve(false); }, 3000);
+    window.speechSynthesis.onvoiceschanged = () => {
+      clearTimeout(tid);
+      nativeVoice = pickSpanishVoice();
+      resolve(nativeVoice);
+    };
+  });
+}
 
-function splitText(text, max = 150) {
+function speakNativeChunk(text, voice) {
+  return new Promise((resolve, reject) => {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.voice = voice;
+    utt.lang  = voice.lang;
+    utt.rate  = 1;
+    utt.onend   = resolve;
+    utt.onerror = e => reject(new Error(e.error));
+    window.speechSynthesis.speak(utt);
+  });
+}
+
+// Google TTS has a ~200 char limit per request, so split at sentence boundaries.
+function splitText(text, max = 180) {
   const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
   const chunks = [];
   let cur = '';
@@ -243,23 +262,31 @@ function splitText(text, max = 150) {
   return chunks;
 }
 
-async function playFloat32(audioData, sampleRate) {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
-  const buf = audioCtx.createBuffer(1, audioData.length, sampleRate);
-  buf.getChannelData(0).set(audioData);
+async function speakChunk(text) {
+  const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+  if (!r.ok) throw new Error(`TTS ${r.status}`);
+  const decoded = await audioCtx.decodeAudioData(await r.arrayBuffer());
   const src = audioCtx.createBufferSource();
-  src.buffer = buf;
+  src.buffer = decoded;
   src.connect(audioCtx.destination);
   return new Promise(resolve => { src.onended = resolve; src.start(0); });
 }
 
 async function speak(text) {
-  if (!synthesizer) { setSub('⚠️ Modèle vocal en cours de chargement…'); return; }
-  for (const chunk of splitText(text)) {
-    const out = await synthesizer(chunk);
-    await playFloat32(out.audio, out.sampling_rate);
+  if (nativeVoice === null) await initNativeVoice();
+
+  if (nativeVoice) {
+    try {
+      for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
+      return;
+    } catch {
+      nativeVoice = false; // native failed, don't retry
+    }
   }
+
+  // Fallback: Google Translate TTS via Vercel proxy
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  for (const chunk of splitText(text)) await speakChunk(chunk);
 }
 
 // ── MediaRecorder ────────────────────────────────────────────
