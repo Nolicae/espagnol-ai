@@ -190,28 +190,10 @@ let audioCtx = null;
 
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (isIOS) {
-    // Unlock AudioContext (needs gesture) then suspend: avoids audio session conflict with SpeechSynthesis
-    audioCtx.resume().then(() => audioCtx.suspend()).catch(() => {});
-    // Warmup: volume=0.01 (not 0) so iOS produces real audio, keeping session alive ~10s
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const warmup = new SpeechSynthesisUtterance('preparando la respuesta');
-      warmup.rate   = 0.1;
-      warmup.volume = 0.01;
-      const v = pickSpanishVoice();
-      if (v) { warmup.voice = v; warmup.lang = v.lang; nativeVoice = v; }
-      window.speechSynthesis.speak(warmup);
-    }
-  } else {
-    audioCtx.resume().catch(() => {});
-  }
+  audioCtx.resume().catch(() => {});
 }
 
 // ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
-// iOS WebKit (all iOS browsers incl. Chrome) has unreliable SpeechSynthesis onend → force Google TTS
-const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-
 // Priority list from readium/speech (web-speech-recommended-voices)
 const RECOMMENDED_ES = [
   // veryHigh — Microsoft Online Natural (Edge)
@@ -261,45 +243,9 @@ function speakNativeChunk(text, voice) {
     utt.voice = voice;
     utt.lang  = voice.lang;
     utt.rate  = 1;
-
-    let done = false, startTid, zombieTid;
-    const finish = err => {
-      if (done) return; done = true;
-      clearInterval(poll);
-      clearTimeout(startTid);
-      clearTimeout(zombieTid);
-      if (err) window.speechSynthesis.cancel();
-      err ? reject(err) : resolve();
-    };
-
-    utt.onend   = () => finish();
-    utt.onerror = e => finish(new Error(e.error || 'speech-error'));
-
-    // iOS: cancel warmup + speak in same sync tick to transfer the audio session
-    if (isIOS) window.speechSynthesis.cancel();
+    utt.onend   = resolve;
+    utt.onerror = e => reject(new Error(e.error));
     window.speechSynthesis.speak(utt);
-
-    // Fail fast if speech never starts within 1.5s (iOS session expired)
-    startTid = setTimeout(() => {
-      if (!window.speechSynthesis.speaking) finish(new Error('no-start'));
-    }, 1500);
-
-    // Poll .speaking as reliable onend fallback (iOS onend unreliable)
-    // + zombie watchdog: if .speaking stays true for >4s after first seen, iOS is stuck silent
-    let seenSpeaking = false;
-    const poll = setInterval(() => {
-      if (window.speechSynthesis.speaking) {
-        if (!seenSpeaking) {
-          seenSpeaking = true;
-          clearTimeout(startTid);
-          zombieTid = setTimeout(() => {
-            if (window.speechSynthesis.speaking) finish(new Error('zombie'));
-          }, 4000);
-        }
-        return;
-      }
-      if (seenSpeaking) { clearTimeout(zombieTid); finish(); }
-    }, 100);
   });
 }
 
@@ -328,17 +274,17 @@ async function speakChunk(text) {
 
 async function speak(text) {
   if (nativeVoice === null) await initNativeVoice();
+
   if (nativeVoice) {
     try {
       for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
       return;
     } catch {
-      nativeVoice = false; // native failed, fallback below
+      nativeVoice = false; // native failed, don't retry
     }
   }
 
-  // Fallback: Google Translate TTS — clear SpeechSynthesis first (iOS audio session conflict)
-  window.speechSynthesis?.cancel();
+  // Fallback: Google Translate TTS via Vercel proxy
   if (audioCtx.state === 'suspended') await audioCtx.resume();
   for (const chunk of splitText(text)) await speakChunk(chunk);
 }
