@@ -250,21 +250,25 @@ function initNativeVoice() {
 
 function speakNativeChunk(text, voice) {
   return new Promise((resolve, reject) => {
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.voice = voice;
-    utt.lang  = voice.lang;
-    utt.rate  = 1;
-    let done = false;
-    const finish = err => { if (done) return; done = true; clearInterval(poll); err ? reject(err) : resolve(); };
-    utt.onend   = () => finish();
-    utt.onerror = e  => finish(new Error(e.error || 'speech-error'));
-    window.speechSynthesis.speak(utt);
-    // Fallback poll : onend pas toujours fiable sur iOS
-    let seen = false;
-    const poll = setInterval(() => {
-      if (window.speechSynthesis.speaking) { seen = true; return; }
-      if (seen) finish();
-    }, 100);
+    if (window.speechSynthesis.speaking) { resolve(); return; }
+    window.speechSynthesis.cancel();
+    setTimeout(() => {
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.voice = voice;
+      utt.lang  = voice.lang;
+      utt.rate  = 1;
+      let done = false;
+      const finish = err => { if (done) return; done = true; clearInterval(poll); err ? reject(err) : resolve(); };
+      utt.onend   = () => finish();
+      utt.onerror = e  => finish(new Error(e.error || 'speech-error'));
+      window.speechSynthesis.speak(utt);
+      // Fallback poll : onend pas toujours fiable sur iOS
+      let seen = false;
+      const poll = setInterval(() => {
+        if (window.speechSynthesis.speaking) { seen = true; return; }
+        if (seen) finish();
+      }, 100);
+    }, 10);
   });
 }
 
