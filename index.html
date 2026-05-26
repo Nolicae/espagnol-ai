@@ -194,6 +194,9 @@ function unlockAudio() {
 }
 
 // ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
+// iOS WebKit (all iOS browsers incl. Chrome) has unreliable SpeechSynthesis onend → force Google TTS
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
 // Priority list from readium/speech (web-speech-recommended-voices)
 const RECOMMENDED_ES = [
   // veryHigh — Microsoft Online Natural (Edge)
@@ -243,42 +246,9 @@ function speakNativeChunk(text, voice) {
     utt.voice = voice;
     utt.lang  = voice.lang;
     utt.rate  = 1;
-
-    let done = false, noStartTid, zombieTid;
-    const finish = err => {
-      if (done) return; done = true;
-      clearTimeout(noStartTid);
-      clearTimeout(zombieTid);
-      clearInterval(poll);
-      if (err) window.speechSynthesis.cancel();
-      err ? reject(err) : resolve();
-    };
-
-    utt.onend   = () => finish();
-    utt.onerror = e  => finish(new Error(e.error || 'speech-error'));
+    utt.onend   = resolve;
+    utt.onerror = e => reject(new Error(e.error));
     window.speechSynthesis.speak(utt);
-
-    // Si la parole ne démarre pas dans 3s → session iOS expirée → Edge TTS
-    noStartTid = setTimeout(() => {
-      if (!window.speechSynthesis.speaking) finish(new Error('no-start'));
-    }, 3000);
-
-    // Poll fin naturelle + zombie guard (déclenché seulement si parole bien démarrée)
-    let seenSpeaking = false;
-    const poll = setInterval(() => {
-      if (window.speechSynthesis.speaking) {
-        if (!seenSpeaking) {
-          seenSpeaking = true;
-          clearTimeout(noStartTid);
-          // Zombie : speaking reste true trop longtemps (iOS muet)
-          // Durée max = texte × 120ms (12 chars/s), minimum 12s
-          zombieTid = setTimeout(() => finish(new Error('zombie')),
-            Math.max(12000, text.length * 120));
-        }
-        return;
-      }
-      if (seenSpeaking) finish(); // fin naturelle via poll
-    }, 100);
   });
 }
 
@@ -306,14 +276,15 @@ async function speakChunk(text) {
 }
 
 async function speak(text) {
-  if (nativeVoice === null) await initNativeVoice();
-
-  if (nativeVoice) {
-    try {
-      for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
-      return;
-    } catch {
-      nativeVoice = false; // native failed, don't retry
+  if (!isIOS) {
+    if (nativeVoice === null) await initNativeVoice();
+    if (nativeVoice) {
+      try {
+        for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
+        return;
+      } catch {
+        nativeVoice = false; // native failed, don't retry
+      }
     }
   }
 
