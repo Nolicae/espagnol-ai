@@ -1,4 +1,4 @@
-// Vercel serverless function — Edge TTS (Microsoft Edge neural voices, no API key)
+// Vercel serverless — Edge TTS neural (es-ES-AlvaroNeural), fallback Google TTS
 const WebSocket = require('ws');
 
 function uuid() {
@@ -9,8 +9,8 @@ function uuid() {
 }
 
 function escapeXml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&apos;');
 }
 
 function edgeTTS(text, voice) {
@@ -21,13 +21,20 @@ function edgeTTS(text, voice) {
 
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Origin': 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
+      }
     });
     const chunks = [];
-    const timer = setTimeout(() => { ws.terminate(); reject(new Error('edge-tts timeout')); }, 10000);
+    let resolved = false;
+    const timer = setTimeout(() => { ws.terminate(); reject(new Error('timeout')); }, 9000);
 
     ws.on('open', () => {
-      // 1. Config audio
       ws.send(
         `X-Timestamp:${ts}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n` +
         JSON.stringify({ context: { synthesis: { audio: {
@@ -35,7 +42,6 @@ function edgeTTS(text, voice) {
           outputFormat: 'audio-24khz-48kbitrate-mono-mp3'
         }}}})
       );
-      // 2. SSML
       const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='es-ES'>` +
         `<voice name='${voice}'>${escapeXml(text)}</voice></speak>`;
       ws.send(
@@ -45,7 +51,6 @@ function edgeTTS(text, voice) {
 
     ws.on('message', (data, isBinary) => {
       if (isBinary) {
-        // Binary frame: [2-byte header length][header][audio]
         const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
         const headerLen = buf.readUInt16BE(0);
         const header = buf.slice(2, 2 + headerLen).toString();
@@ -55,7 +60,8 @@ function edgeTTS(text, voice) {
         }
       } else {
         const msg = typeof data === 'string' ? data : data.toString();
-        if (msg.includes('Path:turn.end')) {
+        if (msg.includes('Path:turn.end') && !resolved) {
+          resolved = true;
           clearTimeout(timer);
           ws.close();
           resolve(Buffer.concat(chunks));
@@ -64,20 +70,38 @@ function edgeTTS(text, voice) {
     });
 
     ws.on('error', e => { clearTimeout(timer); reject(e); });
+    ws.on('close', () => {
+      clearTimeout(timer);
+      if (!resolved && chunks.length > 0) { resolved = true; resolve(Buffer.concat(chunks)); }
+      else if (!resolved) reject(new Error('closed without audio'));
+    });
   });
+}
+
+async function googleTTS(text) {
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=es&client=tw-ob`;
+  const r = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' }
+  });
+  if (!r.ok) throw new Error(`google-tts ${r.status}`);
+  return Buffer.from(await r.arrayBuffer());
 }
 
 module.exports = async function handler(req, res) {
   const { text, voice = 'es-ES-AlvaroNeural' } = req.query;
   if (!text) return res.status(400).end('missing text');
 
+  let audio;
   try {
-    const audio = await edgeTTS(text, voice);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'no-store');
-    res.end(audio);
+    audio = await edgeTTS(text, voice);
+    console.log('edge-tts ok');
   } catch (e) {
-    console.error('edge-tts error:', e.message);
-    res.status(500).end('TTS error');
+    console.warn('edge-tts failed:', e.message, '— fallback google');
+    try { audio = await googleTTS(text); }
+    catch (e2) { return res.status(500).end('TTS error'); }
   }
+
+  res.setHeader('Content-Type', 'audio/mpeg');
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(audio);
 };
