@@ -106,6 +106,11 @@
     #chrono-btns { display:flex; gap:8px; }
     #chrono-btns button { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:6px 14px; font-size:0.82rem; cursor:pointer; }
     #chrono-btns button:hover { border-color:var(--accent); }
+    /* TTS loading */
+    #tts-loading { display:none; flex-direction:column; align-items:center; gap:6px; width:100%; max-width:280px; }
+    #tts-bar-wrap { width:100%; height:5px; background:var(--surface); border-radius:3px; overflow:hidden; }
+    #tts-bar { height:100%; width:0%; background:var(--accent); border-radius:3px; transition:width 0.3s; }
+    #tts-label { font-size:0.72rem; color:var(--muted); }
   </style>
 </head>
 <body>
@@ -116,6 +121,10 @@
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
+  <div id="tts-loading">
+    <span id="tts-label">Chargement de la voix…</span>
+    <div id="tts-bar-wrap"><div id="tts-bar"></div></div>
+  </div>
   <!-- chrono -->
   <div id="chrono">
     <span id="chrono-display">00:00</span>
@@ -185,113 +194,44 @@ function setState(s) {
 
 const setSub = t => { subEl.textContent = t; };
 
-// ── Audio unlock ─────────────────────────────────────────────
-// Audio silencieux pour initialiser la session audio iOS dès le premier geste
-const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-silentAudio.volume = 0;
-
-// Tentative dès le chargement (bloqué sur iOS sans geste, mais déclenché ensuite)
-document.addEventListener('DOMContentLoaded', () => { silentAudio.play().catch(() => {}); });
+// ── Audio context ────────────────────────────────────────────
+let audioCtx = null;
 
 function unlockAudio() {
-  silentAudio.play().catch(() => {});
-  // Warmup speechSynthesis dans le contexte du geste utilisateur (iOS exige ça)
-  if (window.speechSynthesis) {
-    const w = new SpeechSynthesisUtterance(' ');
-    w.volume = 0;
-    window.speechSynthesis.speak(w);
-  }
-}
-
-// ── TTS — native Web Speech API ──────────────────────────────
-const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-// Priority list from readium/speech (web-speech-recommended-voices)
-const RECOMMENDED_ES = [
-  // veryHigh — Microsoft Online Natural (Edge)
-  'Microsoft Elvira Online','Microsoft Alvaro Online','Microsoft Dalia Online',
-  'Microsoft Jorge Online','Microsoft Elena Online','Microsoft Tomas Online',
-  'Microsoft Paloma Online','Microsoft Alonso Online','Microsoft Ximena Online',
-  'Microsoft Salome Online','Microsoft Catalina Online','Microsoft Lorenzo Online',
-  // high — Google (Chrome / Android)
-  'Google español','Google español de Estados Unidos',
-  'Google español 1 (Natural)','Google español 2 (Natural)',
-  'Google español 3 (Natural)','Google español 4 (Natural)',
-  'Google español 5 (Natural)',
-  // normal — Microsoft Windows
-  'Microsoft Helena','Microsoft Laura','Microsoft Pablo','Microsoft Sabina','Microsoft Raul',
-  // low — Apple
-  'Marisol','Mónica','Jorge','Angelica','Paulina','Juan','Isabela','Diego',
-  'Francesca','Soledad','Jimena','Carlos',
-];
-
-let nativeVoice = null; // null=pending, false=none, SpeechSynthesisVoice=ready
-
-function pickSpanishVoice() {
-  const voices = window.speechSynthesis?.getVoices() || [];
-  for (const name of RECOMMENDED_ES) {
-    const v = voices.find(v => v.name.startsWith(name));
-    if (v) return v;
-  }
-  return voices.find(v => v.lang.startsWith('es')) || false;
-}
-
-function initNativeVoice() {
-  return new Promise(resolve => {
-    const voices = window.speechSynthesis?.getVoices() || [];
-    if (voices.length) { nativeVoice = pickSpanishVoice(); resolve(nativeVoice); return; }
-    const tid = setTimeout(() => { nativeVoice = false; resolve(false); }, 3000);
-    window.speechSynthesis.onvoiceschanged = () => {
-      clearTimeout(tid);
-      nativeVoice = pickSpanishVoice();
-      resolve(nativeVoice);
-    };
-  });
-}
-
-let audioCtx = null;
-function getAudioCtx() {
+  // Créer l'AudioContext dans le contexte du geste (iOS : démarré en état "running")
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  return audioCtx;
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
 }
 
-function playSilence(duration) {
-  return new Promise(resolve => {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    gain.gain.value = 0;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-    osc.onended = resolve;
-  });
-}
+// ── TTS — Transformers.js local (Xenova/mms-tts-spa) ─────────
+// Modèle VITS entraîné spécifiquement sur l'espagnol (~50 Mo)
+// Fonctionne en local via WebAssembly — pas de réseau après le premier chargement
+let synthesizer = null;
 
-function speakNativeChunk(text, voice) {
-  return new Promise((resolve, reject) => {
-    if (window.speechSynthesis.speaking) { resolve(); return; }
-    window.speechSynthesis.cancel();
-    playSilence(0.1).then(() => {
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.voice = voice;
-      utt.lang  = voice.lang;
-      utt.rate  = 1;
-      let done = false;
-      const finish = err => { if (done) return; done = true; clearInterval(poll); err ? reject(err) : resolve(); };
-      utt.onend   = () => finish();
-      utt.onerror = e  => finish(new Error(e.error || 'speech-error'));
-      window.speechSynthesis.speak(utt);
-      let seen = false;
-      const poll = setInterval(() => {
-        if (window.speechSynthesis.speaking) { seen = true; return; }
-        if (seen) finish();
-      }, 100);
+async function loadTTS() {
+  $('tts-loading').style.display = 'flex';
+  try {
+    const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+    synthesizer = await pipeline('text-to-speech', 'Xenova/mms-tts-spa', {
+      progress_callback: p => {
+        if (p.status === 'progress' && p.total) {
+          const pct = Math.round((p.loaded / p.total) * 100);
+          $('tts-bar').style.width = pct + '%';
+          $('tts-label').textContent = `Chargement de la voix… ${pct}%`;
+        }
+      }
     });
-  });
+  } catch (e) {
+    $('tts-label').textContent = '⚠️ Modèle vocal indisponible';
+    console.error('TTS load error:', e);
+    return;
+  }
+  $('tts-loading').style.display = 'none';
 }
 
-function splitText(text, max = 180) {
+loadTTS();
+
+function splitText(text, max = 150) {
   const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
   const chunks = [];
   let cur = '';
@@ -303,12 +243,23 @@ function splitText(text, max = 180) {
   return chunks;
 }
 
+async function playFloat32(audioData, sampleRate) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  const buf = audioCtx.createBuffer(1, audioData.length, sampleRate);
+  buf.getChannelData(0).set(audioData);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(audioCtx.destination);
+  return new Promise(resolve => { src.onended = resolve; src.start(0); });
+}
+
 async function speak(text) {
-  if (nativeVoice === null) await initNativeVoice();
-  if (!nativeVoice) { setSub('⚠️ Sin voz española'); return; }
-  window.speechSynthesis.cancel();
-  if (isIOS) await new Promise(r => setTimeout(r, 100));
-  for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
+  if (!synthesizer) { setSub('⚠️ Modèle vocal en cours de chargement…'); return; }
+  for (const chunk of splitText(text)) {
+    const out = await synthesizer(chunk);
+    await playFloat32(out.audio, out.sampling_rate);
+  }
 }
 
 // ── MediaRecorder ────────────────────────────────────────────
