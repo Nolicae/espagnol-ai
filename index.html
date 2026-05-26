@@ -185,15 +185,26 @@ function setState(s) {
 
 const setSub = t => { subEl.textContent = t; };
 
-// ── Audio context (unlocked by user gesture; stays authorized across async on iOS) ──
-let audioCtx = null;
+// ── Audio unlock ─────────────────────────────────────────────
+// Audio silencieux pour initialiser la session audio iOS dès le premier geste
+const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+silentAudio.volume = 0;
+
+// Tentative dès le chargement (bloqué sur iOS sans geste, mais déclenché ensuite)
+document.addEventListener('DOMContentLoaded', () => { silentAudio.play().catch(() => {}); });
 
 function unlockAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume().catch(() => {});
+  silentAudio.play().catch(() => {});
+  // Warmup speechSynthesis dans le contexte du geste utilisateur (iOS exige ça)
+  if (window.speechSynthesis) {
+    const w = new SpeechSynthesisUtterance(' ');
+    w.volume = 0;
+    window.speechSynthesis.speak(w);
+  }
 }
 
-// ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
+// ── TTS — native Web Speech API ──────────────────────────────
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 // Priority list from readium/speech (web-speech-recommended-voices)
 const RECOMMENDED_ES = [
   // veryHigh — Microsoft Online Natural (Edge)
@@ -243,13 +254,20 @@ function speakNativeChunk(text, voice) {
     utt.voice = voice;
     utt.lang  = voice.lang;
     utt.rate  = 1;
-    utt.onend   = resolve;
-    utt.onerror = e => reject(new Error(e.error));
+    let done = false;
+    const finish = err => { if (done) return; done = true; clearInterval(poll); err ? reject(err) : resolve(); };
+    utt.onend   = () => finish();
+    utt.onerror = e  => finish(new Error(e.error || 'speech-error'));
     window.speechSynthesis.speak(utt);
+    // Fallback poll : onend pas toujours fiable sur iOS
+    let seen = false;
+    const poll = setInterval(() => {
+      if (window.speechSynthesis.speaking) { seen = true; return; }
+      if (seen) finish();
+    }, 100);
   });
 }
 
-// Google TTS has a ~200 char limit per request, so split at sentence boundaries.
 function splitText(text, max = 180) {
   const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
   const chunks = [];
@@ -262,31 +280,12 @@ function splitText(text, max = 180) {
   return chunks;
 }
 
-async function speakChunk(text) {
-  const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
-  if (!r.ok) throw new Error(`TTS ${r.status}`);
-  const decoded = await audioCtx.decodeAudioData(await r.arrayBuffer());
-  const src = audioCtx.createBufferSource();
-  src.buffer = decoded;
-  src.connect(audioCtx.destination);
-  return new Promise(resolve => { src.onended = resolve; src.start(0); });
-}
-
 async function speak(text) {
   if (nativeVoice === null) await initNativeVoice();
-
-  if (nativeVoice) {
-    try {
-      for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
-      return;
-    } catch {
-      nativeVoice = false; // native failed, don't retry
-    }
-  }
-
-  // Fallback: Google Translate TTS via Vercel proxy
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
-  for (const chunk of splitText(text)) await speakChunk(chunk);
+  if (!nativeVoice) { setSub('⚠️ Sin voz española'); return; }
+  window.speechSynthesis.cancel();
+  if (isIOS) await new Promise(r => setTimeout(r, 100));
+  for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
 }
 
 // ── MediaRecorder ────────────────────────────────────────────
