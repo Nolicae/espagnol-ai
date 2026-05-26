@@ -194,6 +194,9 @@ function unlockAudio() {
 }
 
 // ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
+// iOS WebKit (all iOS browsers incl. Chrome) has unreliable SpeechSynthesis onend → force Google TTS
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+
 // Priority list from readium/speech (web-speech-recommended-voices)
 const RECOMMENDED_ES = [
   // veryHigh — Microsoft Online Natural (Edge)
@@ -273,14 +276,15 @@ async function speakChunk(text) {
 }
 
 async function speak(text) {
-  if (nativeVoice === null) await initNativeVoice();
-
-  if (nativeVoice) {
-    try {
-      for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
-      return;
-    } catch {
-      nativeVoice = false; // native failed, don't retry
+  if (!isIOS) {
+    if (nativeVoice === null) await initNativeVoice();
+    if (nativeVoice) {
+      try {
+        for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
+        return;
+      } catch {
+        nativeVoice = false; // native failed, don't retry
+      }
     }
   }
 
