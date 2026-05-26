@@ -190,16 +190,21 @@ let audioCtx = null;
 
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume().catch(() => {});
-  // iOS: keep audio session alive with a slow silent warmup that outlasts network calls
-  if (isIOS && window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-    const warmup = new SpeechSynthesisUtterance('preparando la respuesta');
-    warmup.rate   = 0.1; // ~10s — covers STT + LLM round-trip
-    warmup.volume = 0;   // silent but iOS tracks real duration
-    const v = pickSpanishVoice();
-    if (v) { warmup.voice = v; warmup.lang = v.lang; nativeVoice = v; }
-    window.speechSynthesis.speak(warmup);
+  if (isIOS) {
+    // Unlock AudioContext (needs gesture) then suspend: avoids audio session conflict with SpeechSynthesis
+    audioCtx.resume().then(() => audioCtx.suspend()).catch(() => {});
+    // Warmup: volume=0.01 (not 0) so iOS produces real audio, keeping session alive ~10s
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const warmup = new SpeechSynthesisUtterance('preparando la respuesta');
+      warmup.rate   = 0.1;
+      warmup.volume = 0.01;
+      const v = pickSpanishVoice();
+      if (v) { warmup.voice = v; warmup.lang = v.lang; nativeVoice = v; }
+      window.speechSynthesis.speak(warmup);
+    }
+  } else {
+    audioCtx.resume().catch(() => {});
   }
 }
 
@@ -273,10 +278,8 @@ function speakNativeChunk(text, voice) {
 
     // Fail fast if speech never starts within 1.5s (iOS session expired)
     const startTid = setTimeout(() => {
-      if (!window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-        finish(new Error('no-start'));
-      }
+      if (!window.speechSynthesis.speaking) finish(new Error('no-start'));
+      // no cancel() here — would break AudioContext audio session on iOS
     }, 1500);
 
     // Poll .speaking as reliable onend fallback (iOS onend unreliable)
@@ -322,7 +325,8 @@ async function speak(text) {
     }
   }
 
-  // Fallback: Google Translate TTS via Vercel proxy
+  // Fallback: Google Translate TTS — clear SpeechSynthesis first (iOS audio session conflict)
+  window.speechSynthesis?.cancel();
   if (audioCtx.state === 'suspended') await audioCtx.resume();
   for (const chunk of splitText(text)) await speakChunk(chunk);
 }
