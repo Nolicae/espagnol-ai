@@ -191,6 +191,12 @@ let audioCtx = null;
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume().catch(() => {});
+  // iOS: SpeechSynthesis must be triggered inside a user-gesture handler
+  if (isIOS && window.speechSynthesis) {
+    const u = new SpeechSynthesisUtterance('');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+  }
 }
 
 // ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
@@ -246,9 +252,26 @@ function speakNativeChunk(text, voice) {
     utt.voice = voice;
     utt.lang  = voice.lang;
     utt.rate  = 1;
-    utt.onend   = resolve;
-    utt.onerror = e => reject(new Error(e.error));
+
+    let done = false;
+    const finish = err => {
+      if (done) return; done = true;
+      clearInterval(poll);
+      err ? reject(err) : resolve();
+    };
+
+    utt.onend   = () => finish();
+    utt.onerror = e => finish(new Error(e.error || 'speech-error'));
     window.speechSynthesis.speak(utt);
+
+    // iOS: onend often never fires — poll .speaking state as reliable fallback
+    let seenSpeaking = false;
+    const poll = setInterval(() => {
+      if (window.speechSynthesis.speaking) { seenSpeaking = true; return; }
+      if (seenSpeaking) finish();
+    }, 100);
+
+    setTimeout(() => finish(new Error('timeout')), 30000); // safety cap
   });
 }
 
@@ -276,15 +299,13 @@ async function speakChunk(text) {
 }
 
 async function speak(text) {
-  if (!isIOS) {
-    if (nativeVoice === null) await initNativeVoice();
-    if (nativeVoice) {
-      try {
-        for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
-        return;
-      } catch {
-        nativeVoice = false; // native failed, don't retry
-      }
+  if (nativeVoice === null) await initNativeVoice();
+  if (nativeVoice) {
+    try {
+      for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
+      return;
+    } catch {
+      nativeVoice = false; // native failed, fallback below
     }
   }
 
