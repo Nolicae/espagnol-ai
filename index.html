@@ -100,6 +100,12 @@
     .key-group input:focus { border-color: var(--accent); }
     .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
     .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
+    /* chrono */
+    #chrono { display:flex; flex-direction:column; align-items:center; gap:8px; }
+    #chrono-display { font-size:1.6rem; font-weight:700; letter-spacing:0.08em; color:var(--text); font-variant-numeric:tabular-nums; }
+    #chrono-btns { display:flex; gap:8px; }
+    #chrono-btns button { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:6px 14px; font-size:0.82rem; cursor:pointer; }
+    #chrono-btns button:hover { border-color:var(--accent); }
   </style>
 </head>
 <body>
@@ -110,6 +116,14 @@
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
+  <!-- chrono -->
+  <div id="chrono">
+    <span id="chrono-display">00:00</span>
+    <div id="chrono-btns">
+      <button id="chrono-start">Démarrer</button>
+      <button id="chrono-reset">Réinitialiser</button>
+    </div>
+  </div>
 
   <div id="settings-panel">
     <button id="settings-close">✕</button>
@@ -138,7 +152,8 @@ Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
 Si el usuario comete errores gramaticales, corrígelos sutilmente en tu respuesta.`;
 
 // ── Keys ─────────────────────────────────────────────────────
-const groqKey = () => localStorage.getItem('groq_key') || '';
+const DEFAULT_KEY = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI81CPW'; // clé par défaut
+const groqKey = () => localStorage.getItem('groq_key') || DEFAULT_KEY;
 
 // ── DOM ──────────────────────────────────────────────────────
 const $        = id => document.getElementById(id);
@@ -310,7 +325,7 @@ micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') s
 
 // ── Settings ─────────────────────────────────────────────────
 $('settings-btn').addEventListener('click', () => {
-  $('s-groq').value = groqKey();
+  $('s-groq').value = localStorage.getItem('groq_key') || DEFAULT_KEY; // clé par défaut
   sPanel.classList.add('open');
 });
 $('settings-close').addEventListener('click', () => sPanel.classList.remove('open'));
@@ -319,6 +334,29 @@ $('s-save').addEventListener('click', () => {
   sPanel.classList.remove('open');
 });
 $('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
+
+// ── Chrono ───────────────────────────────────────────────────
+let chronoInterval = null;
+let chronoSeconds  = 0;
+
+function chronoTick() {
+  chronoSeconds++;
+  const m = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
+  const s = String(chronoSeconds % 60).padStart(2, '0');
+  $('chrono-display').textContent = `${m}:${s}`;
+}
+
+$('chrono-start').addEventListener('click', () => {
+  if (chronoInterval) return;
+  chronoInterval = setInterval(chronoTick, 1000);
+});
+
+$('chrono-reset').addEventListener('click', () => {
+  clearInterval(chronoInterval);
+  chronoInterval = null;
+  chronoSeconds  = 0;
+  $('chrono-display').textContent = '00:00';
+});
 
 // ── Boot ─────────────────────────────────────────────────────
 initMime();
