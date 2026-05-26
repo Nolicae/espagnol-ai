@@ -243,9 +243,20 @@ function speakNativeChunk(text, voice) {
     utt.voice = voice;
     utt.lang  = voice.lang;
     utt.rate  = 1;
-    utt.onend   = resolve;
-    utt.onerror = e => reject(new Error(e.error));
+    let done = false;
+    const finish = err => {
+      if (done) return; done = true;
+      clearTimeout(tid);
+      err ? reject(err) : resolve();
+    };
+    utt.onend   = () => finish();
+    utt.onerror = e  => finish(new Error(e.error || 'speech-error'));
     window.speechSynthesis.speak(utt);
+    // 4s watchdog — si onend ne se déclenche pas (bug iOS), on rejette → fallback Edge TTS
+    const tid = setTimeout(() => {
+      window.speechSynthesis.cancel();
+      finish(new Error('timeout'));
+    }, 4000);
   });
 }
 
