@@ -800,8 +800,8 @@
         <span id="voice-counter">01 / 44</span>
       </div>
 
-      <!-- Voices grid -->
-      <div class="voices-grid" id="voices-grid"></div>
+      <!-- Voices map -->
+      <svg id="voices-map" viewBox="0 0 360 290" width="100%" height="290" style="position: absolute; top: 212px; left: 0; right: 0; overflow: visible; display: block; padding: 0 16px; max-width: 402px;"></svg>
 
       <!-- Selected voice card -->
       <div class="settings-selected-voice">
@@ -858,55 +858,55 @@ const DEFAULT_VOICE = 'es-ES-ElviraNeural';
 // Ondas Configuration
 // ──────────────────────────────────────────────────────────────
 
-// 44 Spanish voices with hue-based coloring
+// 44 Spanish voices with hue-based coloring + geographic coordinates
 const ONDAS_VOICES = [
   // Iberia (8)
-  { id: 'es-ES-AlvaroNeural', name: 'Álvaro', city: 'Madrid', country: 'España', region: 'Iberia', hue: 350, tag: 'directo' },
-  { id: 'es-ES-ElviraNeural', name: 'Elvira', city: 'Madrid', country: 'España', region: 'Iberia', hue: 30, tag: 'paciente' },
-  { id: 'es-MX-DaliaNeural', name: 'Dalia', city: 'Guadalajara', country: 'México', region: 'Iberia', hue: 120, tag: 'expresiva' },
-  { id: 'es-MX-JorgeNeural', name: 'Jorge', city: 'México', country: 'México', region: 'Iberia', hue: 140, tag: 'claro' },
-  { id: 'es-AR-ElenaNeural', name: 'Elena', city: 'Buenos Aires', country: 'Argentina', region: 'Iberia', hue: 185, tag: 'musical' },
-  { id: 'es-AR-TomasNeural', name: 'Tomás', city: 'Buenos Aires', country: 'Argentina', region: 'Iberia', hue: 305, tag: 'rápido' },
-  { id: 'es-BO-SofiaNeural', name: 'Sofía', city: 'La Paz', country: 'Bolivia', region: 'Iberia', hue: 175, tag: 'suave' },
-  { id: 'es-BO-MarceloNeural', name: 'Marcelo', city: 'La Paz', country: 'Bolivia', region: 'Iberia', hue: 200, tag: 'tranquilo' },
+  { id: 'es-ES-AlvaroNeural', name: 'Álvaro', city: 'Madrid', country: 'España', region: 'Iberia', hue: 350, tag: 'directo', x: 298, y: 60 },
+  { id: 'es-ES-ElviraNeural', name: 'Elvira', city: 'Madrid', country: 'España', region: 'Iberia', hue: 30, tag: 'paciente', x: 298, y: 60 },
+  { id: 'es-MX-DaliaNeural', name: 'Dalia', city: 'Guadalajara', country: 'México', region: 'Iberia', hue: 120, tag: 'expresiva', x: 64, y: 94 },
+  { id: 'es-MX-JorgeNeural', name: 'Jorge', city: 'Ciudad de México', country: 'México', region: 'Iberia', hue: 140, tag: 'claro', x: 80, y: 110 },
+  { id: 'es-AR-ElenaNeural', name: 'Elena', city: 'Buenos Aires', country: 'Argentina', region: 'Iberia', hue: 185, tag: 'musical', x: 212, y: 256 },
+  { id: 'es-AR-TomasNeural', name: 'Tomás', city: 'Buenos Aires', country: 'Argentina', region: 'Iberia', hue: 305, tag: 'rápido', x: 212, y: 256 },
+  { id: 'es-BO-SofiaNeural', name: 'Sofía', city: 'La Paz', country: 'Bolivia', region: 'Iberia', hue: 175, tag: 'suave', x: 178, y: 232 },
+  { id: 'es-BO-MarceloNeural', name: 'Marcelo', city: 'La Paz', country: 'Bolivia', region: 'Iberia', hue: 200, tag: 'tranquilo', x: 178, y: 232 },
   // Americas (20)
-  { id: 'es-CL-CatalinaNeural', name: 'Catalina', city: 'Santiago', country: 'Chile', region: 'Americas', hue: 235, tag: 'firme' },
-  { id: 'es-CL-LorenzoNeural', name: 'Lorenzo', city: 'Santiago', country: 'Chile', region: 'Americas', hue: 225, tag: 'rápida' },
-  { id: 'es-CO-SalomeNeural', name: 'Salomé', city: 'Bogotá', country: 'Colombia', region: 'Americas', hue: 265, tag: 'neutra' },
-  { id: 'es-CO-GonzaloNeural', name: 'Gonzalo', city: 'Bogotá', country: 'Colombia', region: 'Americas', hue: 275, tag: 'precisa' },
-  { id: 'es-CR-MariaNeural', name: 'María', city: 'San José', country: 'Costa Rica', region: 'Americas', hue: 100, tag: 'pausado' },
-  { id: 'es-CR-JuanNeural', name: 'Juan', city: 'San José', country: 'Costa Rica', region: 'Americas', hue: 95, tag: 'amable' },
-  { id: 'es-CU-BelkysNeural', name: 'Belkys', city: 'La Habana', country: 'Cuba', region: 'Americas', hue: 185, tag: 'musical' },
-  { id: 'es-CU-ManuelNeural', name: 'Manuel', city: 'La Habana', country: 'Cuba', region: 'Americas', hue: 305, tag: 'caribeño' },
-  { id: 'es-DO-RamonaNeural', name: 'Ramona', city: 'Santo Domingo', country: 'R.D.', region: 'Americas', hue: 325, tag: 'animada' },
-  { id: 'es-DO-EmilioNeural', name: 'Emilio', city: 'Santo Domingo', country: 'R.D.', region: 'Americas', hue: 305, tag: 'rápido' },
-  { id: 'es-EC-AndreaNeural', name: 'Andrea', city: 'Quito', country: 'Ecuador', region: 'Americas', hue: 45, tag: 'serena' },
-  { id: 'es-EC-LuisNeural', name: 'Luis', city: 'Quito', country: 'Ecuador', region: 'Americas', hue: 275, tag: 'precisa' },
-  { id: 'es-GQ-TeresaNeural', name: 'Teresa', city: 'Malabo', country: 'Guinea Ec.', region: 'Americas', hue: 160, tag: 'melódica' },
-  { id: 'es-GQ-JavierNeural', name: 'Javier', city: 'Malabo', country: 'Guinea Ec.', region: 'Americas', hue: 200, tag: 'tranquilo' },
-  { id: 'es-GT-MartaNeural', name: 'Marta', city: 'Antigua', country: 'Guatemala', region: 'Americas', hue: 175, tag: 'suave' },
-  { id: 'es-GT-AndresNeural', name: 'Andrés', city: 'Antigua', country: 'Guatemala', region: 'Americas', hue: 200, tag: 'tranquilo' },
-  { id: 'es-HN-KarlaNeural', name: 'Karla', city: 'Tegucigalpa', country: 'Honduras', region: 'Americas', hue: 235, tag: 'firme' },
-  { id: 'es-HN-CarlosNeural', name: 'Carlos', city: 'Tegucigalpa', country: 'Honduras', region: 'Americas', hue: 200, tag: 'tranquilo' },
+  { id: 'es-CL-CatalinaNeural', name: 'Catalina', city: 'Santiago', country: 'Chile', region: 'Americas', hue: 235, tag: 'firme', x: 170, y: 256 },
+  { id: 'es-CL-LorenzoNeural', name: 'Lorenzo', city: 'Santiago', country: 'Chile', region: 'Americas', hue: 225, tag: 'rápida', x: 170, y: 256 },
+  { id: 'es-CO-SalomeNeural', name: 'Salomé', city: 'Bogotá', country: 'Colombia', region: 'Americas', hue: 265, tag: 'neutra', x: 162, y: 182 },
+  { id: 'es-CO-GonzaloNeural', name: 'Gonzalo', city: 'Bogotá', country: 'Colombia', region: 'Americas', hue: 275, tag: 'precisa', x: 162, y: 182 },
+  { id: 'es-CR-MariaNeural', name: 'María', city: 'San José', country: 'Costa Rica', region: 'Americas', hue: 100, tag: 'pausado', x: 130, y: 164 },
+  { id: 'es-CR-JuanNeural', name: 'Juan', city: 'San José', country: 'Costa Rica', region: 'Americas', hue: 95, tag: 'amable', x: 130, y: 164 },
+  { id: 'es-CU-BelkysNeural', name: 'Belkys', city: 'La Habana', country: 'Cuba', region: 'Americas', hue: 185, tag: 'musical', x: 122, y: 100 },
+  { id: 'es-CU-ManuelNeural', name: 'Manuel', city: 'La Habana', country: 'Cuba', region: 'Americas', hue: 305, tag: 'caribeño', x: 122, y: 100 },
+  { id: 'es-DO-RamonaNeural', name: 'Ramona', city: 'Santo Domingo', country: 'Rep. Dominicana', region: 'Americas', hue: 325, tag: 'animada', x: 156, y: 118 },
+  { id: 'es-DO-EmilioNeural', name: 'Emilio', city: 'Santo Domingo', country: 'Rep. Dominicana', region: 'Americas', hue: 305, tag: 'rápido', x: 156, y: 118 },
+  { id: 'es-EC-AndreaNeural', name: 'Andrea', city: 'Quito', country: 'Ecuador', region: 'Americas', hue: 45, tag: 'serena', x: 150, y: 200 },
+  { id: 'es-EC-LuisNeural', name: 'Luis', city: 'Quito', country: 'Ecuador', region: 'Americas', hue: 275, tag: 'precisa', x: 150, y: 200 },
+  { id: 'es-GQ-TeresaNeural', name: 'Teresa', city: 'Malabo', country: 'Guinea Ecuatorial', region: 'Americas', hue: 160, tag: 'melódica', x: 328, y: 142 },
+  { id: 'es-GQ-JavierNeural', name: 'Javier', city: 'Malabo', country: 'Guinea Ecuatorial', region: 'Americas', hue: 200, tag: 'tranquilo', x: 328, y: 142 },
+  { id: 'es-GT-MartaNeural', name: 'Marta', city: 'Antigua', country: 'Guatemala', region: 'Americas', hue: 175, tag: 'suave', x: 90, y: 130 },
+  { id: 'es-GT-AndresNeural', name: 'Andrés', city: 'San Salvador', country: 'El Salvador', region: 'Americas', hue: 200, tag: 'tranquilo', x: 98, y: 140 },
+  { id: 'es-HN-KarlaNeural', name: 'Karla', city: 'Tegucigalpa', country: 'Honduras', region: 'Americas', hue: 235, tag: 'firme', x: 114, y: 140 },
+  { id: 'es-HN-CarlosNeural', name: 'Carlos', city: 'Tegucigalpa', country: 'Honduras', region: 'Americas', hue: 200, tag: 'tranquilo', x: 114, y: 140 },
   // South America (16)
-  { id: 'es-NI-YolandaNeural', name: 'Yolanda', city: 'Managua', country: 'Nicaragua', region: 'S.America', hue: 95, tag: 'amable' },
-  { id: 'es-NI-FedericoNeural', name: 'Federico', city: 'Managua', country: 'Nicaragua', region: 'S.America', hue: 235, tag: 'firme' },
-  { id: 'es-PA-MargaritaNeural', name: 'Margarita', city: 'Panamá', country: 'Panamá', region: 'S.America', hue: 80, tag: 'natural' },
-  { id: 'es-PA-RobertoNeural', name: 'Roberto', city: 'Panamá', country: 'Panamá', region: 'S.America', hue: 150, tag: 'amistoso' },
-  { id: 'es-PE-CamilaNeural', name: 'Camila', city: 'Lima', country: 'Perú', region: 'S.America', hue: 45, tag: 'serena' },
-  { id: 'es-PE-AlexNeural', name: 'Alex', city: 'Lima', country: 'Perú', region: 'S.America', hue: 275, tag: 'precisa' },
-  { id: 'es-PR-KarinaNeural', name: 'Karina', city: 'San Juan', country: 'Puerto Rico', region: 'S.America', hue: 325, tag: 'animada' },
-  { id: 'es-PR-VictorNeural', name: 'Víctor', city: 'San Juan', country: 'Puerto Rico', region: 'S.America', hue: 305, tag: 'caribeño' },
-  { id: 'es-PY-TaniaNeural', name: 'Tania', city: 'Asunción', country: 'Paraguay', region: 'S.America', hue: 155, tag: 'amistoso' },
-  { id: 'es-PY-MarioNeural', name: 'Mario', city: 'Asunción', country: 'Paraguay', region: 'S.America', hue: 150, tag: 'amistoso' },
-  { id: 'es-SV-LorenaNeural', name: 'Lorena', city: 'San Salvador', country: 'El Salvador', region: 'S.America', hue: 175, tag: 'suave' },
-  { id: 'es-SV-RodrigoNeural', name: 'Rodrigo', city: 'San Salvador', country: 'El Salvador', region: 'S.America', hue: 200, tag: 'tranquilo' },
-  { id: 'es-US-PalomaNeural', name: 'Paloma', city: 'Los Ángeles', country: 'EE.UU.', region: 'S.America', hue: 20, tag: 'cercana' },
-  { id: 'es-US-AlonsoNeural', name: 'Alonso', city: 'Miami', country: 'EE.UU.', region: 'S.America', hue: 290, tag: 'enérgico' },
-  { id: 'es-UY-ValentinaNeural', name: 'Valentina', city: 'Montevideo', country: 'Uruguay', region: 'S.America', hue: 330, tag: 'cordial' },
-  { id: 'es-UY-MateoNeural', name: 'Mateo', city: 'Montevideo', country: 'Uruguay', region: 'S.America', hue: 255, tag: 'rioplatense' },
-  { id: 'es-VE-PaolaNeural', name: 'Paola', city: 'Caracas', country: 'Venezuela', region: 'S.America', hue: 345, tag: 'enérgico' },
-  { id: 'es-VE-SebastianNeural', name: 'Sebastián', city: 'Caracas', country: 'Venezuela', region: 'S.America', hue: 345, tag: 'enérgico' },
+  { id: 'es-NI-YolandaNeural', name: 'Yolanda', city: 'Managua', country: 'Nicaragua', region: 'S.America', hue: 95, tag: 'amable', x: 120, y: 152 },
+  { id: 'es-NI-FedericoNeural', name: 'Federico', city: 'Managua', country: 'Nicaragua', region: 'S.America', hue: 235, tag: 'firme', x: 120, y: 152 },
+  { id: 'es-PA-MargaritaNeural', name: 'Margarita', city: 'Panamá', country: 'Panamá', region: 'S.America', hue: 80, tag: 'natural', x: 148, y: 172 },
+  { id: 'es-PA-RobertoNeural', name: 'Roberto', city: 'Panamá', country: 'Panamá', region: 'S.America', hue: 150, tag: 'amistoso', x: 148, y: 172 },
+  { id: 'es-PE-CamilaNeural', name: 'Camila', city: 'Lima', country: 'Perú', region: 'S.America', hue: 45, tag: 'serena', x: 154, y: 220 },
+  { id: 'es-PE-AlexNeural', name: 'Alex', city: 'Lima', country: 'Perú', region: 'S.America', hue: 275, tag: 'precisa', x: 154, y: 220 },
+  { id: 'es-PR-KarinaNeural', name: 'Karina', city: 'San Juan', country: 'Puerto Rico', region: 'S.America', hue: 325, tag: 'animada', x: 174, y: 118 },
+  { id: 'es-PR-VictorNeural', name: 'Víctor', city: 'San Juan', country: 'Puerto Rico', region: 'S.America', hue: 305, tag: 'caribeño', x: 174, y: 118 },
+  { id: 'es-PY-TaniaNeural', name: 'Tania', city: 'Asunción', country: 'Paraguay', region: 'S.America', hue: 155, tag: 'amistoso', x: 200, y: 236 },
+  { id: 'es-PY-MarioNeural', name: 'Mario', city: 'Asunción', country: 'Paraguay', region: 'S.America', hue: 150, tag: 'amistoso', x: 200, y: 236 },
+  { id: 'es-SV-LorenaNeural', name: 'Lorena', city: 'San Salvador', country: 'El Salvador', region: 'S.America', hue: 175, tag: 'suave', x: 98, y: 140 },
+  { id: 'es-SV-RodrigoNeural', name: 'Rodrigo', city: 'San Salvador', country: 'El Salvador', region: 'S.America', hue: 200, tag: 'tranquilo', x: 98, y: 140 },
+  { id: 'es-US-PalomaNeural', name: 'Paloma', city: 'Los Ángeles', country: 'EE.UU.', region: 'S.America', hue: 20, tag: 'cercana', x: 56, y: 40 },
+  { id: 'es-US-AlonsoNeural', name: 'Alonso', city: 'Miami', country: 'EE.UU.', region: 'S.America', hue: 290, tag: 'enérgico', x: 130, y: 64 },
+  { id: 'es-UY-ValentinaNeural', name: 'Valentina', city: 'Montevideo', country: 'Uruguay', region: 'S.America', hue: 330, tag: 'cordial', x: 222, y: 254 },
+  { id: 'es-UY-MateoNeural', name: 'Mateo', city: 'Montevideo', country: 'Uruguay', region: 'S.America', hue: 255, tag: 'rioplatense', x: 222, y: 254 },
+  { id: 'es-VE-PaolaNeural', name: 'Paola', city: 'Caracas', country: 'Venezuela', region: 'S.America', hue: 345, tag: 'enérgico', x: 190, y: 166 },
+  { id: 'es-VE-SebastianNeural', name: 'Sebastián', city: 'Caracas', country: 'Venezuela', region: 'S.America', hue: 345, tag: 'enérgico', x: 190, y: 166 },
 ];
 
 const ONDAS_PALETTES = {
@@ -936,6 +936,7 @@ let chronoInterval = null;
 let chronoSeconds = 0;
 let t = 0; // Animation frame counter
 let rafId = null;
+let mapTick = 0; // For map ripple animation
 
 // ──────────────────────────────────────────────────────────────
 // DOM Elements
@@ -1335,7 +1336,14 @@ function renderOrb() {
 
 function animate() {
   t = (t + 1) % 10000;
+  mapTick = (mapTick + 1) % 1000;
   renderOrb();
+
+  // Re-render map if on settings screen to animate ripple
+  if (!screenSettings.classList.contains('hidden')) {
+    renderVoicesMap();
+  }
+
   rafId = requestAnimationFrame(animate);
 }
 
@@ -1363,7 +1371,7 @@ toggleTextBtn.addEventListener('click', () => {
 btnSettings.addEventListener('click', () => {
   screenConversation.classList.add('hidden');
   screenSettings.classList.remove('hidden');
-  populateVoicesGrid();
+  renderVoicesMap();
 });
 
 btnSettingsClose.addEventListener('click', () => {
@@ -1397,33 +1405,51 @@ btnSave.addEventListener('click', () => {
 });
 
 // ──────────────────────────────────────────────────────────────
-// Settings screen
+// Settings screen — Map
 // ──────────────────────────────────────────────────────────────
 
-function populateVoicesGrid() {
-  voicesGrid.innerHTML = '';
+function renderVoicesMap() {
+  const mapSvg = document.getElementById('voices-map');
+  const ripple = (Math.sin(mapTick * 0.08) + 1) / 2;
+
+  let svg = `<g opacity="0.6" stroke="rgba(255,255,255,0.08)" stroke-width="0.55" fill="none" stroke-dasharray="1.4 4" stroke-linecap="round">
+    <path d="M276 30 C 296 22, 326 26, 332 50 C 336 70, 318 86, 296 84 C 276 82, 264 64, 270 44 Z" />
+    <path d="M335 100 C 345 122, 348 150, 340 168 C 332 180, 320 178, 316 168" />
+    <path d="M28 28 C 50 60, 76 90, 104 110 C 134 128, 156 144, 172 170" />
+    <path d="M115 56 C 138 78, 158 96, 178 116 C 190 132, 198 152, 196 172" />
+    <path d="M182 178 C 208 202, 228 226, 234 256" />
+    <path d="M150 188 C 148 218, 158 254, 178 270" />
+  </g>`;
+
   ONDAS_VOICES.forEach((voice, idx) => {
-    const btn = document.createElement('button');
-    btn.className = 'voice-btn';
-    btn.setAttribute('data-selected', idx === currentVoiceIdx ? 'true' : 'false');
-
+    const sel = idx === currentVoiceIdx;
     const hsl = `hsl(${voice.hue}, 60%, 72%)`;
-    btn.innerHTML = `
-      <div class="voice-dot-mini" style="background: ${hsl}; box-shadow: 0 0 4px ${hsl};"></div>
-      <span class="voice-name">${voice.name}</span>
-    `;
 
-    btn.addEventListener('click', () => {
-      currentVoiceIdx = idx;
-      populateVoicesGrid();
-      updateSelectedVoiceCard();
-      updateVoicePill();
-    });
+    if (sel) {
+      svg += `<g>
+        <circle cx="${voice.x}" cy="${voice.y}" r="${12 + ripple * 6}" fill="none" stroke="${hsl}" stroke-width="0.7" opacity="${0.5 - ripple * 0.35}" />
+        <circle cx="${voice.x}" cy="${voice.y}" r="10" fill="hsla(${voice.hue}, 60%, 70%, 0.18)" />
+      </g>`;
+    }
 
-    voicesGrid.appendChild(btn);
+    svg += `<g style="cursor: pointer;" data-voice-idx="${idx}">
+      <circle cx="${voice.x}" cy="${voice.y}" r="${sel ? 4.2 : 2}" fill="${hsl}" opacity="${sel ? 1 : 0.6}"
+        style="filter: ${sel ? `drop-shadow(0 0 7px hsla(${voice.hue}, 70%, 70%, 0.9))` : `drop-shadow(0 0 2px hsla(${voice.hue}, 50%, 60%, 0.45))`}; transition: r 0.25s, opacity 0.25s;" />
+      <circle cx="${voice.x}" cy="${voice.y}" r="14" fill="transparent" />
+    </g>`;
   });
 
-  updateSelectedVoiceCard();
+  mapSvg.innerHTML = svg;
+
+  // Add click listeners
+  mapSvg.querySelectorAll('g[data-voice-idx]').forEach(el => {
+    el.addEventListener('click', () => {
+      currentVoiceIdx = +el.getAttribute('data-voice-idx');
+      updateSelectedVoiceCard();
+      updateVoicePill();
+      renderVoicesMap();
+    });
+  });
 }
 
 function updateSelectedVoiceCard() {
