@@ -75,8 +75,8 @@
       width: 100%;
       background:
         radial-gradient(140% 100% at 50% 0%,
-          rgba(66, 100, 150, 0.15) 0%,
-          rgba(42, 46, 72, 0.4) 45%,
+          hsla(var(--hue-dyn, 30), 65%, 62%, 0.12) 0%,
+          hsla(var(--hue-dyn, 30), 60%, 50%, 0.06) 45%,
           var(--bg3) 100%),
         radial-gradient(140% 100% at 50% 0%, var(--bg1) 0%, var(--bg2) 45%, var(--bg3) 100%);
       position: relative;
@@ -242,25 +242,6 @@
 
     .prompt.hidden { display: none; }
 
-    .subtitle {
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--inkDim);
-      letter-spacing: 2.4px;
-      text-transform: uppercase;
-      margin-top: 8px;
-      display: none !important;
-      visibility: hidden !important;
-      position: absolute;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-
-    .subtitle.visible {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
 
     /* Timer */
     .timer-container {
@@ -754,7 +735,6 @@
       <!-- Prompt -->
       <div class="prompt-container">
         <div class="prompt" id="prompt">Pulsa para hablar</div>
-        <div class="subtitle" id="subtitle"></div>
       </div>
 
       <!-- Toggle text button -->
@@ -960,7 +940,6 @@ const sessionIdEl = document.getElementById('session-id');
 const orbBtn = document.getElementById('orb-btn');
 const orbSvg = document.getElementById('orb-svg');
 const prompt = document.getElementById('prompt');
-const subtitle = document.getElementById('subtitle');
 const toggleTextBtn = document.getElementById('toggle-text');
 const timerMm = document.getElementById('timer-mm');
 const timerSs = document.getElementById('timer-ss');
@@ -999,21 +978,13 @@ function setState(s) {
     statusDot.classList.remove('listening');
   }
 
-  // Toggle text visibility button (subtitle always hidden by default)
-  if (s === 'speaking') {
-    textVisible = false;
-    subtitle.classList.remove('visible');
-    toggleTextBtn.classList.remove('hidden');
-    toggleTextBtn.textContent = '👁️ Voir';
-  } else {
-    toggleTextBtn.classList.add('hidden');
-    subtitle.classList.remove('visible');
-    textVisible = false;
-  }
+  // No subtitles shown (removed from DOM)
+  toggleTextBtn.classList.add('hidden');
+  textVisible = false;
 }
 
 function setSub(t) {
-  subtitle.textContent = t;
+  // Subtitles removed from DOM - this is now a no-op
 }
 
 function setPrompt(t) {
@@ -1033,6 +1004,7 @@ function updateVoicePill() {
   const voice = ONDAS_VOICES[currentVoiceIdx];
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
   document.documentElement.style.setProperty('--accent', hsl);
+  document.documentElement.style.setProperty('--hue-dyn', voice.hue);
 }
 
 function updateSessionId() {
@@ -1389,11 +1361,8 @@ orbBtn.addEventListener('pointerdown', e => {
 orbBtn.addEventListener('pointerup', () => { if (appState === 'listening') stopRec(); });
 orbBtn.addEventListener('pointercancel', () => { if (appState === 'listening') stopRec(); });
 
-toggleTextBtn.addEventListener('click', () => {
-  textVisible = !textVisible;
-  subtitle.classList.toggle('visible', textVisible);
-  toggleTextBtn.textContent = textVisible ? '👁️ Cacher' : '👁️ Voir';
-});
+// Text toggle removed (subtitles no longer in DOM)
+// toggleTextBtn.addEventListener('click', () => { ... });
 
 // Settings
 btnSettings.addEventListener('click', () => {
@@ -1483,9 +1452,10 @@ function updateSelectedVoiceCard() {
   selectedVoiceMeta.textContent = `${voice.country} · ${voice.tag}`;
   voiceCounter.textContent = `${String(currentVoiceIdx + 1).padStart(2, '0')} / 44`;
 
-  // Update accent color
+  // Update accent color and haze
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
   document.documentElement.style.setProperty('--accent', hsl);
+  document.documentElement.style.setProperty('--hue-dyn', voice.hue);
 }
 
 // ──────────────────────────────────────────────────────────────
