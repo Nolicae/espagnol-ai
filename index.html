@@ -231,8 +231,12 @@
       </select>
     </div>
     <div class="key-group">
-      <label>Clé Groq</label>
-      <input id="s-groq" type="password" placeholder="gsk_…">
+      <label>Durée session</label>
+      <select id="s-session">
+        <option value="5">5 minutes</option>
+        <option value="10" selected>10 minutes</option>
+        <option value="15">15 minutes</option>
+      </select>
     </div>
     <button class="s-save" id="s-save">Sauvegarder</button>
     <button class="s-out"  id="s-out">Réinitialiser</button>
@@ -385,6 +389,7 @@ async function startRec() {
     recorder.onstop = onStop;
     recorder.start();
     setState('listening');
+    chronoStart(sessionDuration()); // Start session countdown
   } catch (e) {
     setSub(`⚠️ Micro : ${e.message}`);
     setState('idle');
@@ -395,6 +400,7 @@ function stopRec() {
   if (!recorder || recorder.state === 'inactive') return;
   recorder.stop();
   recorder.stream.getTracks().forEach(t => t.stop());
+  chronoStop(); // Stop and reset chrono
 }
 
 // ── Pipeline ─────────────────────────────────────────────────
@@ -471,40 +477,68 @@ micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') s
 micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') stopRec(); });
 
 // ── Settings ─────────────────────────────────────────────────
+const sessionDuration = () => parseInt(localStorage.getItem('session_duration') || '10', 10);
+
 $('settings-btn').addEventListener('click', () => {
-  $('s-groq').value = localStorage.getItem('groq_key') || DEFAULT_KEY; // clé par défaut
   $('s-voice').value = voiceKey(); // voix sélectionnée
+  $('s-session').value = sessionDuration(); // durée session
   sPanel.classList.add('open');
 });
 $('settings-close').addEventListener('click', () => sPanel.classList.remove('open'));
 $('s-save').addEventListener('click', () => {
-  localStorage.setItem('groq_key', $('s-groq').value.trim());
   localStorage.setItem('tts_voice', $('s-voice').value);
+  localStorage.setItem('session_duration', $('s-session').value);
   sPanel.classList.remove('open');
 });
 $('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
 
-// ── Chrono ───────────────────────────────────────────────────
+// ── Chrono (Session Countdown) ───────────────────────────────
 let chronoInterval = null;
 let chronoSeconds  = 0;
+let chronoTotal    = 0;
 
 function chronoTick() {
-  chronoSeconds++;
+  chronoSeconds--;
+  if (chronoSeconds <= 0) {
+    chronoSeconds = 0;
+    clearInterval(chronoInterval);
+    chronoInterval = null;
+    console.log('[Session] Time\'s up! Stopping recording...');
+    stopRec();
+    setSub('⏱️ Session terminée !');
+    return;
+  }
   const m = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
   const s = String(chronoSeconds % 60).padStart(2, '0');
   $('chrono-display').textContent = `${m}:${s}`;
 }
 
-$('chrono-start').addEventListener('click', () => {
-  if (chronoInterval) return;
+function chronoStart(durationMinutes) {
+  if (chronoInterval) return; // already running
+  chronoTotal = durationMinutes * 60;
+  chronoSeconds = chronoTotal;
+  const m = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
+  const s = String(chronoSeconds % 60).padStart(2, '0');
+  $('chrono-display').textContent = `${m}:${s}`;
+  console.log(`[Session] Starting ${durationMinutes}min countdown`);
   chronoInterval = setInterval(chronoTick, 1000);
+}
+
+function chronoStop() {
+  clearInterval(chronoInterval);
+  chronoInterval = null;
+  chronoSeconds = 0;
+  chronoTotal = 0;
+  $('chrono-display').textContent = '00:00';
+}
+
+// Manual buttons (optional, for manual testing)
+$('chrono-start').addEventListener('click', () => {
+  if (!chronoInterval) chronoStart(sessionDuration());
 });
 
 $('chrono-reset').addEventListener('click', () => {
-  clearInterval(chronoInterval);
-  chronoInterval = null;
-  chronoSeconds  = 0;
-  $('chrono-display').textContent = '00:00';
+  chronoStop();
 });
 
 // ── Boot ─────────────────────────────────────────────────────
