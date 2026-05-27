@@ -98,6 +98,15 @@
       font-size: 0.95rem; outline: none; -webkit-appearance: none;
     }
     .key-group input:focus { border-color: var(--accent); }
+    .key-group select {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 16px; color: var(--text);
+      font-size: 0.95rem; outline: none; -webkit-appearance: none;
+      cursor: pointer;
+    }
+    .key-group select:focus { border-color: var(--accent); }
+    .key-group select optgroup { color: var(--muted); }
+    .key-group select option { background: var(--surface); color: var(--text); }
     .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
     .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
     /* chrono */
@@ -129,6 +138,99 @@
     <button id="settings-close">✕</button>
     <h2>⚙️ Paramètres</h2>
     <div class="key-group">
+      <label>Voix TTS</label>
+      <select id="s-voice">
+        <optgroup label="Espagne">
+          <option value="es-ES-ElviraNeural">Elvira (Femme)</option>
+          <option value="es-ES-AlvaroNeural">Álvaro (Homme)</option>
+        </optgroup>
+        <optgroup label="Mexique">
+          <option value="es-MX-DaliaNeural">Dalia (Femme)</option>
+          <option value="es-MX-JorgeNeural">Jorge (Homme)</option>
+        </optgroup>
+        <optgroup label="Argentine">
+          <option value="es-AR-ElenaNeural">Elena (Femme)</option>
+          <option value="es-AR-TomasNeural">Tomás (Homme)</option>
+        </optgroup>
+        <optgroup label="Bolivie">
+          <option value="es-BO-SofiaNeural">Sofía (Femme)</option>
+          <option value="es-BO-MarceloNeural">Marcelo (Homme)</option>
+        </optgroup>
+        <optgroup label="Chili">
+          <option value="es-CL-CatalinaNeural">Catalina (Femme)</option>
+          <option value="es-CL-LorenzoNeural">Lorenzo (Homme)</option>
+        </optgroup>
+        <optgroup label="Colombie">
+          <option value="es-CO-SalomeNeural">Salomé (Femme)</option>
+          <option value="es-CO-GonzaloNeural">Gonzalo (Homme)</option>
+        </optgroup>
+        <optgroup label="Costa Rica">
+          <option value="es-CR-MariaNeural">María (Femme)</option>
+          <option value="es-CR-JuanNeural">Juan (Homme)</option>
+        </optgroup>
+        <optgroup label="Cuba">
+          <option value="es-CU-BelkysNeural">Belkys (Femme)</option>
+          <option value="es-CU-ManuelNeural">Manuel (Homme)</option>
+        </optgroup>
+        <optgroup label="Rép. Dominicaine">
+          <option value="es-DO-RamonaNeural">Ramona (Femme)</option>
+          <option value="es-DO-EmilioNeural">Emilio (Homme)</option>
+        </optgroup>
+        <optgroup label="Équateur">
+          <option value="es-EC-AndreaNeural">Andrea (Femme)</option>
+          <option value="es-EC-LuisNeural">Luis (Homme)</option>
+        </optgroup>
+        <optgroup label="Guinée Équatoriale">
+          <option value="es-GQ-TeresaNeural">Teresa (Femme)</option>
+          <option value="es-GQ-JavierNeural">Javier (Homme)</option>
+        </optgroup>
+        <optgroup label="Guatemala">
+          <option value="es-GT-MartaNeural">Marta (Femme)</option>
+          <option value="es-GT-AndresNeural">Andrés (Homme)</option>
+        </optgroup>
+        <optgroup label="Honduras">
+          <option value="es-HN-KarlaNeural">Karla (Femme)</option>
+          <option value="es-HN-CarlosNeural">Carlos (Homme)</option>
+        </optgroup>
+        <optgroup label="Nicaragua">
+          <option value="es-NI-YolandaNeural">Yolanda (Femme)</option>
+          <option value="es-NI-FedericoNeural">Federico (Homme)</option>
+        </optgroup>
+        <optgroup label="Panama">
+          <option value="es-PA-MargaritaNeural">Margarita (Femme)</option>
+          <option value="es-PA-RobertoNeural">Roberto (Homme)</option>
+        </optgroup>
+        <optgroup label="Pérou">
+          <option value="es-PE-CamilaNeural">Camila (Femme)</option>
+          <option value="es-PE-AlexNeural">Alex (Homme)</option>
+        </optgroup>
+        <optgroup label="Porto Rico">
+          <option value="es-PR-KarinaNeural">Karina (Femme)</option>
+          <option value="es-PR-VictorNeural">Víctor (Homme)</option>
+        </optgroup>
+        <optgroup label="Paraguay">
+          <option value="es-PY-TaniaNeural">Tania (Femme)</option>
+          <option value="es-PY-MarioNeural">Mario (Homme)</option>
+        </optgroup>
+        <optgroup label="El Salvador">
+          <option value="es-SV-LorenaNeural">Lorena (Femme)</option>
+          <option value="es-SV-RodrigoNeural">Rodrigo (Homme)</option>
+        </optgroup>
+        <optgroup label="États-Unis">
+          <option value="es-US-PalomaNeural">Paloma (Femme)</option>
+          <option value="es-US-AlonsoNeural">Alonso (Homme)</option>
+        </optgroup>
+        <optgroup label="Uruguay">
+          <option value="es-UY-ValentinaNeural">Valentina (Femme)</option>
+          <option value="es-UY-MateoNeural">Mateo (Homme)</option>
+        </optgroup>
+        <optgroup label="Venezuela">
+          <option value="es-VE-PaolaNeural">Paola (Femme)</option>
+          <option value="es-VE-SebastianNeural">Sebastián (Homme)</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="key-group">
       <label>Clé Groq</label>
       <input id="s-groq" type="password" placeholder="gsk_…">
     </div>
@@ -151,9 +253,11 @@ const SYSTEM = `Eres un hablante nativo de español muy amigable y conversaciona
 Responde SIEMPRE en español, de forma natural y breve (máximo 2-3 frases).
 Si el usuario comete errores gramaticales, corrígelos sutilmente en tu respuesta.`;
 
-// ── Keys ─────────────────────────────────────────────────────
+// ── Keys & Config ───────────────────────────────────────────
 const DEFAULT_KEY = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI81CPW'; // clé par défaut
+const DEFAULT_VOICE = 'es-ES-ElviraNeural'; // voix par défaut
 const groqKey = () => localStorage.getItem('groq_key') || DEFAULT_KEY;
+const voiceKey = () => localStorage.getItem('tts_voice') || DEFAULT_VOICE;
 
 // ── DOM ──────────────────────────────────────────────────────
 const $        = id => document.getElementById(id);
@@ -212,7 +316,8 @@ function splitText(text, max = 180) {
 
 async function speakChunk(text) {
   try {
-    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+    const voice = voiceKey();
+    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
     if (!r.ok) throw new Error(`TTS fetch ${r.status}`);
 
     const arrayBuf = await r.arrayBuffer();
@@ -368,11 +473,13 @@ micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') s
 // ── Settings ─────────────────────────────────────────────────
 $('settings-btn').addEventListener('click', () => {
   $('s-groq').value = localStorage.getItem('groq_key') || DEFAULT_KEY; // clé par défaut
+  $('s-voice').value = voiceKey(); // voix sélectionnée
   sPanel.classList.add('open');
 });
 $('settings-close').addEventListener('click', () => sPanel.classList.remove('open'));
 $('s-save').addEventListener('click', () => {
   localStorage.setItem('groq_key', $('s-groq').value.trim());
+  localStorage.setItem('tts_voice', $('s-voice').value);
   sPanel.classList.remove('open');
 });
 $('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
