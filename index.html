@@ -283,13 +283,14 @@
     .timer-dot {
       position: absolute;
       top: 50%;
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
       transform: translateY(-50%);
       border-radius: 50%;
-      background: radial-gradient(circle, var(--accent, var(--peach)) 0%, var(--accent, var(--peach))66 30%, transparent 70%);
-      filter: blur(0.5px);
-      transition: left 600ms ease, background 600ms ease;
+      background: var(--accent, var(--peach));
+      box-shadow: 0 0 8px var(--accent, var(--peach));
+      filter: blur(0.4px);
+      transition: left 100ms ease;
     }
 
     .timer-labels {
@@ -1133,7 +1134,7 @@ function chronoTick() {
     timerMm.textContent = '00';
     timerSs.textContent = '00';
     timerFill.style.width = '0%';
-    timerDot.style.left = '-7px';
+    timerDot.style.left = 'calc(0% - 7px)';
     return;
   }
   const mm = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
@@ -1141,11 +1142,10 @@ function chronoTick() {
   timerMm.textContent = mm;
   timerSs.textContent = ss;
 
-  // Update progress bar
-  const pct = Math.max(0, Math.min(1, chronoSeconds / (sessionDuration * 60)));
-  const pctPct = pct * 100;
-  timerFill.style.width = pctPct + '%';
-  timerDot.style.left = `calc(${pctPct}% - 7px)`;
+  // Progress bar: starts full (100%) and counts down to empty (0%)
+  const remainingPct = (chronoSeconds / (sessionDuration * 60)) * 100;
+  timerFill.style.width = remainingPct + '%';
+  timerDot.style.left = `calc(${remainingPct}% - 7px)`;
 }
 
 function chronoStart(durationMinutes) {
@@ -1156,6 +1156,9 @@ function chronoStart(durationMinutes) {
   const ss = String(chronoSeconds % 60).padStart(2, '0');
   timerMm.textContent = mm;
   timerSs.textContent = ss;
+  // Initialize progress bar at full
+  timerFill.style.width = '100%';
+  timerDot.style.left = 'calc(100% - 7px)';
   console.log(`[Session] Starting ${durationMinutes}min countdown`);
   chronoInterval = setInterval(chronoTick, 1000);
 }
