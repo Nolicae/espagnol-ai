@@ -112,7 +112,7 @@
     /* HUD */
     .hud {
       position: absolute;
-      top: 62px;
+      top: 20px;
       left: 24px;
       right: 24px;
       display: flex;
@@ -143,12 +143,9 @@
 
     .status-dot.listening { animation: none; }
 
-    .hud-session {
-      font-family: var(--mono);
-      font-size: 10.5px;
-      letter-spacing: 2px;
-      color: var(--inkDim);
-      text-transform: uppercase;
+    .hud-controls {
+      display: flex;
+      gap: 12px;
     }
 
     @keyframes blink {
@@ -304,17 +301,6 @@
       letter-spacing: 1.4px;
     }
 
-    /* Controls */
-    .controls {
-      position: absolute;
-      bottom: 24px;
-      left: 24px;
-      right: 24px;
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      z-index: 10;
-    }
 
     .icon-btn {
       width: 48px;
@@ -671,7 +657,19 @@
           <div class="status-dot" id="status-dot"></div>
           <span id="status-text">Inactivo</span>
         </div>
-        <div class="hud-session">sesión · <span id="session-id">0024</span></div>
+        <div class="hud-controls">
+          <button class="icon-btn" id="btn-reset" title="reiniciar">
+            <svg viewBox="0 0 16 16">
+              <path d="M2 8a6 6 0 1 1 6 6M2 8v-4M2 8h4" />
+            </svg>
+          </button>
+          <button class="icon-btn" id="btn-settings" title="ajustes">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="1.6"/>
+              <path d="M8 2v1.4M8 12.6V14M2 8h1.4M12.6 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1" />
+            </svg>
+          </button>
+        </div>
       </div>
 
 
@@ -698,21 +696,6 @@
         <div class="timer-labels">
           <span>0:00</span><span>5:00</span><span>10:00</span>
         </div>
-      </div>
-
-      <!-- Controls -->
-      <div class="controls">
-        <button class="icon-btn" id="btn-reset" title="reiniciar">
-          <svg viewBox="0 0 16 16">
-            <path d="M2 8a6 6 0 1 1 6 6M2 8v-4M2 8h4" />
-          </svg>
-        </button>
-        <button class="icon-btn" id="btn-settings" title="ajustes">
-          <svg viewBox="0 0 16 16">
-            <circle cx="8" cy="8" r="1.6"/>
-            <path d="M8 2v1.4M8 12.6V14M2 8h1.4M12.6 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1" />
-          </svg>
-        </button>
       </div>
     </div>
 
@@ -879,7 +862,6 @@ const screenConversation = document.getElementById('screen-conversation');
 const screenSettings = document.getElementById('screen-settings');
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
-const sessionIdEl = document.getElementById('session-id');
 const orbBtn = document.getElementById('orb-btn');
 const orbSvg = document.getElementById('orb-svg');
 const timerMm = document.getElementById('timer-mm');
@@ -946,9 +928,6 @@ function updateVoicePill() {
   document.documentElement.style.setProperty('--hue-dyn', voice.hue);
 }
 
-function updateSessionId() {
-  sessionIdEl.textContent = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
-}
 
 function splitText(text, max = 180) {
   const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
@@ -1415,7 +1394,6 @@ function init() {
   setPrompt('Pulsa para hablar');
   setSub('');
   setState('idle');
-  updateSessionId();
 
   // Start animation loop
   animate();
