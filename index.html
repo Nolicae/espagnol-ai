@@ -217,34 +217,6 @@
       transition: filter 0.3s ease;
     }
 
-    /* Prompt */
-    .prompt-container {
-      position: absolute;
-      top: calc(50% + 186px + 16px);
-      left: 50%;
-      transform: translateX(-50%);
-      text-align: center;
-      z-index: 10;
-    }
-
-    .prompt {
-      font-family: var(--serif);
-      font-style: italic;
-      font-size: 28px;
-      letter-spacing: 0.2px;
-      line-height: 1.2;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--ink) 55%, rgba(255,255,255,0.55) 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 22px rgba(255,255,255,0.18), 0 0 44px var(--accent, var(--peach))22;
-      display: none;
-    }
-
-    .prompt.visible { display: block; }
-    .prompt.hidden { display: none; }
-
-
     /* Timer */
     .timer-container {
       position: absolute;
@@ -370,31 +342,6 @@
       stroke-linecap: round;
       stroke-linejoin: round;
       fill: none;
-    }
-
-    /* Hide/Show toggle button */
-    #toggle-text {
-      position: absolute;
-      top: calc(50% + 186px + 50px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: none;
-      border: 1px solid var(--rule);
-      color: var(--ink);
-      border-radius: 10px;
-      padding: 8px 16px;
-      font-size: 0.85rem;
-      cursor: pointer;
-      margin-top: 12px;
-      transition: border-color 0.2s;
-    }
-
-    #toggle-text:hover {
-      border-color: var(--accent, var(--peach));
-    }
-
-    #toggle-text.hidden {
-      display: none;
     }
 
     /* Screen: Settings (Ajustes) */
@@ -734,13 +681,6 @@
         </button>
       </div>
 
-      <!-- Prompt -->
-      <div class="prompt-container">
-        <div class="prompt" id="prompt">Pulsa para hablar</div>
-      </div>
-
-      <!-- Toggle text button -->
-      <button id="toggle-text" class="hidden">👁️ Ver</button>
 
       <!-- Timer -->
       <div class="timer-container">
@@ -941,8 +881,6 @@ const statusText = document.getElementById('status-text');
 const sessionIdEl = document.getElementById('session-id');
 const orbBtn = document.getElementById('orb-btn');
 const orbSvg = document.getElementById('orb-svg');
-const prompt = document.getElementById('prompt');
-const toggleTextBtn = document.getElementById('toggle-text');
 const timerMm = document.getElementById('timer-mm');
 const timerSs = document.getElementById('timer-ss');
 const timerFill = document.getElementById('timer-fill');
@@ -980,14 +918,7 @@ function setState(s) {
     statusDot.classList.remove('listening');
   }
 
-  // Hide prompt when idle or listening
-  if (s === 'idle' || s === 'listening') {
-    prompt.classList.remove('visible');
-  }
-
-  // No subtitles shown (removed from DOM)
-  toggleTextBtn.classList.add('hidden');
-  textVisible = false;
+  // No text shown (prompt and subtitles removed from DOM)
 }
 
 function setSub(t) {
@@ -995,12 +926,7 @@ function setSub(t) {
 }
 
 function setPrompt(t) {
-  prompt.textContent = t;
-  if (t && t !== 'Pulsa para hablar') {
-    prompt.classList.add('visible');
-  } else {
-    prompt.classList.remove('visible');
-  }
+  // Prompt element removed from DOM - this is now a no-op
 }
 
 function getVoiceKey() {
