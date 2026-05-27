@@ -115,6 +115,9 @@
     #chrono-btns { display:flex; gap:8px; }
     #chrono-btns button { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:10px; padding:6px 14px; font-size:0.82rem; cursor:pointer; }
     #chrono-btns button:hover { border-color:var(--accent); }
+    /* toggle text button */
+    #toggle-text { background:none; border:1px solid var(--border); color:var(--text); border-radius:10px; padding:8px 16px; font-size:0.85rem; cursor:pointer; margin-top:12px; transition:border-color 0.2s; }
+    #toggle-text:hover { border-color:var(--accent); }
   </style>
 </head>
 <body>
@@ -125,6 +128,7 @@
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
+  <button id="toggle-text" style="display:none">👁️ Voir</button>
   <!-- chrono -->
   <div id="chrono">
     <span id="chrono-display">00:00</span>
@@ -275,6 +279,7 @@ const sPanel   = $('settings-panel');
 let appState = 'idle';
 let recorder = null, chunks = [], mimeType = '';
 let history  = [];
+let textVisible = false; // Track if user chose to show reply text
 
 // ── UI ───────────────────────────────────────────────────────
 function setState(s) {
@@ -289,6 +294,18 @@ function setState(s) {
   wavesEl.className  = s === 'idle' ? '' : s;
   micBtn.classList.toggle('listening', s === 'listening');
   micBtn.classList.toggle('busy',      s === 'thinking' || s === 'speaking');
+
+  // Toggle text visibility button for reply
+  if (s === 'speaking') {
+    textVisible = false;
+    subEl.style.display = 'none';
+    $('toggle-text').style.display = 'block';
+    $('toggle-text').textContent = '👁️ Voir';
+  } else {
+    $('toggle-text').style.display = 'none';
+    subEl.style.display = 'block';
+    textVisible = false;
+  }
 }
 
 const setSub = t => { subEl.textContent = t; };
@@ -478,6 +495,13 @@ micBtn.addEventListener('pointerdown', e => {
 });
 micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
 micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') stopRec(); });
+
+// ── Toggle reply text visibility ─────────────────────────────
+$('toggle-text').addEventListener('click', () => {
+  textVisible = !textVisible;
+  subEl.style.display = textVisible ? 'block' : 'none';
+  $('toggle-text').textContent = textVisible ? '👁️ Cacher' : '👁️ Voir';
+});
 
 // ── Settings ─────────────────────────────────────────────────
 const sessionDuration = () => parseInt(localStorage.getItem('session_duration') || '10', 10);
