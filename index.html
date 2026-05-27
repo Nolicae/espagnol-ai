@@ -193,8 +193,8 @@ function unlockAudio() {
   audioCtx.resume().catch(() => {});
 }
 
-// ── TTS — native Web Speech API (primary) + Google Translate (fallback) ──────
-// iOS WebKit (all iOS browsers incl. Chrome) has unreliable SpeechSynthesis onend → force Google TTS
+// ── TTS — native Web Speech API (primary) + espagnol-tts API (fallback) ──────
+// iOS WebKit (all iOS browsers incl. Chrome) has unreliable SpeechSynthesis onend → use espagnol-tts API
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
 // Priority list from readium/speech (web-speech-recommended-voices)
@@ -252,7 +252,7 @@ function speakNativeChunk(text, voice) {
   });
 }
 
-// Google TTS has a ~200 char limit per request, so split at sentence boundaries.
+// Split long text at sentence boundaries for better readability in speech.
 function splitText(text, max = 180) {
   const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
   const chunks = [];
