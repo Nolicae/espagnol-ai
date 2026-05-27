@@ -251,7 +251,7 @@
     /* Timer */
     .timer-container {
       position: absolute;
-      bottom: 280px;
+      bottom: 140px;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
@@ -728,11 +728,6 @@
         <div class="hud-session">sesión · <span id="session-id">0024</span></div>
       </div>
 
-      <!-- Voice pill -->
-      <div class="voice-pill" id="voice-pill">
-        <div class="voice-pill-dot" id="voice-pill-dot"></div>
-        <span class="voice-pill-text" id="voice-pill-text">Elvira · Madrid</span>
-      </div>
 
       <!-- Orb -->
       <div class="orb-container" id="orb-container">
@@ -1339,9 +1334,15 @@ function animate() {
   mapTick = (mapTick + 1) % 1000;
   renderOrb();
 
-  // Re-render map if on settings screen to animate ripple
+  // Update map ripple animation if visible (without re-rendering entire map)
   if (!screenSettings.classList.contains('hidden')) {
-    renderVoicesMap();
+    const ripple = (Math.sin(mapTick * 0.08) + 1) / 2;
+    const voice = ONDAS_VOICES[currentVoiceIdx];
+    const rippleEl = document.querySelector('circle[data-ripple="true"]');
+    if (rippleEl) {
+      rippleEl.setAttribute('r', 12 + ripple * 6);
+      rippleEl.setAttribute('opacity', Math.max(0, 0.5 - ripple * 0.35));
+    }
   }
 
   rafId = requestAnimationFrame(animate);
@@ -1410,7 +1411,6 @@ btnSave.addEventListener('click', () => {
 
 function renderVoicesMap() {
   const mapSvg = document.getElementById('voices-map');
-  const ripple = (Math.sin(mapTick * 0.08) + 1) / 2;
 
   let svg = `<g opacity="0.6" stroke="rgba(255,255,255,0.08)" stroke-width="0.55" fill="none" stroke-dasharray="1.4 4" stroke-linecap="round">
     <path d="M276 30 C 296 22, 326 26, 332 50 C 336 70, 318 86, 296 84 C 276 82, 264 64, 270 44 Z" />
@@ -1426,10 +1426,8 @@ function renderVoicesMap() {
     const hsl = `hsl(${voice.hue}, 60%, 72%)`;
 
     if (sel) {
-      svg += `<g>
-        <circle cx="${voice.x}" cy="${voice.y}" r="${12 + ripple * 6}" fill="none" stroke="${hsl}" stroke-width="0.7" opacity="${0.5 - ripple * 0.35}" />
-        <circle cx="${voice.x}" cy="${voice.y}" r="10" fill="hsla(${voice.hue}, 60%, 70%, 0.18)" />
-      </g>`;
+      svg += `<circle cx="${voice.x}" cy="${voice.y}" r="10" fill="hsla(${voice.hue}, 60%, 70%, 0.18)" />
+        <circle cx="${voice.x}" cy="${voice.y}" r="12" fill="none" stroke="${hsl}" stroke-width="0.7" opacity="0.5" data-ripple="true" />`;
     }
 
     svg += `<g style="cursor: pointer;" data-voice-idx="${idx}">
@@ -1441,13 +1439,12 @@ function renderVoicesMap() {
 
   mapSvg.innerHTML = svg;
 
-  // Add click listeners
+  // Add click listeners (do this once after rendering)
   mapSvg.querySelectorAll('g[data-voice-idx]').forEach(el => {
     el.addEventListener('click', () => {
       currentVoiceIdx = +el.getAttribute('data-voice-idx');
       updateSelectedVoiceCard();
-      updateVoicePill();
-      renderVoicesMap();
+      renderVoicesMap(); // Re-render to update selection
     });
   });
 }
