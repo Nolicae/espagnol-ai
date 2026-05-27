@@ -943,9 +943,6 @@ const screenSettings = document.getElementById('screen-settings');
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 const sessionIdEl = document.getElementById('session-id');
-const voicePill = document.getElementById('voice-pill');
-const voicePillDot = document.getElementById('voice-pill-dot');
-const voicePillText = document.getElementById('voice-pill-text');
 const orbBtn = document.getElementById('orb-btn');
 const orbSvg = document.getElementById('orb-svg');
 const prompt = document.getElementById('prompt');
@@ -1021,9 +1018,6 @@ function getVoiceIndex() {
 function updateVoicePill() {
   const voice = ONDAS_VOICES[currentVoiceIdx];
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
-  voicePillDot.style.background = hsl;
-  voicePillDot.style.boxShadow = `0 0 10px ${hsl}`;
-  voicePillText.textContent = `${voice.name} · ${voice.city}`;
   document.documentElement.style.setProperty('--accent', hsl);
 }
 
