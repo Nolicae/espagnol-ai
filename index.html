@@ -238,33 +238,35 @@
       background-clip: text;
       -webkit-text-fill-color: transparent;
       text-shadow: 0 0 22px rgba(255,255,255,0.18), 0 0 44px var(--accent, var(--peach))22;
+      display: none;
     }
 
+    .prompt.visible { display: block; }
     .prompt.hidden { display: none; }
 
 
     /* Timer */
     .timer-container {
       position: absolute;
-      bottom: 88px;
+      bottom: 100px;
       left: 50%;
       transform: translateX(-50%);
       text-align: center;
-      z-index: 10;
+      z-index: 20;
+      pointer-events: none;
     }
 
     .timer {
       font-family: var(--serif);
       font-weight: 300;
-      font-size: 48px;
+      font-size: 52px;
       line-height: 1;
       letter-spacing: 0;
       font-variant-numeric: tabular-nums;
-      background: linear-gradient(180deg, rgba(255,255,255,0.72) 0%, var(--ink) 55%, rgba(255,255,255,0.35) 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--ink) 55%, rgba(255,255,255,0.55) 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
-      opacity: 0.7;
     }
 
     .timer-colon {
@@ -978,6 +980,11 @@ function setState(s) {
     statusDot.classList.remove('listening');
   }
 
+  // Hide prompt when idle or listening
+  if (s === 'idle' || s === 'listening') {
+    prompt.classList.remove('visible');
+  }
+
   // No subtitles shown (removed from DOM)
   toggleTextBtn.classList.add('hidden');
   textVisible = false;
@@ -989,6 +996,11 @@ function setSub(t) {
 
 function setPrompt(t) {
   prompt.textContent = t;
+  if (t && t !== 'Pulsa para hablar') {
+    prompt.classList.add('visible');
+  } else {
+    prompt.classList.remove('visible');
+  }
 }
 
 function getVoiceKey() {
