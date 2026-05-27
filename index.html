@@ -399,7 +399,6 @@ function stopRec() {
   if (!recorder || recorder.state === 'inactive') return;
   recorder.stop();
   recorder.stream.getTracks().forEach(t => t.stop());
-  chronoStop(); // Stop and reset chrono
 }
 
 // ── Pipeline ─────────────────────────────────────────────────
