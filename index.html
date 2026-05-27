@@ -193,64 +193,9 @@ function unlockAudio() {
   audioCtx.resume().catch(() => {});
 }
 
-// ── TTS — native Web Speech API (primary) + espagnol-tts API (fallback) ──────
-// iOS WebKit (all iOS browsers incl. Chrome) has unreliable SpeechSynthesis onend → use espagnol-tts API
-const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-
-// Priority list from readium/speech (web-speech-recommended-voices)
-const RECOMMENDED_ES = [
-  // veryHigh — Microsoft Online Natural (Edge)
-  'Microsoft Elvira Online','Microsoft Alvaro Online','Microsoft Dalia Online',
-  'Microsoft Jorge Online','Microsoft Elena Online','Microsoft Tomas Online',
-  'Microsoft Paloma Online','Microsoft Alonso Online','Microsoft Ximena Online',
-  'Microsoft Salome Online','Microsoft Catalina Online','Microsoft Lorenzo Online',
-  // high — Google (Chrome / Android)
-  'Google español','Google español de Estados Unidos',
-  'Google español 1 (Natural)','Google español 2 (Natural)',
-  'Google español 3 (Natural)','Google español 4 (Natural)',
-  'Google español 5 (Natural)',
-  // normal — Microsoft Windows
-  'Microsoft Helena','Microsoft Laura','Microsoft Pablo','Microsoft Sabina','Microsoft Raul',
-  // low — Apple
-  'Marisol','Mónica','Jorge','Angelica','Paulina','Juan','Isabela','Diego',
-  'Francesca','Soledad','Jimena','Carlos',
-];
-
-let nativeVoice = null; // null=pending, false=none, SpeechSynthesisVoice=ready
-
-function pickSpanishVoice() {
-  const voices = window.speechSynthesis?.getVoices() || [];
-  for (const name of RECOMMENDED_ES) {
-    const v = voices.find(v => v.name.startsWith(name));
-    if (v) return v;
-  }
-  return voices.find(v => v.lang.startsWith('es')) || false;
-}
-
-function initNativeVoice() {
-  return new Promise(resolve => {
-    const voices = window.speechSynthesis?.getVoices() || [];
-    if (voices.length) { nativeVoice = pickSpanishVoice(); resolve(nativeVoice); return; }
-    const tid = setTimeout(() => { nativeVoice = false; resolve(false); }, 3000);
-    window.speechSynthesis.onvoiceschanged = () => {
-      clearTimeout(tid);
-      nativeVoice = pickSpanishVoice();
-      resolve(nativeVoice);
-    };
-  });
-}
-
-function speakNativeChunk(text, voice) {
-  return new Promise((resolve, reject) => {
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.voice = voice;
-    utt.lang  = voice.lang;
-    utt.rate  = 1;
-    utt.onend   = resolve;
-    utt.onerror = e => reject(new Error(e.error));
-    window.speechSynthesis.speak(utt);
-  });
-}
+// ── TTS — espagnol-tts (always-on, reliable across all platforms) ──────
+// Single source: espagnol-tts API (https://nolicae-espagnol-tts.hf.space)
+// Consistent voice (es-ES-ElviraNeural) + always works (desktop, iOS, Android)
 
 // Split long text at sentence boundaries for better readability in speech.
 function splitText(text, max = 180) {
@@ -276,19 +221,6 @@ async function speakChunk(text) {
 }
 
 async function speak(text) {
-  if (!isIOS) {
-    if (nativeVoice === null) await initNativeVoice();
-    if (nativeVoice) {
-      try {
-        for (const chunk of splitText(text, 300)) await speakNativeChunk(chunk, nativeVoice);
-        return;
-      } catch {
-        nativeVoice = false; // native failed, don't retry
-      }
-    }
-  }
-
-  // Fallback: Google Translate TTS via Vercel proxy
   if (audioCtx.state === 'suspended') await audioCtx.resume();
   for (const chunk of splitText(text)) await speakChunk(chunk);
 }
