@@ -244,9 +244,10 @@
       letter-spacing: 2.4px;
       text-transform: uppercase;
       margin-top: 8px;
+      display: none;
     }
 
-    .subtitle.hidden { display: none; }
+    .subtitle.visible { display: block; }
 
     /* Timer */
     .timer-container {
@@ -932,6 +933,7 @@ let chronoSeconds = 0;
 let t = 0; // Animation frame counter
 let rafId = null;
 let mapTick = 0; // For map ripple animation
+let particles = []; // Orb particles
 
 // ──────────────────────────────────────────────────────────────
 // DOM Elements
@@ -986,15 +988,15 @@ function setState(s) {
     statusDot.classList.remove('listening');
   }
 
-  // Toggle text visibility button
+  // Toggle text visibility button (subtitle always hidden by default)
   if (s === 'speaking') {
     textVisible = false;
-    subtitle.classList.add('hidden');
+    subtitle.classList.remove('visible');
     toggleTextBtn.classList.remove('hidden');
-    toggleTextBtn.textContent = '👁️ Ver';
+    toggleTextBtn.textContent = '👁️ Voir';
   } else {
     toggleTextBtn.classList.add('hidden');
-    subtitle.classList.remove('hidden');
+    subtitle.classList.remove('visible');
     textVisible = false;
   }
 }
@@ -1292,6 +1294,23 @@ function renderOrb() {
   svg += `<circle cx="0" cy="0" r="${rOuter}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" stroke-dasharray="1.5 6" />`;
   svg += `<circle cx="0" cy="0" r="${rInner}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="0.5" />`;
 
+  // Particles
+  const pCount = 35;
+  for (let i = 0; i < pCount; i++) {
+    const pAngle = (i / pCount) * Math.PI * 2;
+    const pRadius = 110 + ((i*17) % 26) - 13;
+    const pSpeed = 0.0015 + ((i*7) % 10) / 6000;
+    const pSize = 1.4 + ((i*5) % 4) * 0.6;
+
+    const a = pAngle + t * pSpeed * (listening ? 4 : 1) * 1;
+    const r = (pRadius / 160) * rInner + (listening ? Math.sin(t*0.025 + i) * 6 : 0);
+    const px = Math.cos(a) * r;
+    const py = Math.sin(a) * r;
+    const isAccent = i % 7 === 0;
+
+    svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${pSize * (listening ? 1.2 : 1)}" fill="${isAccent ? hsl : 'rgba(255,255,255,0.4)'}" opacity="${isAccent ? 0.7 : 0.32}" style="filter: blur(0.4px);" />`;
+  }
+
   // Waves (simplified)
   const N = 48;
   const freqA = 3, freqB = 2;
@@ -1364,8 +1383,8 @@ orbBtn.addEventListener('pointercancel', () => { if (appState === 'listening') s
 
 toggleTextBtn.addEventListener('click', () => {
   textVisible = !textVisible;
-  subtitle.style.display = textVisible ? 'block' : 'none';
-  toggleTextBtn.textContent = textVisible ? '👁️ Cacher' : '👁️ Ver';
+  subtitle.classList.toggle('visible', textVisible);
+  toggleTextBtn.textContent = textVisible ? '👁️ Cacher' : '👁️ Voir';
 });
 
 // Settings
