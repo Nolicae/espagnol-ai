@@ -211,18 +211,57 @@ function splitText(text, max = 180) {
 }
 
 async function speakChunk(text) {
-  const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
-  if (!r.ok) throw new Error(`TTS ${r.status}`);
-  const decoded = await audioCtx.decodeAudioData(await r.arrayBuffer());
-  const src = audioCtx.createBufferSource();
-  src.buffer = decoded;
-  src.connect(audioCtx.destination);
-  return new Promise(resolve => { src.onended = resolve; src.start(0); });
+  try {
+    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+    if (!r.ok) throw new Error(`TTS fetch ${r.status}`);
+
+    const arrayBuf = await r.arrayBuffer();
+    console.log('[TTS] Fetched audio, decoding...', arrayBuf.byteLength, 'bytes');
+
+    const decoded = await audioCtx.decodeAudioData(arrayBuf);
+    console.log('[TTS] Decoded, playing...');
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = decoded;
+    src.connect(audioCtx.destination);
+
+    return new Promise((resolve, reject) => {
+      src.onended = () => { console.log('[TTS] Playback ended'); resolve(); };
+      src.onerror = e => { console.error('[TTS] Playback error', e); reject(e); };
+      src.start(0);
+      console.log('[TTS] Started playback');
+    });
+  } catch (e) {
+    console.error('[TTS] Error:', e.message, e.stack);
+    throw e;
+  }
 }
 
 async function speak(text) {
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
-  for (const chunk of splitText(text)) await speakChunk(chunk);
+  try {
+    console.log('[TTS] Starting speak:', text.slice(0, 50) + '...');
+    console.log('[TTS] AudioContext state:', audioCtx?.state);
+
+    if (!audioCtx) {
+      console.error('[TTS] AudioContext not initialized');
+      return;
+    }
+
+    if (audioCtx.state === 'suspended') {
+      console.log('[TTS] Resuming AudioContext...');
+      await audioCtx.resume();
+      console.log('[TTS] AudioContext resumed');
+    }
+
+    for (const chunk of splitText(text)) {
+      console.log('[TTS] Speaking chunk:', chunk.slice(0, 40) + '...');
+      await speakChunk(chunk);
+    }
+    console.log('[TTS] All chunks done');
+  } catch (e) {
+    console.error('[TTS] speak() error:', e.message, e.stack);
+    throw e;
+  }
 }
 
 // ── MediaRecorder ────────────────────────────────────────────
