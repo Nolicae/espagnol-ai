@@ -1,7 +1,5 @@
 {
   "name": "espagnol-ai",
   "version": "1.0.0",
-  "dependencies": {
-    "ws": "^8.18.0"
-  }
+  "dependencies": {}
 }
