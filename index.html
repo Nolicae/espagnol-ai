@@ -389,7 +389,6 @@ async function startRec() {
     recorder.onstop = onStop;
     recorder.start();
     setState('listening');
-    chronoStart(sessionDuration()); // Start session countdown
   } catch (e) {
     setSub(`⚠️ Micro : ${e.message}`);
     setState('idle');
@@ -408,6 +407,11 @@ async function onStop() {
   if (!chunks.length) { setState('idle'); return; }
   const type = recorder.mimeType || mimeType || 'audio/webm';
   const blob = new Blob(chunks, { type });
+
+  // Start session countdown on first input
+  if (!chronoInterval) {
+    chronoStart(sessionDuration());
+  }
 
   setState('thinking');
   setSub('');
@@ -503,9 +507,10 @@ function chronoTick() {
     chronoSeconds = 0;
     clearInterval(chronoInterval);
     chronoInterval = null;
-    console.log('[Session] Time\'s up! Stopping recording...');
-    stopRec();
-    setSub('⏱️ Session terminée !');
+    console.log('[Session] Time\'s up!');
+    setSub('⏱️ Session terminée - Prochaine session disponible');
+    setState('idle');
+    $('chrono-display').textContent = '00:00';
     return;
   }
   const m = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
