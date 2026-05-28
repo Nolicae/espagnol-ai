@@ -8,7 +8,7 @@ const STATIC_ASSETS = [
   '/icons/icon.svg',
 ];
 
-// Préfixes des URLs dynamiques → toujours network first
+// Patterns d'URLs dynamiques → toujours network first
 const NETWORK_FIRST_PATTERNS = [
   '/api/',
   'api.groq.com',
@@ -19,21 +19,19 @@ const NETWORK_FIRST_PATTERNS = [
 // Installation: mise en cache des assets statiques
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 // Activation: suppression des anciens caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      )
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // Fetch: cache-first pour assets statiques, network-first pour APIs
@@ -44,7 +42,9 @@ self.addEventListener('fetch', event => {
   const isNetworkFirst = NETWORK_FIRST_PATTERNS.some(p => url.includes(p));
   if (isNetworkFirst) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request).catch(() =>
+        caches.match(event.request).then(r => r || new Response('', { status: 503 }))
+      )
     );
     return;
   }
@@ -61,7 +61,7 @@ self.addEventListener('fetch', event => {
         const toCache = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
         return response;
-      });
+      }).catch(() => new Response('', { status: 503 }));
     })
   );
 });
