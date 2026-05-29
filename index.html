@@ -776,6 +776,9 @@ let audioCtx    = null;
 // Active voice accent color — updated when voice is selected
 let orbAccent = { r: 185, g: 225, b: 255 }; // default blue
 
+// WebM init segment — first chunk contains codec headers; must prepend to every blob
+let recorderInitChunk = null;
+
 // TTS interruption
 let ttsSource  = null;
 let speakToken = 0;
@@ -1004,11 +1007,10 @@ async function startSession() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-    // Rolling 8-second buffer — prevents giant silence blobs reaching Groq
     recorder.ondataavailable = e => {
       if (e.data.size > 0) {
+        if (!recorderInitChunk) recorderInitChunk = e.data; // save codec init segment
         audioChunks.push(e.data);
-        if (audioChunks.length > 80) audioChunks.shift();
       }
     };
     recorder.start(100);
@@ -1031,9 +1033,10 @@ function stopSession() {
     recorder.stop();
     recorder.stream.getTracks().forEach(t => t.stop());
   }
-  recorder    = null;
-  audioChunks = [];
-  aiSpeaking  = false;
+  recorder          = null;
+  audioChunks       = [];
+  recorderInitChunk = null;
+  aiSpeaking        = false;
   processing  = false;
   setState('inactive');
   chronoStop();
@@ -1100,7 +1103,11 @@ async function triggerProcessing() {
 
   processing = true;
   const type = (recorder && recorder.mimeType) || mimeType || 'audio/webm';
-  const blob = new Blob(chunks, { type });
+  // Prepend init segment if this isn't the first blob — without it WebM is undecodable
+  const blobParts = (recorderInitChunk && chunks[0] !== recorderInitChunk)
+    ? [recorderInitChunk, ...chunks]
+    : chunks;
+  const blob = new Blob(blobParts, { type });
 
   try {
     const transcript = await stt(blob, type);
