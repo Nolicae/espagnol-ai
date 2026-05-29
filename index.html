@@ -855,9 +855,9 @@ function drawOrbFrame(t) {
   // ── Sphere body ──────────────────────────────────────────────
   const bGrd = ctx2d.createRadialGradient(CX - 22, CY - 26, 4, CX, CY, ORB_R);
   if (mode === 'inactive') {
-    bGrd.addColorStop(0,    'rgba(80,95,115,0.40)');
-    bGrd.addColorStop(0.55, 'rgba(18,28,52,0.60)');
-    bGrd.addColorStop(1,    'rgba(5,8,20,0.88)');
+    bGrd.addColorStop(0,    'rgba(80,105,140,0.42)');
+    bGrd.addColorStop(0.55, 'rgba(20,35,68,0.62)');
+    bGrd.addColorStop(1,    'rgba(6,10,24,0.88)');
   } else if (mode === 'session') {
     // lighter tint of accent at highlight, deeper shade toward edge
     bGrd.addColorStop(0,    `rgba(${Math.min(255,ar+70)},${Math.min(255,ag+40)},${Math.min(255,ab+30)},0.78)`);
