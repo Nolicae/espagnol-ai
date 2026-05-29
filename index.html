@@ -1601,6 +1601,66 @@ async function startRec() {
     if (interjectManager) {
       interjectManager.startAnalysis();
       interjectManager.resetSession();
+
+      // Create audio analyzer for real-time interject detection
+      const source = audioCtx.createMediaStreamAudioSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+
+      // Periodic check for interjection opportunities
+      let lastChunkCount = 0;
+      let silenceCounter = 0;
+      const interjectCheckInterval = setInterval(async () => {
+        if (appState !== 'listening') {
+          clearInterval(interjectCheckInterval);
+          return;
+        }
+
+        try {
+          // Detect pause: if chunk count hasn't changed, audio is likely silent
+          if (chunks.length === lastChunkCount) {
+            silenceCounter++;
+          } else {
+            silenceCounter = 0;
+            lastChunkCount = chunks.length;
+          }
+
+          // Pause detected (3+ checks with no new chunks = ~1.5s silence)
+          if (silenceCounter >= 3) {
+            // Request interject
+            const interjectData = await interjectManager.requestInterjection({
+              type: 'pause',
+              subtype: 'detected',
+              confidence: 0.7
+            });
+
+            if (interjectData) {
+              // Pause recording
+              if (recorder && recorder.state === 'recording') {
+                recorder.pause();
+              }
+
+              // Play interject while recording is paused
+              setState('speaking');
+              setSub('');
+              await interjectManager.playInterject(interjectData);
+
+              // Resume recording
+              if (recorder && recorder.state === 'paused') {
+                recorder.resume();
+              }
+              setState('listening');
+              silenceCounter = 0; // Reset to avoid rapid re-triggers
+            }
+          }
+        } catch (err) {
+          console.error('[Interject] Check failed:', err);
+        }
+      }, 500); // Check every 500ms
+
+      // Store interval for cleanup
+      window.interjectCheckInterval = interjectCheckInterval;
     }
   } catch (e) {
     setSub(`⚠️ Micrófono: ${e.message}`);
@@ -1610,6 +1670,13 @@ async function startRec() {
 
 function stopRec() {
   if (!recorder || recorder.state === 'inactive') return;
+
+  // Clear interject check interval
+  if (window.interjectCheckInterval) {
+    clearInterval(window.interjectCheckInterval);
+    window.interjectCheckInterval = null;
+  }
+
   recorder.stop();
   recorder.stream.getTracks().forEach(t => t.stop());
 }
