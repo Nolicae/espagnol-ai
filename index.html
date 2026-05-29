@@ -834,6 +834,591 @@ const ONDAS_PALETTES = {
   graphite: 'pal-graphite',
 };
 
+// ══════════════════════════════════════════════════════════════
+// ═══ INTERJECT MANAGER CLASSES ═══════════════════════════════
+// ══════════════════════════════════════════════════════════════
+
+// ──────────────────────────────────────────────────────────────
+// AudioAnalyzer: Real-time audio analysis for triggers
+// ──────────────────────────────────────────────────────────────
+class AudioAnalyzer {
+  constructor(audioContext, sampleRate = 16000) {
+    this.audioContext = audioContext;
+    this.sampleRate = sampleRate;
+    this.minPauseDuration = 1.5; // seconds
+    this.maxPauseDuration = 2.0; // seconds
+    this.silenceThreshold = -40; // dB
+    this.listeners = [];
+  }
+
+  on(event, callback) {
+    this.listeners.push({ event, callback });
+  }
+
+  emit(event, data) {
+    this.listeners
+      .filter(l => l.event === event)
+      .forEach(l => l.callback(data));
+  }
+
+  analyzePause(audioBuffer, isUserSpeaking) {
+    if (!isUserSpeaking) return null;
+
+    const samples = audioBuffer.getChannelData(0);
+    let sumSquares = 0;
+    for (let i = 0; i < samples.length; i++) {
+      sumSquares += samples[i] * samples[i];
+    }
+    const rms = Math.sqrt(sumSquares / samples.length);
+    const db = rms > 0 ? 20 * Math.log10(rms) : -Infinity;
+
+    if (db < this.silenceThreshold) {
+      const duration = audioBuffer.duration;
+      if (duration >= this.minPauseDuration && duration <= this.maxPauseDuration) {
+        return {
+          type: 'pause',
+          duration: duration,
+          intensity: Math.abs(db)
+        };
+      }
+    }
+    return null;
+  }
+
+  analyzeHesitation(audioBuffer) {
+    const samples = audioBuffer.getChannelData(0);
+    const duration = audioBuffer.duration;
+    const avgEnergy = this._calculateAverageEnergy(samples);
+
+    if (duration >= 0.3 && duration <= 1.0 && avgEnergy > this.silenceThreshold + 5) {
+      return {
+        type: 'hesitation',
+        duration: duration,
+        confidence: 0.7
+      };
+    }
+    return null;
+  }
+
+  analyzeKeywords(transcript) {
+    if (!transcript || transcript.length === 0) return null;
+
+    const lowerTranscript = transcript.toLowerCase();
+    const questionPatterns = [
+      '¿cuándo', '¿por qué', '¿cómo', '¿qué', '¿dónde',
+      '¿cuál', '¿quién', '¿cuánto'
+    ];
+    const markerPatterns = [
+      'pero', 'entonces', 'por eso', 'sin embargo',
+      'además', 'claro', 'verdad'
+    ];
+
+    for (const pattern of questionPatterns) {
+      if (lowerTranscript.includes(pattern)) {
+        return {
+          type: 'keyword',
+          subtype: 'question',
+          pattern: pattern,
+          confidence: 0.9
+        };
+      }
+    }
+
+    for (const pattern of markerPatterns) {
+      if (lowerTranscript.includes(pattern)) {
+        return {
+          type: 'keyword',
+          subtype: 'marker',
+          pattern: pattern,
+          confidence: 0.7
+        };
+      }
+    }
+
+    return null;
+  }
+
+  analyzeContext(transcript, audioBuffer) {
+    if (!transcript || !audioBuffer) return null;
+
+    const hasSentenceEnd = /[.!?]$/.test(transcript.trim());
+    const hasExclamation = transcript.includes('!') || transcript.includes('¡');
+    const continuationMarkers = [
+      'porque', 'cuando', 'si', 'aunque',
+      'mientras', 'después', 'antes'
+    ];
+    const lowerTranscript = transcript.toLowerCase();
+    const hasContinuationMarker = continuationMarkers.some(m =>
+      lowerTranscript.includes(m)
+    );
+
+    if (hasSentenceEnd || hasExclamation || hasContinuationMarker) {
+      return {
+        type: 'context',
+        subtype: hasSentenceEnd ? 'sentence_end' :
+                 hasExclamation ? 'emotional' : 'continuation',
+        confidence: 0.6
+      };
+    }
+
+    return null;
+  }
+
+  detectTrigger(audioBuffer, transcript, isUserSpeaking) {
+    const pause = this.analyzePause(audioBuffer, isUserSpeaking);
+    if (pause) return pause;
+
+    const hesitation = this.analyzeHesitation(audioBuffer);
+    if (hesitation) return hesitation;
+
+    const keyword = this.analyzeKeywords(transcript);
+    if (keyword) return keyword;
+
+    const context = this.analyzeContext(transcript, audioBuffer);
+    if (context) return context;
+
+    return null;
+  }
+
+  _calculateAverageEnergy(samples) {
+    let sum = 0;
+    for (let i = 0; i < samples.length; i++) {
+      sum += Math.abs(samples[i]);
+    }
+    return 20 * Math.log10(sum / samples.length + 1e-10);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// CooldownManager: Escalating cooldown state machine
+// ──────────────────────────────────────────────────────────────
+class CooldownManager {
+  constructor() {
+    this.state = 'off'; // 'off', '30s', '2min'
+    this.cooldownTimer = null;
+    this.cooldownEndTime = null;
+    this.cooldownDuration = 0;
+
+    this.triggerPhrases = [
+      'déjame hablar', 'dejame hablar', 'no me interrumpas',
+      'dame un momento', 'dame un segundo', 'silencio', 'calla', 'para', 'espera'
+    ];
+
+    this.resumePhrases = [
+      'puedo hablar de nuevo', 'vuelve', 'adelante', 'continúa'
+    ];
+  }
+
+  isActive() {
+    if (this.state === 'off') return false;
+
+    if (this.cooldownEndTime && Date.now() >= this.cooldownEndTime) {
+      this.state = 'off';
+      return false;
+    }
+
+    return true;
+  }
+
+  checkTranscript(transcript) {
+    if (!transcript) return null;
+
+    const lowerTranscript = transcript.toLowerCase();
+
+    for (const phrase of this.triggerPhrases) {
+      if (lowerTranscript.includes(phrase)) {
+        return { action: 'activate', phrase };
+      }
+    }
+
+    for (const phrase of this.resumePhrases) {
+      if (lowerTranscript.includes(phrase)) {
+        return { action: 'resume', phrase };
+      }
+    }
+
+    return null;
+  }
+
+  activate() {
+    if (this.state === 'off') {
+      this.state = '30s';
+      this.cooldownDuration = 30000; // 30 seconds
+    } else if (this.state === '30s') {
+      this.state = '2min';
+      this.cooldownDuration = 120000; // 2 minutes
+    } else if (this.state === '2min') {
+      this.cooldownDuration = 120000;
+    }
+
+    this.cooldownEndTime = Date.now() + this.cooldownDuration;
+    return this.state;
+  }
+
+  resume() {
+    if (this.cooldownTimer) {
+      clearTimeout(this.cooldownTimer);
+    }
+    this.state = 'off';
+    this.cooldownEndTime = null;
+    this.cooldownDuration = 0;
+  }
+
+  getState() {
+    return {
+      active: this.isActive(),
+      state: this.state,
+      remainingSeconds: this._getRemainingSeconds()
+    };
+  }
+
+  _getRemainingSeconds() {
+    if (!this.cooldownEndTime) return 0;
+    const remaining = Math.max(0, this.cooldownEndTime - Date.now());
+    return Math.ceil(remaining / 1000);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// InterjectManager: Main orchestrator
+// ──────────────────────────────────────────────────────────────
+class InterjectManager {
+  constructor(audioContext, options = {}) {
+    this.audioContext = audioContext;
+    this.audioAnalyzer = new AudioAnalyzer(audioContext);
+    this.cooldownManager = new CooldownManager();
+
+    this.isRecording = false;
+    this.isPlayingInterject = false;
+    this.currentAudioBuffer = null;
+    this.recentTranscript = null;
+    this.currentPlayingAudio = null;
+    this.interjectionHistory = [];
+    this.conversationContext = [];
+
+    this.config = {
+      minFrequencyPerSession: 3,
+      maxFrequencyPerSession: 5,
+      maxInterjectLength: 150,
+      maxInterjectDuration: 15,
+      llmValidationTimeout: 3000,
+      ...options
+    };
+
+    this.sessionInterjectionCount = 0;
+  }
+
+  startAnalysis() {
+    this.isRecording = true;
+    this.sessionInterjectionCount = 0;
+  }
+
+  stopAnalysis() {
+    this.isRecording = false;
+    this.currentAudioBuffer = null;
+  }
+
+  updateTranscript(chunk) {
+    this.recentTranscript = chunk;
+  }
+
+  async analyzeBuffer(audioBuffer) {
+    if (!this.isRecording || this.isPlayingInterject || this.cooldownManager.isActive()) {
+      return null;
+    }
+
+    const trigger = this.audioAnalyzer.detectTrigger(
+      audioBuffer,
+      this.recentTranscript,
+      true
+    );
+
+    if (!trigger) return null;
+
+    return this.requestInterjection(trigger);
+  }
+
+  async requestInterjection(trigger) {
+    if (this.sessionInterjectionCount >= this.config.maxFrequencyPerSession) {
+      return null;
+    }
+
+    try {
+      const prompt = this._buildValidationPrompt(trigger);
+      const response = await this._callLLM(prompt, {
+        temperature: 0.7,
+        max_tokens: 50
+      });
+
+      const { shouldInterject } = this._parseValidationResponse(response);
+
+      if (shouldInterject) {
+        return await this.generateInterject(trigger);
+      }
+    } catch (error) {
+      console.error('[Interject] LLM validation failed:', error);
+    }
+
+    return null;
+  }
+
+  async generateInterject(trigger) {
+    try {
+      const prompt = this._buildGenerationPrompt(trigger);
+      const text = await this._callLLM(prompt, {
+        temperature: 0.8,
+        max_tokens: 60
+      });
+
+      const words = text.split(/\s+/).length;
+      const finalText = words > this.config.maxInterjectLength
+        ? this._truncateInterject(text, this.config.maxInterjectLength)
+        : text.trim();
+
+      return {
+        text: finalText,
+        type: this._classifyInterject(finalText),
+        trigger: trigger.type
+      };
+    } catch (error) {
+      console.error('[Interject] Generation failed:', error);
+      return null;
+    }
+  }
+
+  async playInterject(interjectData) {
+    if (!interjectData || !interjectData.text) return false;
+
+    this.isPlayingInterject = true;
+
+    try {
+      const audioBlob = await this._getTTSAudio(interjectData.text);
+      const audio = new Audio(URL.createObjectURL(audioBlob));
+      audio.volume = 0.8;
+
+      this.currentPlayingAudio = audio;
+      this._emitEvent('interject:start', { text: interjectData.text });
+
+      await new Promise((resolve) => {
+        audio.addEventListener('ended', () => {
+          this.currentPlayingAudio = null;
+          this._emitEvent('interject:end', {});
+          resolve();
+        }, { once: true });
+
+        audio.play().catch(err => {
+          console.error('[Interject] Playback failed:', err);
+          this.currentPlayingAudio = null;
+          resolve();
+        });
+      });
+
+      this.storeInterject(interjectData.text, interjectData.type);
+      this.sessionInterjectionCount++;
+
+      return true;
+    } catch (error) {
+      console.error('[Interject] Playback error:', error);
+      return false;
+    } finally {
+      this.isPlayingInterject = false;
+    }
+  }
+
+  interruptCurrentInterject() {
+    if (this.currentPlayingAudio) {
+      this.currentPlayingAudio.pause();
+      this.currentPlayingAudio.currentTime = 0;
+      this.currentPlayingAudio = null;
+
+      this._emitEvent('interject:interrupted', {});
+      return true;
+    }
+    return false;
+  }
+
+  storeInterject(text, type) {
+    const interject = {
+      timestamp: Date.now(),
+      text: text,
+      type: type
+    };
+    this.interjectionHistory.push(interject);
+    return interject;
+  }
+
+  getInterjectionContext() {
+    return this.interjectionHistory
+      .map(i => ({
+        role: 'assistant',
+        type: 'interject',
+        content: i.text
+      }))
+      .slice(-3);
+  }
+
+  processCooldownCommand(transcript) {
+    const result = this.cooldownManager.checkTranscript(transcript);
+    if (!result) return;
+
+    if (result.action === 'activate') {
+      const newState = this.cooldownManager.activate();
+      console.log(`[Interject] Cooldown activated: ${newState}`);
+    } else if (result.action === 'resume') {
+      this.cooldownManager.resume();
+      console.log('[Interject] Cooldown resumed');
+    }
+  }
+
+  addConversationTurn(userText, assistantResponse) {
+    this.conversationContext.push({
+      user: userText,
+      assistant: assistantResponse,
+      interjections: [...this.interjectionHistory.slice(-1)]
+    });
+
+    if (this.conversationContext.length > 5) {
+      this.conversationContext.shift();
+    }
+  }
+
+  getFullResponseSystemPrompt() {
+    const recentInterjections = this.interjectionHistory
+      .slice(-2)
+      .map(i => i.text)
+      .join('; ');
+
+    if (recentInterjections.length === 0) {
+      return SYSTEM;
+    }
+
+    return SYSTEM + `\n\nNota: Acabas de hacer estas interjecciones: "${recentInterjections}". En tu respuesta, evita repetir estos puntos. Expándelos o reconócelos naturalmente.`;
+  }
+
+  resetSession() {
+    this.sessionInterjectionCount = 0;
+    this.interjectionHistory = [];
+    this.cooldownManager.resume();
+  }
+
+  // Private helpers
+  _buildValidationPrompt(trigger) {
+    const context = this.conversationContext
+      .slice(-2)
+      .map(ex => `User: ${ex.user}\nAssistant: ${ex.assistant}`)
+      .join('\n');
+
+    return `You are a Spanish conversation partner.
+
+User is currently speaking. Context:
+${context}
+
+Current moment: User ${trigger.type} ${trigger.subtype ? `(${trigger.subtype})` : ''}.
+Recent: "${this.recentTranscript}"
+
+Should you interject now with a short follow-up comment? Answer only: YES or NO.`;
+  }
+
+  _buildGenerationPrompt(trigger) {
+    return `You are a Spanish conversation partner having a natural conversation.
+
+User just ${trigger.type === 'pause' ? 'paused' : trigger.type}.
+
+Generate a SHORT (1-3 sentences) natural interject that:
+- Shows you understand what they're saying
+- Validates or adds relevant information
+- Feels like a real interruption in conversation
+
+Write ONLY the interject, in Spanish, no explanation.`;
+  }
+
+  _parseValidationResponse(response) {
+    const text = response.toLowerCase();
+    const shouldInterject = text.includes('yes') || text.includes('sí');
+    return { shouldInterject };
+  }
+
+  _classifyInterject(text) {
+    const lower = text.toLowerCase();
+
+    if (/^(sí|exacto|claro|verdad|correcto|tienes razón)/.test(lower)) {
+      return 'confirmatory';
+    }
+
+    if (text.includes('?')) {
+      return 'question';
+    }
+
+    if (/^(pero|aunque|sin embargo|realmente)/.test(lower)) {
+      return 'new_angle';
+    }
+
+    return 'confirmatory';
+  }
+
+  _truncateInterject(text, maxWords) {
+    const words = text.split(/\s+/);
+    if (words.length <= maxWords) return text;
+
+    const truncated = words.slice(0, maxWords).join(' ');
+    const lastPeriod = truncated.lastIndexOf('.');
+    const lastComma = truncated.lastIndexOf(',');
+    const breakPoint = Math.max(lastPeriod, lastComma);
+
+    if (breakPoint > maxWords * 0.7) {
+      return truncated.substring(0, breakPoint + 1);
+    }
+
+    return truncated + '...';
+  }
+
+  async _callLLM(prompt, options = {}) {
+    const response = await fetch(GROQ_CHAT, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DEFAULT_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: options.temperature || 0.7,
+        max_tokens: options.max_tokens || 100
+      })
+    });
+
+    if (!response.ok) throw new Error('LLM API failed');
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
+
+  async _getTTSAudio(text) {
+    const voice = ONDAS_VOICES[currentVoiceIdx].id;
+
+    const response = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
+
+    if (!response.ok) throw new Error('TTS API failed');
+
+    return response.blob();
+  }
+
+  _emitEvent(eventName, data) {
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      const event = new CustomEvent(`interject:${eventName}`, { detail: data });
+      window.dispatchEvent(event);
+    }
+  }
+
+  on(eventName, callback) {
+    if (typeof window !== 'undefined') {
+      window.addEventListener(`interject:${eventName}`, (e) => {
+        callback(e.detail);
+      });
+    }
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // State management
 // ──────────────────────────────────────────────────────────────
@@ -844,6 +1429,7 @@ let mimeType = '';
 let history = [];
 let audioCtx = null;
 let textVisible = false;
+let interjectManager = null; // Interject AI system
 
 // Ondas state
 let currentPalette = 'aurora';
@@ -1010,6 +1596,12 @@ async function startRec() {
     recorder.onstop = onStop;
     recorder.start();
     setState('listening');
+
+    // Start interject analysis
+    if (interjectManager) {
+      interjectManager.startAnalysis();
+      interjectManager.resetSession();
+    }
   } catch (e) {
     setSub(`⚠️ Micrófono: ${e.message}`);
     setState('idle');
@@ -1047,13 +1639,18 @@ function getGroqKey() {
 }
 
 async function llm() {
+  // Use enhanced system prompt if interject manager is available
+  const systemPrompt = interjectManager
+    ? interjectManager.getFullResponseSystemPrompt()
+    : SYSTEM;
+
   const r = await fetch(GROQ_CHAT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getGroqKey()}` },
     body: JSON.stringify({
       model: GROQ_MODEL,
       max_tokens: 200,
-      messages: [{ role: 'system', content: SYSTEM }, ...history],
+      messages: [{ role: 'system', content: systemPrompt }, ...history],
     }),
   });
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `LLM ${r.status}`); }
@@ -1081,12 +1678,24 @@ async function onStop() {
     const transcript = await stt(blob, type);
     if (!transcript.trim()) { setState('idle'); setSub('(sin captar)'); return; }
     setSub(`« ${transcript} »`);
+
+    // Update interject manager
+    if (interjectManager) {
+      interjectManager.updateTranscript(transcript);
+      interjectManager.processCooldownCommand(transcript);
+    }
+
     history.push({ role: 'user', content: transcript });
     if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
 
     const reply = await llm();
     history.push({ role: 'assistant', content: reply });
     if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
+
+    // Track conversation in interject manager
+    if (interjectManager) {
+      interjectManager.addConversationTurn(transcript, reply);
+    }
 
     setState('speaking');
     setPrompt(reply);
@@ -1395,6 +2004,13 @@ function init() {
   setPrompt('Pulsa para hablar');
   setSub('');
   setState('idle');
+
+  // Initialize interject manager
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  interjectManager = new InterjectManager(audioCtx);
+  console.log('[Interject] Manager initialized');
 
   // Start animation loop
   animate();
