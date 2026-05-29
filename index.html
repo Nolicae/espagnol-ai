@@ -1081,9 +1081,13 @@ function stopRecognition() {
 
 function handleSpeechResult(e) {
   let hasFinal = false;
+  let hasInterim = false;
   for (let i = e.resultIndex; i < e.results.length; i++) {
     if (e.results[i].isFinal) hasFinal = true;
+    else hasInterim = true;
   }
+  // Cancel silence timer the moment any speech activity is detected
+  if (hasInterim || hasFinal) clearSilenceTimer();
   if (hasFinal) triggerProcessing();
 }
 
@@ -1136,7 +1140,7 @@ async function triggerProcessing() {
     processing  = false;
     if (sessionActive) {
       setState('session');
-      startSilenceTimer(); // if user doesn't respond in 6s, AI prompts
+      startSilenceTimer(9000); // if user doesn't respond in 9s, AI prompts
     }
   }
 }
