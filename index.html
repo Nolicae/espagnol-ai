@@ -845,9 +845,9 @@ class AudioAnalyzer {
   constructor(audioContext, sampleRate = 16000) {
     this.audioContext = audioContext;
     this.sampleRate = sampleRate;
-    this.minPauseDuration = 1.5; // seconds
-    this.maxPauseDuration = 2.0; // seconds
-    this.silenceThreshold = -40; // dB
+    this.minPauseDuration = 0.8; // seconds (reduced from 1.5 for more aggressive detection)
+    this.maxPauseDuration = 3.0; // seconds (increased window)
+    this.silenceThreshold = -35; // dB (lowered from -40 to detect softer pauses)
     this.listeners = [];
   }
 
@@ -890,11 +890,11 @@ class AudioAnalyzer {
     const duration = audioBuffer.duration;
     const avgEnergy = this._calculateAverageEnergy(samples);
 
-    if (duration >= 0.3 && duration <= 1.0 && avgEnergy > this.silenceThreshold + 5) {
+    if (duration >= 0.2 && duration <= 1.2 && avgEnergy > this.silenceThreshold + 3) {
       return {
         type: 'hesitation',
         duration: duration,
-        confidence: 0.7
+        confidence: 0.8 // Increased confidence
       };
     }
     return null;
@@ -1097,8 +1097,8 @@ class InterjectManager {
     this.conversationContext = [];
 
     this.config = {
-      minFrequencyPerSession: 3,
-      maxFrequencyPerSession: 5,
+      minFrequencyPerSession: 2,
+      maxFrequencyPerSession: 8, // Increased from 5 to 8 for more aggressive interjections
       maxInterjectLength: 150,
       maxInterjectDuration: 15,
       llmValidationTimeout: 3000,
