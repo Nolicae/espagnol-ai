@@ -1659,8 +1659,11 @@ async function startRec() {
       let lastTranscriptCheck = '';
       let lastErrorCheckTime = 0;
 
+      console.log('[Interject] Starting periodic check loop');
+
       const interjectCheckInterval = setInterval(async () => {
-        if (appState !== 'listening' && appState !== 'en vivo') {
+        if (appState !== 'listening') {
+          console.log('[Interject] State changed to', appState, '- clearing interval');
           clearInterval(interjectCheckInterval);
           return;
         }
@@ -1670,24 +1673,31 @@ async function startRec() {
           const now = Date.now();
           if (now - lastErrorCheckTime > 2000 && chunks.length > 0) { // Check every 2 seconds
             lastErrorCheckTime = now;
+            console.log('[Interject] Checking for errors - chunks:', chunks.length);
 
             try {
               // Get interim transcription from accumulated chunks
               const mimeType = recorder.mimeType || 'audio/webm';
               const interimBlob = new Blob(chunks, { type: mimeType });
+              console.log('[Interject] Interim blob size:', interimBlob.size);
 
               if (interimBlob.size > 10000) { // Only if we have enough audio
+                console.log('[Interject] Requesting interim STT...');
                 const interimTranscript = await stt(interimBlob, mimeType);
+                console.log('[Interject] Interim transcript:', interimTranscript);
 
                 // Only check significant changes to avoid redundant checks
                 if (interimTranscript && interimTranscript !== lastTranscriptCheck && interimTranscript.length > 10) {
                   lastTranscriptCheck = interimTranscript;
+                  console.log('[Interject] New transcript detected, checking for errors...');
 
                   // Check for errors in this transcript
                   const correction = await interjectManager.detectAndCorrectErrors(interimTranscript);
+                  console.log('[Interject] Error detection result:', correction);
 
                   if (correction) {
                     // ERROR DETECTED - interrupt immediately
+                    console.log('[Interject] ERROR FOUND - interrupting!');
                     if (recorder && recorder.state === 'recording') {
                       recorder.pause();
                     }
@@ -1706,6 +1716,8 @@ async function startRec() {
                     return;
                   }
                 }
+              } else {
+                console.log('[Interject] Blob too small:', interimBlob.size, 'need > 10000');
               }
             } catch (err) {
               console.error('[Interject] Interim transcription failed:', err);
