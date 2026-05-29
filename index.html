@@ -772,6 +772,18 @@ let processing  = false;
 let recognition = null;
 let audioCtx    = null;
 
+// TTS interruption support
+let ttsSource  = null;   // currently playing AudioBufferSourceNode
+let speakToken = 0;      // incremented on interrupt; speak() checks it to exit loop
+
+function interruptTTS() {
+  speakToken++;
+  if (ttsSource) {
+    try { ttsSource.stop(); } catch (_) {}
+    ttsSource = null;
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // setState
 // ──────────────────────────────────────────────────────────────
@@ -1037,7 +1049,16 @@ function handleSpeechResult(e) {
 // Trigger pipeline  STT → LLM → TTS
 // ──────────────────────────────────────────────────────────────
 async function triggerProcessing() {
-  if (processing || aiSpeaking || !sessionActive) return;
+  if (processing || !sessionActive) return;
+
+  // User spoke while AI was speaking — interrupt TTS and let this call take over
+  if (aiSpeaking) {
+    interruptTTS();
+    // The ongoing pipeline's finally block will reset flags asynchronously.
+    // Don't proceed now; the next speech event will re-trigger once flags clear.
+    return;
+  }
+
   const chunks = audioChunks.splice(0);
   if (chunks.length === 0) return;
 
@@ -1064,7 +1085,14 @@ async function triggerProcessing() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) setState('session');
+    // Discard any audio recorded while AI was speaking (echo through mic)
+    audioChunks.splice(0);
+    if (sessionActive) {
+      setState('session');
+      // Restart recognition to get a clean slate after AI spoke
+      stopRecognition();
+      startRecognition();
+    }
   }
 }
 
@@ -1133,13 +1161,142 @@ async function speakChunk(text) {
   const src = audioCtx.createBufferSource();
   src.buffer = decoded;
   src.connect(audioCtx.destination);
-  return new Promise((resolve, reject) => { src.onended = resolve; src.onerror = reject; src.start(0); });
+  ttsSource = src;
+  return new Promise((resolve, reject) => {
+    src.onended = () => { if (ttsSource === src) ttsSource = null; resolve(); };
+    src.onerror = reject;
+    src.start(0);
+  });
 }
 
 async function speak(text) {
   if (!audioCtx) return;
   if (audioCtx.state === 'suspended') await audioCtx.resume();
-  for (const chunk of splitText(text)) await speakChunk(chunk);
+  const myToken = speakToken;
+  for (const chunk of splitText(text)) {
+    if (speakToken !== myToken) break; // interrupted
+    await speakChunk(chunk);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Voice data — 22 voices across the Spanish-speaking world
+// ──────────────────────────────────────────────────────────────
+const VOICES = [
+  // Spain
+  { id:'es-ES-ElviraNeural',    name:'Elvira',    city:'Madrid',           country:'España',       trait:'paciente',   x:295, y:32  },
+  { id:'es-ES-AlvaroNeural',    name:'Álvaro',    city:'Barcelona',        country:'España',       trait:'directo',    x:308, y:44  },
+  // United States
+  { id:'es-US-PalomaNeural',    name:'Paloma',    city:'Miami',            country:'EE. UU.',      trait:'moderna',    x:90,  y:58  },
+  { id:'es-US-AlonsoNeural',    name:'Alonso',    city:'Los Ángeles',      country:'EE. UU.',      trait:'relajado',   x:76,  y:66  },
+  // Mexico
+  { id:'es-MX-DaliaNeural',     name:'Dalia',     city:'Ciudad de México', country:'México',       trait:'animada',    x:94,  y:88  },
+  { id:'es-MX-JorgeNeural',     name:'Jorge',     city:'Guadalajara',      country:'México',       trait:'amigable',   x:82,  y:98  },
+  // Cuba
+  { id:'es-CU-BelkysNeural',    name:'Belkys',    city:'La Habana',        country:'Cuba',         trait:'musical',    x:152, y:96  },
+  { id:'es-CU-ManuelNeural',    name:'Manuel',    city:'Santiago de Cuba', country:'Cuba',         trait:'cálido',     x:162, y:106 },
+  // El Salvador
+  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',  trait:'serena',     x:100, y:122 },
+  { id:'es-SV-RodrigoNeural',   name:'Rodrigo',   city:'San Salvador',     country:'El Salvador',  trait:'tranquilo',  x:112, y:132 },
+  // Colombia
+  { id:'es-CO-SalomeNeural',    name:'Salomé',    city:'Bogotá',           country:'Colombia',     trait:'cálida',     x:134, y:156 },
+  { id:'es-CO-GonzaloNeural',   name:'Gonzalo',   city:'Medellín',         country:'Colombia',     trait:'jovial',     x:146, y:166 },
+  // Venezuela
+  { id:'es-VE-PaolaNeural',     name:'Paola',     city:'Caracas',          country:'Venezuela',    trait:'vibrante',   x:162, y:148 },
+  { id:'es-VE-SebastianNeural', name:'Sebastián', city:'Maracaibo',        country:'Venezuela',    trait:'expresivo',  x:174, y:158 },
+  // Ecuador
+  { id:'es-EC-AndreaNeural',    name:'Andrea',    city:'Quito',            country:'Ecuador',      trait:'serena',     x:122, y:174 },
+  { id:'es-EC-LuisNeural',      name:'Luis',      city:'Guayaquil',        country:'Ecuador',      trait:'claro',      x:134, y:182 },
+  // Peru
+  { id:'es-PE-CamilaNeural',    name:'Camila',    city:'Lima',             country:'Perú',         trait:'natural',    x:128, y:192 },
+  // Chile
+  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',        trait:'clara',      x:128, y:216 },
+  { id:'es-CL-LorenzoNeural',   name:'Lorenzo',   city:'Valparaíso',       country:'Chile',        trait:'dinámico',   x:140, y:224 },
+  // Argentina
+  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',    trait:'expresiva',  x:153, y:230 },
+  { id:'es-AR-TomasNeural',     name:'Tomás',     city:'Córdoba',          country:'Argentina',    trait:'cálido',     x:164, y:238 },
+  // Uruguay
+  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',      trait:'fluida',     x:162, y:224 },
+];
+
+function initVoicesMap() {
+  const NS     = 'http://www.w3.org/2000/svg';
+  const mapSvg = document.getElementById('voices-map');
+  const nameEl = document.getElementById('selected-voice-name');
+  const cityEl = document.getElementById('selected-voice-city');
+  const metaEl = document.getElementById('selected-voice-meta');
+  const ctrEl  = document.getElementById('voice-counter');
+
+  function selectVoice(v, save) {
+    if (save) localStorage.setItem('voice_key', v.id);
+    nameEl.textContent = v.name;
+    cityEl.textContent = v.city;
+    metaEl.textContent = `${v.country} · ${v.trait}`;
+    const idx = VOICES.findIndex(x => x.id === v.id) + 1;
+    ctrEl.textContent  = `${String(idx).padStart(2,'0')} / ${VOICES.length}`;
+    renderMap(v.id);
+  }
+
+  function renderMap(selectedId) {
+    mapSvg.innerHTML = '';
+
+    // faint constellation lines between geographic neighbours
+    const links = [
+      [0,1],[2,3],[4,5],[4,2],[5,3],[6,7],[8,9],[8,4],[9,5],
+      [10,11],[10,12],[11,13],[12,14],[14,15],[16,15],[17,18],
+      [19,20],[19,17],[20,18],[21,17],[21,19],
+    ];
+    for (const [a, b] of links) {
+      const va = VOICES[a], vb = VOICES[b];
+      if (!va || !vb) continue;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', va.x); line.setAttribute('y1', va.y);
+      line.setAttribute('x2', vb.x); line.setAttribute('y2', vb.y);
+      line.setAttribute('stroke', 'rgba(255,255,255,0.08)');
+      line.setAttribute('stroke-width', '0.8');
+      mapSvg.appendChild(line);
+    }
+
+    // dots
+    for (const v of VOICES) {
+      const isSel = v.id === selectedId;
+      const g = document.createElementNS(NS, 'g');
+      g.style.cursor = 'pointer';
+
+      if (isSel) {
+        // outer glow ring
+        const ring = document.createElementNS(NS, 'circle');
+        ring.setAttribute('cx', v.x); ring.setAttribute('cy', v.y);
+        ring.setAttribute('r', '9');
+        ring.setAttribute('fill', 'none');
+        ring.setAttribute('stroke', 'rgba(164,200,244,0.35)');
+        ring.setAttribute('stroke-width', '1');
+        g.appendChild(ring);
+      }
+
+      const dot = document.createElementNS(NS, 'circle');
+      dot.setAttribute('cx', v.x); dot.setAttribute('cy', v.y);
+      dot.setAttribute('r', isSel ? '4.5' : '3');
+      dot.setAttribute('fill', isSel ? 'rgba(200,228,255,0.95)' : 'rgba(255,255,255,0.32)');
+      if (isSel) dot.setAttribute('filter', 'drop-shadow(0 0 5px rgba(164,200,244,0.9))');
+      g.appendChild(dot);
+
+      // invisible hit target
+      const hit = document.createElementNS(NS, 'circle');
+      hit.setAttribute('cx', v.x); hit.setAttribute('cy', v.y);
+      hit.setAttribute('r', '14');
+      hit.setAttribute('fill', 'transparent');
+      g.appendChild(hit);
+
+      g.addEventListener('click', () => selectVoice(v, true));
+      mapSvg.appendChild(g);
+    }
+  }
+
+  // Init with saved or default voice
+  const savedId = getVoiceKey();
+  const current = VOICES.find(v => v.id === savedId) || VOICES[0];
+  selectVoice(current, false);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1200,6 +1357,9 @@ updateDurationSlider(savedDuration);
 
 // Start orb animation loop
 requestAnimationFrame(drawOrbFrame);
+
+// Init voice map
+initVoicesMap();
 </script>
 
 <script>
