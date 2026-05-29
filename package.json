@@ -1,0 +1,7 @@
+{
+  "name": "espagnol-ai",
+  "version": "1.0.0",
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}

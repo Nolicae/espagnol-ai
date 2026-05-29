@@ -3,32 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>EspañolAI</title>
+  <title>Espagnolai — Ondas</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="EspañolAI">
+  <meta name="apple-mobile-web-app-title" content="Espagnolai">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="manifest" href="manifest.json">
+
+  <!-- Fonts Ondas -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Serif+Display:ital@0;1&family=Crimson+Pro:ital,wght@0,300;0,400;1,400&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
-      --bg: #0a0d14; --surface: #13172a; --border: #1e2235;
-      --accent: #7c3aed; --accent2: #a855f7;
-      --text: #e8eaf0; --muted: #6b7280;
-      --red: #ef4444; --amber: #f59e0b;
+      /* Ondas Aurora palette (default) */
+      --bg1: #2A2E48;
+      --bg2: #181B2D;
+      --bg3: #0D0F1A;
+      --peach: #E8B8C8;
+      --peachDk: #C98EA0;
+      --lilac: #B8DAC8;
+      --lilacDk: #8FB39E;
+      --sage: #C8E0D2;
+      --ink: #E8E6F0;
+      --inkSoft: rgba(255,255,255,0.62);
+      --inkDim: rgba(255,255,255,0.32);
+      --rule: rgba(255,255,255,0.08);
+      --sans: 'Geist', system-ui, sans-serif;
+      --mono: 'Geist Mono', monospace;
+      --serif: 'Instrument Serif', Georgia, serif;
     }
+
+    /* Palette themes */
+    :root.pal-dusk {
+      --bg1: #3A2F4A; --bg2: #231E33; --bg3: #15111E;
+      --peach: #F2B8A2; --peachDk: #E08F73; --lilac: #C8B8E3; --lilacDk: #9E8FBA;
+      --sage: #BAD6C2; --ink: #EDE7F0;
+    }
+    :root.pal-mist {
+      --bg1: #2E3A3D; --bg2: #1A2326; --bg3: #0E1416;
+      --peach: #E8D4B5; --peachDk: #C9B58E; --lilac: #B5D4CE; --lilacDk: #8FB0AA;
+      --sage: #C8DCD0; --ink: #E8EDEC;
+    }
+    :root.pal-cocoa {
+      --bg1: #3D2F26; --bg2: #241A14; --bg3: #13100D;
+      --peach: #E8A578; --peachDk: #C77F4C; --lilac: #D8C5A8; --lilacDk: #B09877;
+      --sage: #C9B894; --ink: #F0E8DD;
+    }
+    :root.pal-graphite {
+      --bg1: #2D2D33; --bg2: #1A1A1F; --bg3: #0E0E11;
+      --peach: #E8DCC8; --peachDk: #C9BA9C; --lilac: #BFC5D2; --lilacDk: #959DAC;
+      --sage: #C8D2C0; --ink: #E8E8EC;
+    }
+
     html, body {
-      height: 100%; background: var(--bg); color: var(--text);
-      font-family: -apple-system, system-ui, sans-serif;
-      -webkit-text-size-adjust: 100%; overflow: hidden;
+      height: 100%;
+      background: var(--bg1);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-text-size-adjust: 100%;
+      overflow: hidden;
     }
+
     #app {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; height: 100vh; gap: 40px;
-      padding: 40px 24px; position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100%;
+      background:
+        radial-gradient(140% 100% at 50% 0%,
+          hsla(var(--hue-dyn, 30), 65%, 62%, 0.12) 0%,
+          hsla(var(--hue-dyn, 30), 60%, 50%, 0.06) 45%,
+          var(--bg3) 100%),
+        radial-gradient(140% 100% at 50% 0%, var(--bg1) 0%, var(--bg2) 45%, var(--bg3) 100%);
+      position: relative;
     }
-    #state-label {
-      font-size: 1rem; font-weight: 600; letter-spacing: 0.04em;
-      color: var(--muted); min-height: 1.4em; transition: color 0.3s;
+
+    /* Main container */
+    .app-container {
+      position: relative;
+      width: 100%;
+      max-width: 402px;
+      height: 100vh;
+      max-height: 874px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     #state-label.session       { color: var(--accent2); }
     #state-label.ai-speaking   { color: var(--accent);  }
@@ -65,38 +129,517 @@
       70% { box-shadow: 0 0 0 32px rgba(168,85,247,0);  }
       100%{ box-shadow: 0 0 0 0    rgba(168,85,247,0);  }
     }
-    #subtitle {
-      font-size: 0.88rem; color: var(--muted); font-style: italic;
-      text-align: center; max-width: 300px; min-height: 2.6em; line-height: 1.6;
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--sage);
+      box-shadow: 0 0 8px var(--sage);
+      animation: blink 1.6s ease-in-out infinite;
     }
-    #settings-btn {
-      position: absolute; top: 20px; right: 20px;
-      background: none; border: none; color: var(--muted);
-      font-size: 1.4rem; cursor: pointer; padding: 8px;
+
+    .status-dot.listening { animation: none; }
+
+    .hud-controls {
+      display: flex;
+      gap: 12px;
     }
-    #settings-panel {
-      position: absolute; inset: 0; background: var(--bg); z-index: 10;
-      display: none; flex-direction: column; align-items: center;
-      justify-content: center; padding: 32px 24px; gap: 16px;
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Voice pill */
+    .voice-pill {
+      position: absolute;
+      top: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px 6px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--rule);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+
+    .voice-pill-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent, var(--peach));
+      filter: blur(0.5px);
+    }
+
+    .voice-pill-text {
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--ink);
+      letter-spacing: 0.2px;
+      font-weight: 400;
+    }
+
+    /* Orb container */
+    .orb-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 372px;
+      height: 372px;
+      z-index: 5;
+    }
+
+    .orb-btn {
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .orb-btn svg {
+      filter: drop-shadow(0 0 8px var(--accent, var(--peach)));
+      transition: filter 0.3s ease;
+    }
+
+    /* Timer */
+    .timer-container {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .timer {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 52px;
+      line-height: 1;
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--ink) 55%, rgba(255,255,255,0.55) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .timer-colon {
+      display: inline-block;
+      font-style: normal;
+      font-weight: 300;
+      font-size: 0.5em;
+      vertical-align: 0.34em;
+      padding: 0 0.36em;
+      letter-spacing: 0;
+      transition: all 600ms ease;
+    }
+
+    .timer-progress {
+      position: relative;
+      width: 240px;
+      height: 14px;
+      margin: 14px auto 0;
+    }
+
+    .timer-track {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+      transform: translateY(-50%);
+      background: linear-gradient(90deg, transparent 0%, var(--rule) 12%, var(--rule) 88%, transparent 100%);
+    }
+
+    .timer-fill {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      height: 1px;
+      transform: translateY(-50%);
+      background: linear-gradient(90deg, transparent 0%, var(--accent, var(--peach)) 35%, var(--accent, var(--peach)) 100%);
+      box-shadow: 0 0 8px var(--accent, var(--peach))80, 0 0 14px var(--accent, var(--peach))40;
+      transition: width 600ms ease, background 600ms ease, box-shadow 600ms ease;
+    }
+
+    .timer-dot {
+      position: absolute;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background: var(--accent, var(--peach));
+      box-shadow: 0 0 8px var(--accent, var(--peach));
+      filter: blur(0.4px);
+      transition: left 100ms ease;
+    }
+
+    .timer-labels {
+      display: flex;
+      justify-content: space-between;
+      max-width: 240px;
+      margin: 10px auto 0;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--inkDim);
+      letter-spacing: 1.4px;
+    }
+
+
+    .icon-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--rule);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      color: var(--ink);
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--accent, var(--peach));
+    }
+
+    .icon-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 1.3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    /* Screen: Settings (Ajustes) */
+    .screen-settings {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      padding: 0;
+      position: relative;
       overflow-y: auto;
     }
-    #settings-panel.open { display: flex; }
-    #settings-panel h2 { font-size: 1.2rem; margin-bottom: 4px; }
-    #settings-close {
-      position: absolute; top: 20px; right: 20px;
-      background: none; border: none; color: var(--muted);
-      font-size: 1.6rem; cursor: pointer; padding: 8px;
+
+    .screen-settings.hidden { display: none; }
+
+    .settings-header {
+      position: absolute;
+      top: 62px;
+      left: 24px;
+      right: 24px;
+      z-index: 20;
     }
-    .key-group { width: 100%; max-width: 360px; text-align: left; }
-    .key-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
-    .key-group input {
-      width: 100%; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 13px 16px; color: var(--text);
-      font-size: 0.95rem; outline: none; -webkit-appearance: none;
+
+    .settings-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
     }
-    .key-group input:focus { border-color: var(--accent); }
-    .s-save { width:100%; max-width:360px; background:var(--accent); color:#fff; border:none; border-radius:14px; padding:14px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:4px; }
-    .s-out  { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:10px 20px; cursor:pointer; font-size:0.85rem; }
+
+    .settings-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--inkSoft);
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .settings-subtitle {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 36px;
+      line-height: 1.05;
+      letter-spacing: -0.4px;
+      margin-top: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--ink) 55%, rgba(255,255,255,0.55) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .settings-section-label {
+      position: absolute;
+      top: 184px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 2px;
+      color: var(--inkDim);
+      text-transform: uppercase;
+      z-index: 20;
+    }
+
+    .voices-grid {
+      position: absolute;
+      top: 212px;
+      left: 24px;
+      right: 24px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .voice-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--rule);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--sans);
+      font-size: 11px;
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .voice-btn:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .voice-btn[data-selected="true"] {
+      border-color: var(--accent, var(--peach));
+      background: rgba(201,100,66,0.08);
+      box-shadow: 0 0 0 1.5px var(--accent, var(--peach)) inset;
+      color: var(--accent, var(--peach));
+    }
+
+    .voice-dot-mini {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .voice-name {
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .settings-selected-voice {
+      position: absolute;
+      top: 524px;
+      left: 24px;
+      right: 24px;
+      text-align: center;
+    }
+
+    .selected-voice-name {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 34px;
+      line-height: 1;
+      letter-spacing: -0.3px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--accent, var(--peach)) 55%, rgba(255,255,255,0.55) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .selected-voice-city {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 17px;
+      color: var(--inkSoft);
+      margin-top: 2px;
+    }
+
+    .selected-voice-meta {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--inkDim);
+      letter-spacing: 2.2px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    /* Session duration */
+    .settings-duration {
+      position: absolute;
+      top: 614px;
+      left: 24px;
+      right: 24px;
+    }
+
+    .duration-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+
+    .duration-label-text {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 2px;
+      color: var(--inkDim);
+      text-transform: uppercase;
+    }
+
+    .duration-value {
+      font-family: var(--serif);
+      font-weight: 300;
+      font-size: 44px;
+      letter-spacing: -1px;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--ink) 55%, rgba(255,255,255,0.55) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .duration-min {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 16px;
+      color: var(--inkSoft);
+      margin-left: 6px;
+    }
+
+    .duration-slider-container {
+      position: relative;
+      height: 36px;
+      margin-top: 12px;
+    }
+
+    .duration-slider {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .duration-track {
+      position: absolute;
+      top: 17px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--rule);
+      border-radius: 1px;
+    }
+
+    .duration-fill {
+      position: absolute;
+      top: 17px;
+      left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--lilac), var(--accent, var(--peach)));
+      box-shadow: 0 0 14px var(--accent, var(--peach))88;
+      border-radius: 1px;
+      transition: width 0.1s ease;
+    }
+
+    .duration-thumb {
+      position: absolute;
+      top: 8px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 0 1.5px var(--accent, var(--peach)), 0 0 16px var(--accent, var(--peach))aa;
+      pointer-events: none;
+      transition: left 0.1s ease;
+    }
+
+    .duration-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      color: var(--inkDim);
+      letter-spacing: 1.5px;
+    }
+
+    /* Save button */
+    .settings-save {
+      position: absolute;
+      bottom: 62px;
+      left: 24px;
+      right: 24px;
+      width: calc(100% - 48px);
+      padding: 16px;
+      background: linear-gradient(
+        180deg,
+        rgba(255,255,255,0.26) 0%,
+        rgba(255,255,255,0.06) 40%,
+        rgba(255,255,255,0) 100%
+      ), linear-gradient(
+        120deg,
+        var(--lilac) 0%,
+        var(--lilac) 32%,
+        var(--accent, var(--peach)) 68%,
+        var(--peach) 100%
+      );
+      border: none;
+      border-radius: 999px;
+      color: #1A1424;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.55),
+        inset 0 -1px 0 rgba(0,0,0,0.18),
+        0 0 32px var(--accent, var(--peach))55,
+        0 6px 22px rgba(0,0,0,0.22);
+      transition: all 250ms ease;
+    }
+
+    .settings-save:hover {
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.65),
+        inset 0 -1px 0 rgba(0,0,0,0.22),
+        0 0 40px var(--accent, var(--peach))66,
+        0 8px 28px rgba(0,0,0,0.28);
+    }
+
+    /* Scrollbar styling */
+    .voices-grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .voices-grid::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+    }
   </style>
 </head>
 <body>
@@ -108,22 +651,115 @@
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
 
-  <div id="settings-panel">
-    <button id="settings-close">✕</button>
-    <h2>⚙️ Paramètres</h2>
-    <div class="key-group">
-      <label>Clé Groq</label>
-      <input id="s-groq" type="password" placeholder="gsk_…">
+    <!-- ═══ Screen: Conversation ═══ -->
+    <div class="screen-conversation" id="screen-conversation">
+      <!-- HUD -->
+      <div class="hud">
+        <div class="hud-status">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">En vivo</span>
+        </div>
+        <div class="hud-controls">
+          <button class="icon-btn" id="btn-reset" title="reiniciar">
+            <svg viewBox="0 0 16 16">
+              <path d="M2 8a6 6 0 1 1 6 6M2 8v-4M2 8h4" />
+            </svg>
+          </button>
+          <button class="icon-btn" id="btn-settings" title="ajustes">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="1.6"/>
+              <path d="M8 2v1.4M8 12.6V14M2 8h1.4M12.6 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Orb -->
+      <div class="orb-container" id="orb-container">
+        <button class="orb-btn" id="orb-btn">
+          <svg id="orb-svg" width="372" height="372" viewBox="-186 -186 372 372"></svg>
+        </button>
+      </div>
+
+
+      <!-- Timer -->
+      <div class="timer-container">
+        <div class="timer">
+          <span id="timer-mm">00</span>
+          <span class="timer-colon">:</span>
+          <span id="timer-ss">00</span>
+        </div>
+        <div class="timer-progress">
+          <div class="timer-track"></div>
+          <div class="timer-fill" id="timer-fill"></div>
+          <div class="timer-dot" id="timer-dot"></div>
+        </div>
+        <div class="timer-labels">
+          <span>0:00</span><span>5:00</span><span>10:00</span>
+        </div>
+      </div>
     </div>
-    <button class="s-save" id="s-save">Sauvegarder</button>
-    <button class="s-out"  id="s-out">Réinitialiser</button>
+
+    <!-- ═══ Screen: Settings ═══ -->
+    <div class="screen-settings hidden" id="screen-settings">
+      <!-- Header -->
+      <div class="settings-header">
+        <div class="settings-title-row">
+          <span style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 2px; color: var(--inkSoft); text-transform: uppercase;">Ajustes</span>
+          <button class="settings-close-btn" id="btn-settings-close">cerrar ✕</button>
+        </div>
+        <h2 class="settings-subtitle">Elige una <span style="font-style: italic;">voz</span></h2>
+      </div>
+
+      <!-- Section label -->
+      <div class="settings-section-label">
+        <span>Mundo hispanohablante</span>
+        <span id="voice-counter">01 / 44</span>
+      </div>
+
+      <!-- Voices map -->
+      <svg id="voices-map" viewBox="0 0 360 290" width="100%" height="290" style="position: absolute; top: 212px; left: 0; right: 0; overflow: visible; display: block; padding: 0 16px; max-width: 402px;"></svg>
+
+      <!-- Selected voice card -->
+      <div class="settings-selected-voice">
+        <div class="selected-voice-name" id="selected-voice-name">Elvira</div>
+        <div class="selected-voice-city" id="selected-voice-city">Madrid</div>
+        <div class="selected-voice-meta" id="selected-voice-meta">España · paciente</div>
+      </div>
+
+      <!-- Duration section -->
+      <div class="settings-duration">
+        <div class="duration-label">
+          <span class="duration-label-text">Duración</span>
+          <div>
+            <span class="duration-value" id="duration-value">10</span>
+            <span class="duration-min">min</span>
+          </div>
+        </div>
+        <div class="duration-slider-container">
+          <div class="duration-track"></div>
+          <div class="duration-fill" id="duration-fill"></div>
+          <input type="range" min="5" max="15" value="10" class="duration-slider" id="duration-slider">
+          <div class="duration-thumb" id="duration-thumb"></div>
+        </div>
+        <div class="duration-labels">
+          <span>5 MIN</span><span>10</span><span>15 MIN</span>
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <button class="settings-save" id="btn-save">Guardar</button>
+    </div>
   </div>
 </div>
 
 <script>
 'use strict';
 
-// ── Config ───────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+// Configuration
+// ──────────────────────────────────────────────────────────────
 const GROQ_STT   = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
@@ -137,16 +773,12 @@ Intervén cuando el usuario hace una pausa, duda, hace una pregunta o comete un 
 Si hay un error gramatical o de vocabulario, corrígelo de forma natural dentro de tu respuesta, sin explicar la regla.
 Nunca repitas literalmente lo que dijo el usuario. Ve directo.`;
 
-// ── Keys ─────────────────────────────────────────────────────
-const groqKey = () => localStorage.getItem('groq_key') || '';
+const DEFAULT_KEY = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI81CPW';
+const DEFAULT_VOICE = 'es-ES-ElviraNeural';
 
-// ── DOM ──────────────────────────────────────────────────────
-const $        = id => document.getElementById(id);
-const stateLbl = $('state-label');
-const wavesEl  = $('waves');
-const micBtn   = $('mic-btn');
-const subEl    = $('subtitle');
-const sPanel   = $('settings-panel');
+// ──────────────────────────────────────────────────────────────
+// Ondas Configuration
+// ──────────────────────────────────────────────────────────────
 
 // ── App state ────────────────────────────────────────────────
 let appState    = 'inactive';
@@ -159,7 +791,6 @@ let aiSpeaking  = false;
 let processing  = false;
 let recognition = null;
 
-// ── UI ───────────────────────────────────────────────────────
 function setState(s) {
   appState = s;
   stateLbl.textContent = {
@@ -172,14 +803,8 @@ function setState(s) {
   micBtn.classList.toggle('active', s === 'session' || s === 'ai-speaking');
 }
 
-const setSub = t => { subEl.textContent = t; };
-
-// ── Audio context (unlocked by user gesture; stays authorized across async on iOS) ──
-let audioCtx = null;
-
-function unlockAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume().catch(() => {});
+function setSub(t) {
+  // Subtitles removed from DOM - this is now a no-op
 }
 
 async function startSession() {
@@ -307,22 +932,59 @@ function splitText(text, max = 180) {
   return chunks;
 }
 
+async function unlockAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume().catch(() => {});
+}
+
+// ──────────────────────────────────────────────────────────────
+// TTS (espagnol-tts API)
+// ──────────────────────────────────────────────────────────────
+
 async function speakChunk(text) {
-  const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
-  if (!r.ok) throw new Error(`TTS ${r.status}`);
-  const decoded = await audioCtx.decodeAudioData(await r.arrayBuffer());
-  const src = audioCtx.createBufferSource();
-  src.buffer = decoded;
-  src.connect(audioCtx.destination);
-  return new Promise(resolve => { src.onended = resolve; src.start(0); });
+  try {
+    const voice = getVoiceKey();
+    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
+    if (!r.ok) throw new Error(`TTS fetch ${r.status}`);
+
+    const arrayBuf = await r.arrayBuffer();
+    const decoded = await audioCtx.decodeAudioData(arrayBuf);
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = decoded;
+    src.connect(audioCtx.destination);
+
+    return new Promise((resolve, reject) => {
+      src.onended = () => resolve();
+      src.onerror = e => reject(e);
+      src.start(0);
+    });
+  } catch (e) {
+    console.error('[TTS] Error:', e.message);
+    throw e;
+  }
 }
 
 async function speak(text) {
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
-  for (const chunk of splitText(text)) await speakChunk(chunk);
+  try {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+
+    for (const chunk of splitText(text)) {
+      await speakChunk(chunk);
+    }
+  } catch (e) {
+    console.error('[TTS] speak() error:', e.message);
+    throw e;
+  }
 }
 
-// ── MediaRecorder ────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+// STT
+// ──────────────────────────────────────────────────────────────
+
 function initMime() {
   for (const t of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']) {
     if (MediaRecorder.isTypeSupported(t)) { mimeType = t; return; }
@@ -346,19 +1008,19 @@ async function stt(blob, type) {
   return (await r.json()).text || '';
 }
 
-// ── LLM ──────────────────────────────────────────────────────
-async function llm() {
-  const r = await fetch(GROQ_CHAT, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
-    body: JSON.stringify({
-      model:      GROQ_MODEL,
-      max_tokens: 200,
-      messages:   [{ role: 'system', content: SYSTEM }, ...history],
-    }),
-  });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `LLM ${r.status}`); }
-  return (await r.json()).choices[0]?.message?.content || '';
+function chronoStart(durationMinutes) {
+  if (chronoInterval) return;
+  sessionDuration = durationMinutes;
+  chronoSeconds = durationMinutes * 60;
+  const mm = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
+  const ss = String(chronoSeconds % 60).padStart(2, '0');
+  timerMm.textContent = mm;
+  timerSs.textContent = ss;
+  // Initialize progress bar at full
+  timerFill.style.width = '100%';
+  timerDot.style.left = 'calc(100% - 7px)';
+  console.log(`[Session] Starting ${durationMinutes}min countdown`);
+  chronoInterval = setInterval(chronoTick, 1000);
 }
 
 // ── Mic button ───────────────────────────────────────────────
@@ -369,22 +1031,25 @@ micBtn.addEventListener('click', e => {
   else stopSession();
 });
 
-// ── Settings ─────────────────────────────────────────────────
-$('settings-btn').addEventListener('click', () => {
-  $('s-groq').value = groqKey();
-  sPanel.classList.add('open');
+orbBtn.addEventListener('pointerup', () => {
+  // No state change - always in en vivo
 });
-$('settings-close').addEventListener('click', () => sPanel.classList.remove('open'));
-$('s-save').addEventListener('click', () => {
-  localStorage.setItem('groq_key', $('s-groq').value.trim());
-  sPanel.classList.remove('open');
-});
-$('s-out').addEventListener('click', () => { localStorage.clear(); location.reload(); });
 
 // ── Boot ─────────────────────────────────────────────────────
 initMime();
 setState('inactive');
 setSub('');
 </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(reg => console.log('[SW] Registered:', reg.scope))
+        .catch(err => console.warn('[SW] Registration failed:', err));
+    });
+  }
+</script>
+
 </body>
 </html>
