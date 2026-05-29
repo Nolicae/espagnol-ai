@@ -1165,8 +1165,8 @@ async function processAiSilencePrompt() {
     if (!r.ok) throw new Error(`LLM ${r.status}`);
     const reply = (await r.json()).choices[0]?.message?.content || '';
     if (reply.trim()) {
-      history.push({ role: 'assistant', content: reply });
-      if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
+      // Silence prompts are ephemeral nudges — don't pollute the conversation history.
+      // When the user speaks next, the LLM picks up cleanly from the last real exchange.
       await speak(reply);
     }
   } catch (e) {
