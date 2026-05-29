@@ -1738,7 +1738,7 @@ Write ONLY the interject, in Spanish, no explanation.`;
 // ──────────────────────────────────────────────────────────────
 // State management
 // ──────────────────────────────────────────────────────────────
-let appState = 'idle';
+let appState = 'en vivo'; // Always listening - no idle state
 let recorder = null;
 let chunks = [];
 let mimeType = '';
@@ -1793,9 +1793,7 @@ const btnSave = document.getElementById('btn-save');
 function setState(s) {
   appState = s;
   statusText.textContent = {
-    idle:      'Inactivo',
     'en vivo': 'En vivo',
-    thinking:  'Pensando…',
     hablando:  'Hablando…',
   }[s] ?? '';
 
@@ -1804,8 +1802,6 @@ function setState(s) {
   } else {
     statusDot.classList.remove('listening');
   }
-
-  // No text shown (prompt and subtitles removed from DOM)
 }
 
 function setSub(t) {
@@ -2040,7 +2036,7 @@ async function startRec() {
     }
   } catch (e) {
     setSub(`⚠️ Micrófono: ${e.message}`);
-    setState('idle');
+    setState('en vivo');
   }
 }
 
@@ -2105,7 +2101,7 @@ async function llm() {
 // ──────────────────────────────────────────────────────────────
 
 async function onStop() {
-  if (!chunks.length) { setState('idle'); return; }
+  if (!chunks.length) { setState('en vivo'); return; }
   const type = recorder.mimeType || mimeType || 'audio/webm';
   const blob = new Blob(chunks, { type });
 
@@ -2119,7 +2115,7 @@ async function onStop() {
 
   try {
     const transcript = await stt(blob, type);
-    if (!transcript.trim()) { setState('idle'); setSub('(sin captar)'); return; }
+    if (!transcript.trim()) { setState('en vivo'); setSub('(sin captar)'); return; }
     setSub(`« ${transcript} »`);
 
     // Update interject manager
@@ -2147,7 +2143,7 @@ async function onStop() {
   } catch (e) {
     setSub(`⚠️ ${e.message}`);
   } finally {
-    setState('idle');
+    setState('en vivo');
   }
 }
 
@@ -2162,7 +2158,7 @@ function chronoTick() {
     clearInterval(chronoInterval);
     chronoInterval = null;
     setSub('⏱️ Sesión terminada · Siguiente sesión disponible');
-    setState('idle');
+    setState('en vivo');
     timerMm.textContent = '00';
     timerSs.textContent = '00';
     timerFill.style.width = '0%';
