@@ -212,6 +212,45 @@ function stopSession() {
   setSub('');
 }
 
+// ── Web Speech recognition ───────────────────────────────────
+function startRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { setSub('⚠️ Web Speech non supporté'); return; }
+
+  recognition = new SR();
+  recognition.continuous     = true;
+  recognition.interimResults = true;
+  recognition.lang           = 'es-ES';
+
+  recognition.onresult    = handleSpeechResult;
+  recognition.onspeechend = () => setTimeout(() => triggerProcessing(), 300);
+  recognition.onerror     = e => { if (e.error !== 'no-speech') setSub(`⚠️ ${e.error}`); };
+  // Auto-restart if browser stops recognition mid-session
+  recognition.onend       = () => { if (sessionActive) recognition.start(); };
+
+  recognition.start();
+}
+
+function stopRecognition() {
+  if (!recognition) return;
+  recognition.onend = null; // prevent auto-restart
+  recognition.stop();
+  recognition = null;
+}
+
+function handleSpeechResult(e) {
+  let interim = '';
+  let hasFinal = false;
+
+  for (let i = e.resultIndex; i < e.results.length; i++) {
+    if (e.results[i].isFinal) hasFinal = true;
+    else interim += e.results[i][0].transcript;
+  }
+
+  if (interim) setSub(interim);
+  if (hasFinal) triggerProcessing();
+}
+
 // ── TTS via Vercel proxy → Google Translate TTS → AudioContext ────────────────
 // Google TTS has a ~200 char limit per request, so split at sentence boundaries.
 function splitText(text, max = 180) {
