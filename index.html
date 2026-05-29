@@ -835,7 +835,186 @@ const ONDAS_PALETTES = {
 };
 
 // ══════════════════════════════════════════════════════════════
-// ═══ INTERJECT MANAGER CLASSES ═══════════════════════════════
+// ═══ CONVERSATION MANAGER - Continuous Listening & Response ════
+// ══════════════════════════════════════════════════════════════
+
+class ConversationManager {
+  constructor() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    this.recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+    this.isListening = false;
+    this.isAISpeaking = false;
+    this.currentTranscript = '';
+    this.interimTranscript = '';
+    this.conversationHistory = [];
+    this.lastResponseTime = 0;
+    this.minResponseDelay = 1000; // Min 1s between responses
+
+    if (this.recognition) {
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
+      this.recognition.lang = 'es-ES';
+      this.setupListeners();
+    }
+  }
+
+  setupListeners() {
+    this.recognition.onstart = () => {
+      console.log('[Conv] Listening started');
+      this.isListening = true;
+    };
+
+    this.recognition.onend = () => {
+      console.log('[Conv] Listening ended');
+      this.isListening = false;
+    };
+
+    this.recognition.onresult = (event) => {
+      this.interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          this.currentTranscript = transcript;
+          this.onFinalTranscript(transcript);
+        } else {
+          this.interimTranscript += transcript;
+        }
+      }
+    };
+
+    this.recognition.onerror = (event) => {
+      console.error('[Conv] Recognition error:', event.error);
+    };
+  }
+
+  async onFinalTranscript(transcript) {
+    if (!transcript.trim()) return;
+
+    console.log('[Conv] Final transcript:', transcript);
+    this.conversationHistory.push({ role: 'user', content: transcript });
+
+    // Check if we should respond based on ConditionsInterject
+    const shouldRespond = await this.checkConditionsInterject(transcript);
+
+    if (shouldRespond && !this.isAISpeaking) {
+      await this.generateAndPlayResponse(transcript);
+    }
+  }
+
+  async checkConditionsInterject(transcript) {
+    if (Date.now() - this.lastResponseTime < this.minResponseDelay) {
+      return false;
+    }
+
+    const prompt = `Tu es un assistant conversationnel en espagnol. Analyse le dernier message de l'utilisateur:
+
+"${transcript}"
+
+DOIS-TU RÉPONDRE? Réponds UNIQUEMENT par "OUI" ou "NON".
+
+Réponds OUI si:
+- L'utilisateur a commis une erreur de grammaire/langue
+- L'utilisateur a posé une question
+- L'utilisateur a fait une pause significative (phrase incomplète)
+- Tu as quelque chose de pertinent à ajouter
+
+Contexte récent: ${this.conversationHistory.slice(-2).map(m => m.content).join(' | ')}
+
+Réponds juste: OUI ou NON`;
+
+    try {
+      const response = await this.callLLM(prompt, { max_tokens: 5, temperature: 0.3 });
+      return response.toUpperCase().includes('OUI');
+    } catch (e) {
+      console.error('[Conv] Condition check failed:', e);
+      return false;
+    }
+  }
+
+  async generateAndPlayResponse(lastUserMessage) {
+    if (this.isAISpeaking) return;
+
+    this.isAISpeaking = true;
+
+    try {
+      const systemPrompt = `Eres un profesor de español amigable. El usuario acaba de decir: "${lastUserMessage}"
+
+Responde de forma breve (1-2 frases), natural y pertinente. Si hay errores, corrígelos sutilmente.`;
+
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        ...this.conversationHistory.slice(-3)
+      ];
+
+      const response = await this.callLLM('', { messages, max_tokens: 100, temperature: 0.7 });
+
+      // Pause recognition while speaking
+      if (this.recognition) {
+        this.recognition.stop();
+      }
+
+      // Show waves while AI speaks
+      setState('speaking');
+
+      await speak(response);
+
+      // Add to history
+      this.conversationHistory.push({ role: 'assistant', content: response });
+      this.lastResponseTime = Date.now();
+
+      // Resume listening
+      setState('listening');
+      if (this.recognition && this.isListening) {
+        this.recognition.start();
+      }
+    } catch (e) {
+      console.error('[Conv] Response generation failed:', e);
+    } finally {
+      this.isAISpeaking = false;
+    }
+  }
+
+  async callLLM(userPrompt, options = {}) {
+    const messages = options.messages || [{ role: 'user', content: userPrompt }];
+
+    const response = await fetch(GROQ_CHAT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getGroqKey()}`
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: messages,
+        max_tokens: options.max_tokens || 100,
+        temperature: options.temperature || 0.7
+      })
+    });
+
+    if (!response.ok) throw new Error('LLM API failed');
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  }
+
+  start() {
+    if (this.recognition && !this.isListening) {
+      this.recognition.start();
+    }
+  }
+
+  stop() {
+    if (this.recognition && this.isListening) {
+      this.recognition.stop();
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// ═══ OLD INTERJECT CLASSES (KEEPING FOR NOW) ═══════════════════
 // ══════════════════════════════════════════════════════════════
 
 // ──────────────────────────────────────────────────────────────
@@ -1475,6 +1654,7 @@ let history = [];
 let audioCtx = null;
 let textVisible = false;
 let interjectManager = null; // Interject AI system
+let conversationManager = null; // Continuous conversation manager
 
 // Ondas state
 let currentPalette = 'aurora';
@@ -1941,7 +2121,8 @@ function renderOrb() {
   const voice = ONDAS_VOICES[currentVoiceIdx];
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
   const hslDeep = `hsl(${voice.hue}, 55%, 50%)`;
-  const listening = appState === 'listening';
+  // Show waves when listening OR when AI is speaking
+  const listening = appState === 'listening' || appState === 'speaking';
 
   const rOuter = ext * 0.86;
   const rInner = ext * 0.72;
@@ -2056,11 +2237,31 @@ orbBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
   if (appState !== 'idle') return;
   unlockAudio();
-  startRec();
+
+  // Use new continuous conversation mode
+  if (conversationManager) {
+    setState('listening'); // Show "EN VIVO"
+    conversationManager.start();
+  }
 });
 
-orbBtn.addEventListener('pointerup', () => { if (appState === 'listening') stopRec(); });
-orbBtn.addEventListener('pointercancel', () => { if (appState === 'listening') stopRec(); });
+orbBtn.addEventListener('pointerup', () => {
+  if (appState === 'listening') {
+    setState('idle');
+    if (conversationManager) {
+      conversationManager.stop();
+    }
+  }
+});
+
+orbBtn.addEventListener('pointercancel', () => {
+  if (appState === 'listening') {
+    setState('idle');
+    if (conversationManager) {
+      conversationManager.stop();
+    }
+  }
+});
 
 // Text toggle removed (subtitles no longer in DOM)
 // toggleTextBtn.addEventListener('click', () => { ... });
@@ -2176,12 +2377,14 @@ function init() {
   setSub('');
   setState('idle');
 
-  // Initialize interject manager
+  // Initialize audio context
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  interjectManager = new InterjectManager(audioCtx);
-  console.log('[Interject] Manager initialized');
+
+  // Initialize new conversation manager (continuous listening)
+  conversationManager = new ConversationManager();
+  console.log('[Conv] Manager initialized');
 
   // Start animation loop
   animate();
