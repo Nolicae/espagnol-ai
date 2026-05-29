@@ -146,9 +146,15 @@ const subEl    = $('subtitle');
 const sPanel   = $('settings-panel');
 
 // ── App state ────────────────────────────────────────────────
-let appState = 'inactive';
-let recorder = null, chunks = [], mimeType = '';
-let history  = [];
+let appState    = 'inactive';
+let sessionActive = false;
+let recorder    = null;
+let audioChunks = [];   // rolling buffer — spliced on each trigger
+let mimeType    = '';
+let history     = [];
+let aiSpeaking  = false;
+let processing  = false;
+let recognition = null;
 
 // ── UI ───────────────────────────────────────────────────────
 function setState(s) {
@@ -171,6 +177,39 @@ let audioCtx = null;
 function unlockAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   audioCtx.resume().catch(() => {});
+}
+
+async function startSession() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // MediaRecorder — collect chunks every 100ms
+    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    recorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    recorder.start(100);
+
+    sessionActive = true;
+    startRecognition();
+    setState('session');
+  } catch (e) {
+    setSub(`⚠️ Micro : ${e.message}`);
+    setState('inactive');
+  }
+}
+
+function stopSession() {
+  sessionActive = false;
+  stopRecognition();
+  if (recorder && recorder.state !== 'inactive') {
+    recorder.stop();
+    recorder.stream.getTracks().forEach(t => t.stop());
+  }
+  recorder    = null;
+  audioChunks = [];
+  aiSpeaking  = false;
+  processing  = false;
+  setState('inactive');
+  setSub('');
 }
 
 // ── TTS via Vercel proxy → Google Translate TTS → AudioContext ────────────────
@@ -206,58 +245,6 @@ async function speak(text) {
 function initMime() {
   for (const t of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']) {
     if (MediaRecorder.isTypeSupported(t)) { mimeType = t; return; }
-  }
-}
-
-async function startRec() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    chunks   = [];
-    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = onStop;
-    recorder.start();
-    setState('listening');
-  } catch (e) {
-    setSub(`⚠️ Micro : ${e.message}`);
-    setState('idle');
-  }
-}
-
-function stopRec() {
-  if (!recorder || recorder.state === 'inactive') return;
-  recorder.stop();
-  recorder.stream.getTracks().forEach(t => t.stop());
-}
-
-// ── Pipeline ─────────────────────────────────────────────────
-async function onStop() {
-  if (!chunks.length) { setState('idle'); return; }
-  const type = recorder.mimeType || mimeType || 'audio/webm';
-  const blob = new Blob(chunks, { type });
-
-  setState('thinking');
-  setSub('');
-
-  try {
-    const transcript = await stt(blob, type);
-    if (!transcript.trim()) { setState('idle'); setSub('(rien capté)'); return; }
-    setSub(`« ${transcript} »`);
-    history.push({ role: 'user', content: transcript });
-    if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
-
-    const reply = await llm();
-    history.push({ role: 'assistant', content: reply });
-    if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
-
-    setState('speaking');
-    setSub(reply);
-    await speak(reply);
-
-  } catch (e) {
-    setSub(`⚠️ ${e.message}`);
-  } finally {
-    setState('idle');
   }
 }
 
