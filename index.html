@@ -251,6 +251,45 @@ function handleSpeechResult(e) {
   if (hasFinal) triggerProcessing();
 }
 
+async function triggerProcessing() {
+  // Gates: don't process if already processing, AI is speaking, or session ended
+  if (processing || aiSpeaking || !sessionActive) return;
+
+  // Take all buffered chunks and reset buffer immediately
+  const chunks = audioChunks.splice(0);
+  if (chunks.length === 0) return;
+
+  processing = true;
+  const type = (recorder && recorder.mimeType) || mimeType || 'audio/webm';
+  const blob = new Blob(chunks, { type });
+
+  try {
+    const transcript = await stt(blob, type);
+    if (!transcript.trim()) return;
+
+    setSub(`« ${transcript} »`);
+    history.push({ role: 'user', content: transcript });
+    if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
+
+    aiSpeaking = true;
+    if (sessionActive) setState('ai-speaking');
+
+    const reply = await llm();
+    history.push({ role: 'assistant', content: reply });
+    if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
+
+    setSub(reply);
+    await speak(reply);
+
+  } catch (e) {
+    setSub(`⚠️ ${e.message}`);
+  } finally {
+    aiSpeaking = false;
+    processing  = false;
+    if (sessionActive) setState('session');
+  }
+}
+
 // ── TTS via Vercel proxy → Google Translate TTS → AudioContext ────────────────
 // Google TTS has a ~200 char limit per request, so split at sentence boundaries.
 function splitText(text, max = 180) {
