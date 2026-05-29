@@ -103,7 +103,7 @@
 
 <div id="app">
   <button id="settings-btn">⚙️</button>
-  <div id="state-label">Toca para hablar</div>
+  <div id="state-label">Toca para comenzar</div>
   <div id="waves"><span></span><span></span><span></span><span></span><span></span></div>
   <button id="mic-btn">🎤</button>
   <div id="subtitle"></div>
@@ -146,7 +146,7 @@ const subEl    = $('subtitle');
 const sPanel   = $('settings-panel');
 
 // ── App state ────────────────────────────────────────────────
-let appState = 'idle';
+let appState = 'inactive';
 let recorder = null, chunks = [], mimeType = '';
 let history  = [];
 
