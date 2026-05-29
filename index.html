@@ -736,7 +736,8 @@ Hablas con el usuario como en una conversación real.
 Responde SIEMPRE en español. Máximo 1-2 frases — la conversación continúa, no hace falta resumir.
 Intervén cuando el usuario hace una pausa, duda, hace una pregunta o comete un error.
 Si hay un error gramatical o de vocabulario, corrígelo de forma natural dentro de tu respuesta, sin explicar la regla.
-Nunca repitas literalmente lo que dijo el usuario. Ve directo.`;
+Nunca repitas literalmente lo que dijo el usuario. Ve directo.
+Si recibes "[silencio]", el usuario no ha respondido después de tu última frase: hazle una pregunta relacionada, dale una pista, corrígelo, o simplemente anímalo — lo que sea más natural según el contexto.`;
 
 const DEFAULT_KEY   = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI81CPW';
 const DEFAULT_VOICE = 'es-ES-ElviraNeural';
@@ -774,6 +775,34 @@ let audioCtx    = null;
 
 // Active voice accent color — updated when voice is selected
 let orbAccent = { r: 185, g: 225, b: 255 }; // default blue
+
+// TTS interruption
+let ttsSource  = null;
+let speakToken = 0;
+
+function interruptTTS() {
+  speakToken++;
+  if (ttsSource) {
+    try { ttsSource.stop(); } catch (_) {}
+    ttsSource = null;
+  }
+}
+
+// Silence timer — fires if user doesn't speak after AI replies
+let silenceTimer = null;
+
+function startSilenceTimer(delay) {
+  clearSilenceTimer();
+  silenceTimer = setTimeout(() => {
+    silenceTimer = null;
+    processAiSilencePrompt();
+  }, delay || 6000);
+}
+
+function clearSilenceTimer() {
+  clearTimeout(silenceTimer);
+  silenceTimer = null;
+}
 
 // ──────────────────────────────────────────────────────────────
 // setState
@@ -975,7 +1004,13 @@ async function startSession() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-    recorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    // Rolling 8-second buffer — prevents giant silence blobs reaching Groq
+    recorder.ondataavailable = e => {
+      if (e.data.size > 0) {
+        audioChunks.push(e.data);
+        if (audioChunks.length > 80) audioChunks.shift();
+      }
+    };
     recorder.start(100);
     sessionActive = true;
     startRecognition();
@@ -989,6 +1024,8 @@ async function startSession() {
 
 function stopSession() {
   sessionActive = false;
+  clearSilenceTimer();
+  interruptTTS();
   stopRecognition();
   if (recorder && recorder.state !== 'inactive') {
     recorder.stop();
@@ -1015,8 +1052,14 @@ function startRecognition() {
   recognition.lang           = 'es-ES';
   recognition.onresult    = handleSpeechResult;
   recognition.onspeechend = () => setTimeout(triggerProcessing, 300);
-  recognition.onerror     = e => { if (e.error !== 'no-speech') console.warn('[SR]', e.error); };
-  recognition.onend       = () => { if (sessionActive) recognition.start(); };
+  recognition.onerror = e => { if (e.error !== 'no-speech') console.warn('[SR]', e.error); };
+  recognition.onend = () => {
+    if (!sessionActive) return;
+    try { recognition.start(); }
+    catch (_) {
+      setTimeout(() => { if (sessionActive) { stopRecognition(); startRecognition(); } }, 150);
+    }
+  };
   recognition.start();
 }
 
@@ -1039,7 +1082,19 @@ function handleSpeechResult(e) {
 // Trigger pipeline  STT → LLM → TTS
 // ──────────────────────────────────────────────────────────────
 async function triggerProcessing() {
-  if (processing || aiSpeaking || !sessionActive) return;
+  if (!sessionActive) return;
+
+  // User spoke while AI was talking — stop TTS and retry once pipeline clears
+  if (aiSpeaking) {
+    interruptTTS();
+    setTimeout(triggerProcessing, 250);
+    return;
+  }
+
+  if (processing) return;
+
+  clearSilenceTimer(); // user spoke, cancel the silence prompt
+
   const chunks = audioChunks.splice(0);
   if (chunks.length === 0) return;
 
@@ -1066,7 +1121,46 @@ async function triggerProcessing() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) setState('session');
+    if (sessionActive) {
+      setState('session');
+      startSilenceTimer(); // if user doesn't respond in 6s, AI prompts
+    }
+  }
+}
+
+// Called when silence timer fires — AI engages the user proactively
+async function processAiSilencePrompt() {
+  if (processing || aiSpeaking || !sessionActive) return;
+  processing = true;
+  aiSpeaking = true;
+  if (sessionActive) setState('ai-speaking');
+  try {
+    // Inject a silent cue without polluting the real history
+    const r = await fetch(GROQ_CHAT, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
+      body: JSON.stringify({
+        model:      GROQ_MODEL,
+        max_tokens: 120,
+        messages:   [{ role: 'system', content: SYSTEM }, ...history, { role: 'user', content: '[silencio]' }],
+      }),
+    });
+    if (!r.ok) throw new Error(`LLM ${r.status}`);
+    const reply = (await r.json()).choices[0]?.message?.content || '';
+    if (reply.trim()) {
+      history.push({ role: 'assistant', content: reply });
+      if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
+      await speak(reply);
+    }
+  } catch (e) {
+    console.error('[silence]', e.message);
+  } finally {
+    aiSpeaking = false;
+    processing  = false;
+    if (sessionActive) {
+      setState('session');
+      startSilenceTimer(10000); // longer wait after an AI-initiated prompt
+    }
   }
 }
 
@@ -1135,13 +1229,22 @@ async function speakChunk(text) {
   const src = audioCtx.createBufferSource();
   src.buffer = decoded;
   src.connect(audioCtx.destination);
-  return new Promise((resolve, reject) => { src.onended = resolve; src.onerror = reject; src.start(0); });
+  ttsSource = src;
+  return new Promise((resolve, reject) => {
+    src.onended = () => { if (ttsSource === src) ttsSource = null; resolve(); };
+    src.onerror = reject;
+    src.start(0);
+  });
 }
 
 async function speak(text) {
   if (!audioCtx) return;
   if (audioCtx.state === 'suspended') await audioCtx.resume();
-  for (const chunk of splitText(text)) await speakChunk(chunk);
+  const myToken = speakToken;
+  for (const chunk of splitText(text)) {
+    if (speakToken !== myToken) break;
+    await speakChunk(chunk);
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
