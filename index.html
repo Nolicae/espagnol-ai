@@ -783,7 +783,13 @@ let recorderInitChunk = null;
 let ttsSource  = null;
 let speakToken = 0;
 
+// Soft: finish current sentence, skip the rest (used when user speaks over AI)
 function interruptTTS() {
+  speakToken++;
+}
+
+// Hard: cut audio immediately (used when session ends)
+function stopTTSNow() {
   speakToken++;
   if (ttsSource) {
     try { ttsSource.stop(); } catch (_) {}
@@ -1027,7 +1033,7 @@ async function startSession() {
 function stopSession() {
   sessionActive = false;
   clearSilenceTimer();
-  interruptTTS();
+  stopTTSNow();
   stopRecognition();
   if (recorder && recorder.state !== 'inactive') {
     recorder.stop();
