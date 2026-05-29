@@ -843,15 +843,15 @@ class ConversationManager {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     this.recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
+    // State tracking
     this.isListening = false;
     this.isAISpeaking = false;
-    this.currentTranscript = '';
-    this.interimTranscript = '';
-    this.conversationHistory = [];
-    this.lastResponseTime = 0;
-    this.minResponseDelay = 2000; // Min 2s between responses
-    this.lastCheckedTranscript = '';
     this.responseInProgress = false;
+    this.lastSpeechTime = 0;
+    this.silenceTimeout = null;
+    this.conversationHistory = [];
+    this.allTranscript = ''; // All speech accumulated so far
+    this.lastFinalTranscript = ''; // Last completed sentence
 
     if (this.recognition) {
       this.recognition.continuous = true;
@@ -863,21 +863,26 @@ class ConversationManager {
 
   setupListeners() {
     this.recognition.onstart = () => {
-      console.log('[Conv] Listening started');
+      console.log('[Conv] 🎤 Listening started');
       this.isListening = true;
     };
 
     this.recognition.onend = () => {
-      console.log('[Conv] Listening ended');
+      console.log('[Conv] 🎤 Listening ended');
       this.isListening = false;
+      if (this.silenceTimeout) clearTimeout(this.silenceTimeout);
     };
 
     this.recognition.onresult = (event) => {
-      let interimText = '';
-      let finalText = '';
+      console.log('[Conv] onresult event - isFinal:', event.results[event.results.length - 1]?.isFinal);
 
+      let finalText = '';
+      let interimText = '';
+
+      // Collect all results
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
+        console.log(`  Result ${i}: "${transcript}" (final: ${event.results[i].isFinal})`);
 
         if (event.results[i].isFinal) {
           finalText += transcript + ' ';
@@ -886,13 +891,24 @@ class ConversationManager {
         }
       }
 
-      this.currentTranscript = (finalText + interimText).trim();
-      this.interimTranscript = interimText.trim();
-
-      // Check interim results for conditions to respond
-      if (this.interimTranscript && !this.responseInProgress) {
-        this.checkAndRespond(this.interimTranscript);
+      // Update accumulated transcript
+      if (finalText) {
+        this.lastFinalTranscript = finalText.trim();
+        this.allTranscript += finalText;
       }
+
+      const currentSpeech = (this.allTranscript + interimText).trim();
+      console.log('[Conv] Current speech:', currentSpeech);
+
+      // Reset silence timer - user is speaking
+      this.lastSpeechTime = Date.now();
+      if (this.silenceTimeout) clearTimeout(this.silenceTimeout);
+
+      // Set new silence timer: 1 second of no new speech
+      this.silenceTimeout = setTimeout(() => {
+        console.log('[Conv] ⏱️ Silence detected (1s) - checking if should respond');
+        this.onSilenceDetected(currentSpeech);
+      }, 1000);
     };
 
     this.recognition.onerror = (event) => {
@@ -900,53 +916,70 @@ class ConversationManager {
     };
   }
 
-  async checkAndRespond(transcript) {
+  // Called when user has been silent for 1 second
+  async onSilenceDetected(transcript) {
     if (!transcript.trim()) return;
     if (this.responseInProgress) return;
     if (this.isAISpeaking) return;
-    if (Date.now() - this.lastResponseTime < this.minResponseDelay) return;
 
-    // Don't repeat the same transcript check
-    if (transcript === this.lastCheckedTranscript) return;
-    this.lastCheckedTranscript = transcript;
+    console.log('[Conv] 📝 Analyzing:', transcript);
 
-    console.log('[Conv] Checking conditions for transcript:', transcript);
+    // Check if we should respond
+    const shouldRespond = this.checkConditionsDirectly(transcript);
+    console.log('[Conv] Should respond (direct check):', shouldRespond);
 
-    // Check if conditions are met for response
-    const shouldRespond = await this.checkConditionsInterject(transcript);
-
-    if (shouldRespond && !this.responseInProgress) {
+    if (shouldRespond) {
+      console.log('[Conv] ✅ Responding!');
       await this.generateAndPlayResponse(transcript);
+    } else {
+      console.log('[Conv] ❌ No response needed, continue listening');
     }
   }
 
-  async checkConditionsInterject(transcript) {
-    const prompt = `Eres un profesor de español. Analiza este texto que el usuario acaba de decir:
+  // Direct condition checks without LLM call
+  checkConditionsDirectly(transcript) {
+    if (!transcript.trim()) return false;
 
-"${transcript}"
+    const lower = transcript.toLowerCase();
 
-¿DEBES RESPONDER AHORA? Responde SOLO con "SÍ" o "NO".
-
-Responde SÍ si:
-- El usuario cometió un error de gramática o idioma
-- El usuario hizo una pregunta
-- El usuario está dudando (vacilación, pausa, "um", "eh")
-- El usuario terminó una frase (hay puntuación final)
-- Tienes algo pertinente que añadir
-
-Contexto: ${this.conversationHistory.slice(-2).map(m => m.content).join(' | ')}
-
-SOLO RESPONDE: SÍ o NO`;
-
-    try {
-      const response = await this.callLLM(prompt, { max_tokens: 5, temperature: 0.3 });
-      const result = response.toUpperCase().trim();
-      console.log('[Conv] Condition check response:', result);
-      return result.includes('SÍ') || result.includes('SI');
-    } catch (e) {
-      console.error('[Conv] Condition check failed:', e);
-      return false;
+    // Check 1: Questions (starts with ¿ or ends with ?)
+    if (transcript.includes('¿') || transcript.includes('?')) {
+      console.log('[Conv] ✓ Detected question');
+      return true;
     }
+
+    // Check 2: Hesitations/filled pauses
+    if (/\b(um|uh|eh|hmm|eee|mmm|bueno|pues|bueno pues)\b/i.test(transcript)) {
+      console.log('[Conv] ✓ Detected hesitation');
+      return true;
+    }
+
+    // Check 3: Obvious grammar errors (basic patterns)
+    if (this.detectBasicErrors(lower)) {
+      console.log('[Conv] ✓ Detected grammar error');
+      return true;
+    }
+
+    // Check 4: Statement with period (completed thought)
+    if (transcript.includes('.') || transcript.includes('!')) {
+      console.log('[Conv] ✓ Detected completed sentence');
+      return true;
+    }
+
+    return false;
+  }
+
+  // Simple error detection without ML
+  detectBasicErrors(text) {
+    // Common Spanish errors
+    const errorPatterns = [
+      /\byo soy/i,  // Usually "soy" alone, not "yo soy"
+      /\bes un/i,   // "es un" before feminine
+      /\bla [^aeiou]/i, // la before consonant (feminine before masculine)
+      /\bel [aeiou]/i,  // el before vowel (masculine before vowel)
+      /\bde la de/i, // Double articles
+    ];
+    return errorPatterns.some(pattern => pattern.test(text));
   }
 
   async generateAndPlayResponse(userMessage) {
@@ -954,34 +987,41 @@ SOLO RESPONDE: SÍ o NO`;
     this.responseInProgress = true;
 
     try {
-      console.log('[Conv] Generating response for:', userMessage);
+      console.log('[Conv] 🤖 Generating response...');
 
-      const systemPrompt = `Eres un profesor de español muy amigable y conversacional.
+      const systemPrompt = `Eres un profesor de español muy amigable.
 El usuario acaba de decir: "${userMessage}"
 
-Responde de forma muy breve (1-2 frases cortas), natural y pertinente.
-Si hay errores de idioma, corrígelos sutilmente en tu respuesta.
-Mantén un tono conversacional, como si estuvieras interrumpiendo naturalmente.`;
+IMPORTANTE: Responde en MÁXIMO 1-2 frases CORTAS.
+- Si hay error de idioma, corrígelo sutilmente
+- Se natural y conversacional
+- Sé breve
+
+Responde solo la réplica, sin explicaciones.`;
 
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...this.conversationHistory.slice(-3),
+        ...this.conversationHistory.slice(-4),
         { role: 'user', content: userMessage }
       ];
 
-      const response = await this.callLLM('', { messages, max_tokens: 80, temperature: 0.7 });
-      console.log('[Conv] Generated response:', response);
+      const response = await this.callLLM('', { messages, max_tokens: 50, temperature: 0.7 });
+      console.log('[Conv] 📢 Response generated:', response);
+
+      // === CRITICAL: Switch to hablando state BEFORE stopping recognition ===
+      console.log('[Conv] 🔴 Setting state to HABLANDO (waves should appear)');
+      setState('hablando');
 
       // Stop recognition while speaking
-      if (this.recognition) {
+      if (this.recognition && this.isListening) {
+        console.log('[Conv] ⏹️ Stopping recognition');
         this.recognition.stop();
       }
 
-      // Switch to speaking state (shows waves)
-      setState('speaking');
-
       // Play the response
+      console.log('[Conv] 🔊 Speaking response');
       await speak(response);
+      console.log('[Conv] ✅ Finished speaking');
 
       // Add to conversation history
       this.conversationHistory.push({ role: 'user', content: userMessage });
@@ -990,19 +1030,19 @@ Mantén un tono conversacional, como si estuvieras interrumpiendo naturalmente.`
         this.conversationHistory = this.conversationHistory.slice(-20);
       }
 
-      this.lastResponseTime = Date.now();
-      this.lastCheckedTranscript = '';
+      // Reset transcript for next cycle
+      this.allTranscript = '';
 
-      // Resume listening - stay in "en vivo" state
-      if (appState === 'speaking') {
-        setState('en vivo');
-      }
+      // === CRITICAL: Resume listening ===
+      console.log('[Conv] 🟢 Setting state back to EN VIVO');
+      setState('en vivo');
 
-      if (this.recognition && appState === 'en vivo') {
-        this.recognition.start();
+      if (this.recognition) {
+        console.log('[Conv] 🎤 Restarting recognition');
+        setTimeout(() => this.recognition.start(), 100); // Brief delay before restarting
       }
     } catch (e) {
-      console.error('[Conv] Response generation failed:', e);
+      console.error('[Conv] ❌ Response generation failed:', e);
     } finally {
       this.isAISpeaking = false;
       this.responseInProgress = false;
@@ -1032,19 +1072,24 @@ Mantén un tono conversacional, como si estuvieras interrumpiendo naturalmente.`
     }
 
     const data = await response.json();
-    return data.choices[0].message.content;
+    const content = data.choices[0]?.message?.content;
+    if (!content) throw new Error('No response content from LLM');
+    return content;
   }
 
   start() {
+    console.log('[Conv] ▶️ Starting conversation manager');
     if (this.recognition && !this.isListening) {
-      console.log('[Conv] Starting recognition');
+      this.allTranscript = '';
+      this.lastFinalTranscript = '';
       this.recognition.start();
     }
   }
 
   stop() {
+    console.log('[Conv] ⏹️ Stopping conversation manager');
+    if (this.silenceTimeout) clearTimeout(this.silenceTimeout);
     if (this.recognition && this.isListening) {
-      console.log('[Conv] Stopping recognition');
       this.recognition.stop();
     }
   }
@@ -1741,7 +1786,7 @@ function setState(s) {
     idle:      'Inactivo',
     'en vivo': 'En vivo',
     thinking:  'Pensando…',
-    speaking:  'Hablando…',
+    hablando:  'Hablando…',
   }[s] ?? '';
 
   if (s === 'en vivo') {
@@ -2159,7 +2204,7 @@ function renderOrb() {
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
   const hslDeep = `hsl(${voice.hue}, 55%, 50%)`;
   // Show waves when listening OR when AI is speaking
-  const listening = appState === 'en vivo' || appState === 'speaking';
+  const listening = appState === 'en vivo' || appState === 'hablando';
 
   const rOuter = ext * 0.86;
   const rInner = ext * 0.72;
