@@ -932,7 +932,13 @@ class ConversationManager {
       console.log('[Conv] ✅ Responding!');
       await this.generateAndPlayResponse(transcript);
     } else {
-      console.log('[Conv] ❌ No response needed, continue listening');
+      // 40% chance to make conversational comment even without explicit trigger
+      if (Math.random() < 0.4 && transcript.trim().length > 5) {
+        console.log('[Conv] 💬 Making conversational comment');
+        await this.generateAndPlayResponse(transcript);
+      } else {
+        console.log('[Conv] ❌ No response needed, continue listening');
+      }
     }
   }
 
@@ -989,13 +995,17 @@ class ConversationManager {
     try {
       console.log('[Conv] 🤖 Generating response...');
 
-      const systemPrompt = `Eres un profesor de español muy amigable.
+      const systemPrompt = `Eres un profesor de español muy amigable y conversacional.
 El usuario acaba de decir: "${userMessage}"
 
-IMPORTANTE: Responde en MÁXIMO 1-2 frases CORTAS.
-- Si hay error de idioma, corrígelo sutilmente
-- Se natural y conversacional
-- Sé breve
+DEBES:
+- Hacer comentarios naturales, no solo responder
+- Hacer preguntas de seguimiento para mantener la conversación
+- Compartir observaciones interesantes
+- Ser como un amigo que conversa, no como un asistente
+
+MÁXIMO 1-2 frases CORTAS. Sé natural.
+Si hay error, corrígelo sutilmente.
 
 Responde solo la réplica, sin explicaciones.`;
 
@@ -2203,8 +2213,8 @@ function renderOrb() {
   const voice = ONDAS_VOICES[currentVoiceIdx];
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
   const hslDeep = `hsl(${voice.hue}, 55%, 50%)`;
-  // Show waves when listening OR when AI is speaking
-  const listening = appState === 'en vivo' || appState === 'hablando';
+  // Show waves ONLY when AI is speaking
+  const listening = appState === 'hablando';
 
   const rOuter = ext * 0.86;
   const rInner = ext * 0.72;
@@ -2317,32 +2327,19 @@ function animate() {
 
 orbBtn.addEventListener('pointerdown', e => {
   e.preventDefault();
-  if (appState !== 'idle') return;
+  // Always listening - no idle state
   unlockAudio();
-
-  // Use new continuous conversation mode
-  if (conversationManager) {
-    setState('en vivo'); // Show "EN VIVO"
+  if (conversationManager && appState === 'en vivo') {
     conversationManager.start();
   }
 });
 
 orbBtn.addEventListener('pointerup', () => {
-  if (appState === 'en vivo') {
-    setState('idle');
-    if (conversationManager) {
-      conversationManager.stop();
-    }
-  }
+  // No state change - always in en vivo
 });
 
 orbBtn.addEventListener('pointercancel', () => {
-  if (appState === 'en vivo') {
-    setState('idle');
-    if (conversationManager) {
-      conversationManager.stop();
-    }
-  }
+  // No state change - always in en vivo
 });
 
 // Text toggle removed (subtitles no longer in DOM)
@@ -2457,7 +2454,7 @@ function init() {
   updateSelectedVoiceCard();
   setPrompt('Pulsa para hablar');
   setSub('');
-  setState('idle');
+  setState('en vivo'); // Always start in listening mode - NO idle state
 
   // Initialize audio context
   if (!audioCtx) {
@@ -2467,6 +2464,10 @@ function init() {
   // Initialize new conversation manager (continuous listening)
   conversationManager = new ConversationManager();
   console.log('[Conv] Manager initialized');
+
+  // START LISTENING IMMEDIATELY
+  conversationManager.start();
+  console.log('[Conv] 🎤 LISTENING STARTED AT INIT');
 
   // Start animation loop
   animate();
