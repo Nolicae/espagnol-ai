@@ -849,7 +849,9 @@ class ConversationManager {
     this.interimTranscript = '';
     this.conversationHistory = [];
     this.lastResponseTime = 0;
-    this.minResponseDelay = 1000; // Min 1s between responses
+    this.minResponseDelay = 2000; // Min 2s between responses
+    this.lastCheckedTranscript = '';
+    this.responseInProgress = false;
 
     if (this.recognition) {
       this.recognition.continuous = true;
@@ -871,17 +873,25 @@ class ConversationManager {
     };
 
     this.recognition.onresult = (event) => {
-      this.interimTranscript = '';
+      let interimText = '';
+      let finalText = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
 
         if (event.results[i].isFinal) {
-          this.currentTranscript = transcript;
-          this.onFinalTranscript(transcript);
+          finalText += transcript + ' ';
         } else {
-          this.interimTranscript += transcript;
+          interimText += transcript + ' ';
         }
+      }
+
+      this.currentTranscript = (finalText + interimText).trim();
+      this.interimTranscript = interimText.trim();
+
+      // Check interim results for conditions to respond
+      if (this.interimTranscript && !this.responseInProgress) {
+        this.checkAndRespond(this.interimTranscript);
       }
     };
 
@@ -890,90 +900,112 @@ class ConversationManager {
     };
   }
 
-  async onFinalTranscript(transcript) {
+  async checkAndRespond(transcript) {
     if (!transcript.trim()) return;
+    if (this.responseInProgress) return;
+    if (this.isAISpeaking) return;
+    if (Date.now() - this.lastResponseTime < this.minResponseDelay) return;
 
-    console.log('[Conv] Final transcript:', transcript);
-    this.conversationHistory.push({ role: 'user', content: transcript });
+    // Don't repeat the same transcript check
+    if (transcript === this.lastCheckedTranscript) return;
+    this.lastCheckedTranscript = transcript;
 
-    // Check if we should respond based on ConditionsInterject
+    console.log('[Conv] Checking conditions for transcript:', transcript);
+
+    // Check if conditions are met for response
     const shouldRespond = await this.checkConditionsInterject(transcript);
 
-    if (shouldRespond && !this.isAISpeaking) {
+    if (shouldRespond && !this.responseInProgress) {
       await this.generateAndPlayResponse(transcript);
     }
   }
 
   async checkConditionsInterject(transcript) {
-    if (Date.now() - this.lastResponseTime < this.minResponseDelay) {
-      return false;
-    }
-
-    const prompt = `Tu es un assistant conversationnel en espagnol. Analyse le dernier message de l'utilisateur:
+    const prompt = `Eres un profesor de español. Analiza este texto que el usuario acaba de decir:
 
 "${transcript}"
 
-DOIS-TU RÉPONDRE? Réponds UNIQUEMENT par "OUI" ou "NON".
+¿DEBES RESPONDER AHORA? Responde SOLO con "SÍ" o "NO".
 
-Réponds OUI si:
-- L'utilisateur a commis une erreur de grammaire/langue
-- L'utilisateur a posé une question
-- L'utilisateur a fait une pause significative (phrase incomplète)
-- Tu as quelque chose de pertinent à ajouter
+Responde SÍ si:
+- El usuario cometió un error de gramática o idioma
+- El usuario hizo una pregunta
+- El usuario está dudando (vacilación, pausa, "um", "eh")
+- El usuario terminó una frase (hay puntuación final)
+- Tienes algo pertinente que añadir
 
-Contexte récent: ${this.conversationHistory.slice(-2).map(m => m.content).join(' | ')}
+Contexto: ${this.conversationHistory.slice(-2).map(m => m.content).join(' | ')}
 
-Réponds juste: OUI ou NON`;
+SOLO RESPONDE: SÍ o NO`;
 
     try {
       const response = await this.callLLM(prompt, { max_tokens: 5, temperature: 0.3 });
-      return response.toUpperCase().includes('OUI');
+      const result = response.toUpperCase().trim();
+      console.log('[Conv] Condition check response:', result);
+      return result.includes('SÍ') || result.includes('SI');
     } catch (e) {
       console.error('[Conv] Condition check failed:', e);
       return false;
     }
   }
 
-  async generateAndPlayResponse(lastUserMessage) {
-    if (this.isAISpeaking) return;
-
-    this.isAISpeaking = true;
+  async generateAndPlayResponse(userMessage) {
+    if (this.responseInProgress || this.isAISpeaking) return;
+    this.responseInProgress = true;
 
     try {
-      const systemPrompt = `Eres un profesor de español amigable. El usuario acaba de decir: "${lastUserMessage}"
+      console.log('[Conv] Generating response for:', userMessage);
 
-Responde de forma breve (1-2 frases), natural y pertinente. Si hay errores, corrígelos sutilmente.`;
+      const systemPrompt = `Eres un profesor de español muy amigable y conversacional.
+El usuario acaba de decir: "${userMessage}"
+
+Responde de forma muy breve (1-2 frases cortas), natural y pertinente.
+Si hay errores de idioma, corrígelos sutilmente en tu respuesta.
+Mantén un tono conversacional, como si estuvieras interrumpiendo naturalmente.`;
 
       const messages = [
         { role: 'system', content: systemPrompt },
-        ...this.conversationHistory.slice(-3)
+        ...this.conversationHistory.slice(-3),
+        { role: 'user', content: userMessage }
       ];
 
-      const response = await this.callLLM('', { messages, max_tokens: 100, temperature: 0.7 });
+      const response = await this.callLLM('', { messages, max_tokens: 80, temperature: 0.7 });
+      console.log('[Conv] Generated response:', response);
 
-      // Pause recognition while speaking
+      // Stop recognition while speaking
       if (this.recognition) {
         this.recognition.stop();
       }
 
-      // Show waves while AI speaks
+      // Switch to speaking state (shows waves)
       setState('speaking');
 
+      // Play the response
       await speak(response);
 
-      // Add to history
+      // Add to conversation history
+      this.conversationHistory.push({ role: 'user', content: userMessage });
       this.conversationHistory.push({ role: 'assistant', content: response });
-      this.lastResponseTime = Date.now();
+      if (this.conversationHistory.length > 20) {
+        this.conversationHistory = this.conversationHistory.slice(-20);
+      }
 
-      // Resume listening
-      setState('listening');
-      if (this.recognition && this.isListening) {
+      this.lastResponseTime = Date.now();
+      this.lastCheckedTranscript = '';
+
+      // Resume listening - stay in "en vivo" state
+      if (appState === 'speaking') {
+        setState('en vivo');
+      }
+
+      if (this.recognition && appState === 'en vivo') {
         this.recognition.start();
       }
     } catch (e) {
       console.error('[Conv] Response generation failed:', e);
     } finally {
       this.isAISpeaking = false;
+      this.responseInProgress = false;
     }
   }
 
@@ -994,7 +1026,10 @@ Responde de forma breve (1-2 frases), natural y pertinente. Si hay errores, corr
       })
     });
 
-    if (!response.ok) throw new Error('LLM API failed');
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `LLM API failed: ${response.status}`);
+    }
 
     const data = await response.json();
     return data.choices[0].message.content;
@@ -1002,12 +1037,14 @@ Responde de forma breve (1-2 frases), natural y pertinente. Si hay errores, corr
 
   start() {
     if (this.recognition && !this.isListening) {
+      console.log('[Conv] Starting recognition');
       this.recognition.start();
     }
   }
 
   stop() {
     if (this.recognition && this.isListening) {
+      console.log('[Conv] Stopping recognition');
       this.recognition.stop();
     }
   }
@@ -1702,12 +1739,12 @@ function setState(s) {
   appState = s;
   statusText.textContent = {
     idle:      'Inactivo',
-    listening: 'En vivo',
+    'en vivo': 'En vivo',
     thinking:  'Pensando…',
     speaking:  'Hablando…',
   }[s] ?? '';
 
-  if (s === 'listening') {
+  if (s === 'en vivo') {
     statusDot.classList.add('listening');
   } else {
     statusDot.classList.remove('listening');
@@ -2122,7 +2159,7 @@ function renderOrb() {
   const hsl = `hsl(${voice.hue}, 60%, 72%)`;
   const hslDeep = `hsl(${voice.hue}, 55%, 50%)`;
   // Show waves when listening OR when AI is speaking
-  const listening = appState === 'listening' || appState === 'speaking';
+  const listening = appState === 'en vivo' || appState === 'speaking';
 
   const rOuter = ext * 0.86;
   const rInner = ext * 0.72;
@@ -2240,13 +2277,13 @@ orbBtn.addEventListener('pointerdown', e => {
 
   // Use new continuous conversation mode
   if (conversationManager) {
-    setState('listening'); // Show "EN VIVO"
+    setState('en vivo'); // Show "EN VIVO"
     conversationManager.start();
   }
 });
 
 orbBtn.addEventListener('pointerup', () => {
-  if (appState === 'listening') {
+  if (appState === 'en vivo') {
     setState('idle');
     if (conversationManager) {
       conversationManager.stop();
@@ -2255,7 +2292,7 @@ orbBtn.addEventListener('pointerup', () => {
 });
 
 orbBtn.addEventListener('pointercancel', () => {
-  if (appState === 'listening') {
+  if (appState === 'en vivo') {
     setState('idle');
     if (conversationManager) {
       conversationManager.stop();
