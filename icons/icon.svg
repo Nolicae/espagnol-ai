@@ -34,8 +34,8 @@
     </radialGradient>
   </defs>
 
-  <!-- Background -->
-  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- Background: solid beige -->
+  <rect width="1024" height="1024" fill="#DDD4C6"/>
 
   <!-- Outer halo: warm coral glow -->
   <circle cx="512" cy="512" r="500" fill="url(#halo)" opacity="0.303"/>
