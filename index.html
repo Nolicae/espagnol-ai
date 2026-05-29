@@ -1066,12 +1066,7 @@ async function triggerProcessing() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) {
-      setState('session');
-      // Restart recognition so it reliably detects the next utterance
-      stopRecognition();
-      startRecognition();
-    }
+    if (sessionActive) setState('session');
   }
 }
 
