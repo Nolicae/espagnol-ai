@@ -1270,6 +1270,37 @@ class InterjectManager {
     }
   }
 
+  async detectAndCorrectErrors(transcript) {
+    if (!transcript || transcript.length < 3) return null;
+    if (this.cooldownManager.isActive()) return null;
+    if (this.sessionInterjectionCount >= this.config.maxFrequencyPerSession) return null;
+
+    try {
+      const prompt = this._buildErrorDetectionPrompt(transcript);
+      const response = await this._callLLM(prompt, {
+        temperature: 0.3, // Lower temp for more consistent corrections
+        max_tokens: 40
+      });
+
+      const correction = response.trim();
+
+      // If no error detected, return null
+      if (correction.includes('PERFECT') || correction.toUpperCase() === 'PERFECT') {
+        return null;
+      }
+
+      // Otherwise, we have a correction to make
+      return {
+        text: correction,
+        type: 'correction',
+        trigger: 'error_detected'
+      };
+    } catch (error) {
+      console.error('[Interject] Error detection failed:', error);
+      return null;
+    }
+  }
+
   addConversationTurn(userText, assistantResponse) {
     this.conversationContext.push({
       user: userText,
@@ -1317,6 +1348,20 @@ Current moment: User ${trigger.type} ${trigger.subtype ? `(${trigger.subtype})` 
 Recent: "${this.recentTranscript}"
 
 Should you interject now with a short follow-up comment? Answer only: YES or NO.`;
+  }
+
+  _buildErrorDetectionPrompt(transcript) {
+    return `You are a Spanish grammar teacher analyzing a student's speech in real-time.
+
+Student just said: "${transcript}"
+
+Analyze for grammar, spelling, or language errors. If there are errors, you MUST correct them with a short (1-2 sentence) natural correction. If perfect, respond with PERFECT.
+
+Respond ONLY with either:
+- The correction (in Spanish, 1-2 sentences max)
+- Or the word: PERFECT
+
+No explanation, just the correction or PERFECT.`;
   }
 
   _buildGenerationPrompt(trigger) {
@@ -1608,17 +1653,66 @@ async function startRec() {
       analyser.fftSize = 2048;
       source.connect(analyser);
 
-      // Periodic check for interjection opportunities
+      // Periodic check for interjections: error detection + pauses
       let lastChunkCount = 0;
       let silenceCounter = 0;
+      let lastTranscriptCheck = '';
+      let lastErrorCheckTime = 0;
+
       const interjectCheckInterval = setInterval(async () => {
-        if (appState !== 'listening') {
+        if (appState !== 'listening' && appState !== 'en vivo') {
           clearInterval(interjectCheckInterval);
           return;
         }
 
         try {
-          // Detect pause: if chunk count hasn't changed, audio is likely silent
+          // Strategy 1: Check for grammar/language errors in interim transcript
+          const now = Date.now();
+          if (now - lastErrorCheckTime > 2000 && chunks.length > 0) { // Check every 2 seconds
+            lastErrorCheckTime = now;
+
+            try {
+              // Get interim transcription from accumulated chunks
+              const mimeType = recorder.mimeType || 'audio/webm';
+              const interimBlob = new Blob(chunks, { type: mimeType });
+
+              if (interimBlob.size > 10000) { // Only if we have enough audio
+                const interimTranscript = await stt(interimBlob, mimeType);
+
+                // Only check significant changes to avoid redundant checks
+                if (interimTranscript && interimTranscript !== lastTranscriptCheck && interimTranscript.length > 10) {
+                  lastTranscriptCheck = interimTranscript;
+
+                  // Check for errors in this transcript
+                  const correction = await interjectManager.detectAndCorrectErrors(interimTranscript);
+
+                  if (correction) {
+                    // ERROR DETECTED - interrupt immediately
+                    if (recorder && recorder.state === 'recording') {
+                      recorder.pause();
+                    }
+
+                    // Play correction
+                    setState('speaking');
+                    setSub('');
+                    await interjectManager.playInterject(correction);
+
+                    // Resume recording
+                    if (recorder && recorder.state === 'paused') {
+                      recorder.resume();
+                    }
+                    setState('listening');
+                    lastTranscriptCheck = ''; // Reset to allow future checks
+                    return;
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('[Interject] Interim transcription failed:', err);
+            }
+          }
+
+          // Strategy 2: Detect pauses (fallback for other interjections)
           if (chunks.length === lastChunkCount) {
             silenceCounter++;
           } else {
@@ -1626,9 +1720,8 @@ async function startRec() {
             lastChunkCount = chunks.length;
           }
 
-          // Pause detected (3+ checks with no new chunks = ~1.5s silence)
+          // Pause detected (3+ checks = ~1.5s silence)
           if (silenceCounter >= 3) {
-            // Request interject
             const interjectData = await interjectManager.requestInterjection({
               type: 'pause',
               subtype: 'detected',
@@ -1636,22 +1729,19 @@ async function startRec() {
             });
 
             if (interjectData) {
-              // Pause recording
               if (recorder && recorder.state === 'recording') {
                 recorder.pause();
               }
 
-              // Play interject while recording is paused
               setState('speaking');
               setSub('');
               await interjectManager.playInterject(interjectData);
 
-              // Resume recording
               if (recorder && recorder.state === 'paused') {
                 recorder.resume();
               }
               setState('listening');
-              silenceCounter = 0; // Reset to avoid rapid re-triggers
+              silenceCounter = 0;
             }
           }
         } catch (err) {
