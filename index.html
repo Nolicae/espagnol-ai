@@ -772,18 +772,6 @@ let processing  = false;
 let recognition = null;
 let audioCtx    = null;
 
-// TTS interruption support
-let ttsSource  = null;   // currently playing AudioBufferSourceNode
-let speakToken = 0;      // incremented on interrupt; speak() checks it to exit loop
-
-function interruptTTS() {
-  speakToken++;
-  if (ttsSource) {
-    try { ttsSource.stop(); } catch (_) {}
-    ttsSource = null;
-  }
-}
-
 // ──────────────────────────────────────────────────────────────
 // setState
 // ──────────────────────────────────────────────────────────────
@@ -1049,16 +1037,7 @@ function handleSpeechResult(e) {
 // Trigger pipeline  STT → LLM → TTS
 // ──────────────────────────────────────────────────────────────
 async function triggerProcessing() {
-  if (processing || !sessionActive) return;
-
-  // User spoke while AI was speaking — interrupt TTS and let this call take over
-  if (aiSpeaking) {
-    interruptTTS();
-    // The ongoing pipeline's finally block will reset flags asynchronously.
-    // Don't proceed now; the next speech event will re-trigger once flags clear.
-    return;
-  }
-
+  if (processing || aiSpeaking || !sessionActive) return;
   const chunks = audioChunks.splice(0);
   if (chunks.length === 0) return;
 
@@ -1085,14 +1064,7 @@ async function triggerProcessing() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    // Discard any audio recorded while AI was speaking (echo through mic)
-    audioChunks.splice(0);
-    if (sessionActive) {
-      setState('session');
-      // Restart recognition to get a clean slate after AI spoke
-      stopRecognition();
-      startRecognition();
-    }
+    if (sessionActive) setState('session');
   }
 }
 
@@ -1161,22 +1133,13 @@ async function speakChunk(text) {
   const src = audioCtx.createBufferSource();
   src.buffer = decoded;
   src.connect(audioCtx.destination);
-  ttsSource = src;
-  return new Promise((resolve, reject) => {
-    src.onended = () => { if (ttsSource === src) ttsSource = null; resolve(); };
-    src.onerror = reject;
-    src.start(0);
-  });
+  return new Promise((resolve, reject) => { src.onended = resolve; src.onerror = reject; src.start(0); });
 }
 
 async function speak(text) {
   if (!audioCtx) return;
   if (audioCtx.state === 'suspended') await audioCtx.resume();
-  const myToken = speakToken;
-  for (const chunk of splitText(text)) {
-    if (speakToken !== myToken) break; // interrupted
-    await speakChunk(chunk);
-  }
+  for (const chunk of splitText(text)) await speakChunk(chunk);
 }
 
 // ──────────────────────────────────────────────────────────────
