@@ -30,9 +30,8 @@
       font-size: 1rem; font-weight: 600; letter-spacing: 0.04em;
       color: var(--muted); min-height: 1.4em; transition: color 0.3s;
     }
-    #state-label.listening { color: var(--red); }
-    #state-label.thinking  { color: var(--amber); }
-    #state-label.speaking  { color: var(--accent2); }
+    #state-label.session       { color: var(--accent2); }
+    #state-label.ai-speaking   { color: var(--accent);  }
     #waves { display: flex; align-items: center; gap: 6px; height: 64px; }
     #waves span {
       display: block; width: 6px; border-radius: 3px;
@@ -45,9 +44,8 @@
     #waves span:nth-child(3) { height: 48px; animation-delay: 0.30s; }
     #waves span:nth-child(4) { height: 30px; animation-delay: 0.15s; }
     #waves span:nth-child(5) { height: 16px; animation-delay: 0.00s; }
-    #waves.listening span { opacity: 1;   background: var(--red);    animation-name: w-listen; }
-    #waves.thinking  span { opacity: 0.7; background: var(--amber);  animation-name: w-think;  }
-    #waves.speaking  span { opacity: 0.9; background: var(--accent2); animation-name: w-speak; }
+    #waves.session     span { opacity: 1;   background: var(--accent2); animation-name: w-listen; }
+    #waves.ai-speaking span { opacity: 0.9; background: var(--accent);  animation-name: w-speak;  }
     @keyframes w-idle   { 0%,100%{transform:scaleY(.6)} 50%{transform:scaleY(1)}   }
     @keyframes w-listen { 0%,100%{transform:scaleY(.7)} 50%{transform:scaleY(1.4)} }
     @keyframes w-think  { 0%,100%{transform:scaleY(.8)} 50%{transform:scaleY(1.1)} }
@@ -61,12 +59,11 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: none; user-select: none;
     }
-    #mic-btn.listening { background: var(--red); animation: sonar 1.2s ease-out infinite; }
-    #mic-btn.busy      { opacity: .35; pointer-events: none; }
+    #mic-btn.active { background: var(--accent2); animation: sonar 1.2s ease-out infinite; }
     @keyframes sonar {
-      0%  { box-shadow: 0 0 0 0    rgba(239,68,68,.7); }
-      70% { box-shadow: 0 0 0 32px rgba(239,68,68,0);  }
-      100%{ box-shadow: 0 0 0 0    rgba(239,68,68,0);  }
+      0%  { box-shadow: 0 0 0 0    rgba(168,85,247,.7); }
+      70% { box-shadow: 0 0 0 32px rgba(168,85,247,0);  }
+      100%{ box-shadow: 0 0 0 0    rgba(168,85,247,0);  }
     }
     #subtitle {
       font-size: 0.88rem; color: var(--muted); font-style: italic;
@@ -157,15 +154,13 @@ let history  = [];
 function setState(s) {
   appState = s;
   stateLbl.textContent = {
-    idle:      'Toca para hablar',
-    listening: '🔴 Escuchando…',
-    thinking:  '💭 Pensando…',
-    speaking:  '🔊 Hablando…',
+    inactive:      'Toca para comenzar',
+    session:       '🎙 Sesión activa',
+    'ai-speaking': '🔊 Hablando…',
   }[s] ?? '';
-  stateLbl.className = s === 'idle' ? '' : s;
-  wavesEl.className  = s === 'idle' ? '' : s;
-  micBtn.classList.toggle('listening', s === 'listening');
-  micBtn.classList.toggle('busy',      s === 'thinking' || s === 'speaking');
+  stateLbl.className = s;
+  wavesEl.className  = s;
+  micBtn.classList.toggle('active', s === 'session' || s === 'ai-speaking');
 }
 
 const setSub = t => { subEl.textContent = t; };
@@ -299,14 +294,12 @@ async function llm() {
 }
 
 // ── Mic button ───────────────────────────────────────────────
-micBtn.addEventListener('pointerdown', e => {
+micBtn.addEventListener('click', e => {
   e.preventDefault();
-  if (appState !== 'idle') return;
   unlockAudio();
-  startRec();
+  if (!sessionActive) startSession();
+  else stopSession();
 });
-micBtn.addEventListener('pointerup',     () => { if (appState === 'listening') stopRec(); });
-micBtn.addEventListener('pointercancel', () => { if (appState === 'listening') stopRec(); });
 
 // ── Settings ─────────────────────────────────────────────────
 $('settings-btn').addEventListener('click', () => {
@@ -322,7 +315,7 @@ $('s-out').addEventListener('click', () => { localStorage.clear(); location.relo
 
 // ── Boot ─────────────────────────────────────────────────────
 initMime();
-setState('idle');
+setState('inactive');
 setSub('');
 </script>
 </body>
