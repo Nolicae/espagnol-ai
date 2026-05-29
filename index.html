@@ -1633,6 +1633,7 @@ function initMime() {
 }
 
 async function startRec() {
+  console.log('🎙️ [RECORD] Starting recording...');
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     chunks = [];
@@ -1640,6 +1641,7 @@ async function startRec() {
     recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     recorder.onstop = onStop;
     recorder.start();
+    console.log('🎙️ [RECORD] Recording started, state set to listening');
     setState('listening');
 
     // Start interject analysis
