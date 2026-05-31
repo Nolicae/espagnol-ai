@@ -735,7 +735,7 @@
           <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
             <path d="M3 13h10M8 2v8M5 7l3 3 3-3"/>
           </svg>
-          <span id="exam-pick-label">Charger un document</span>
+          <span id="exam-pick-label">Subir un documento</span>
         </button>
         <span class="exam-file-badge" id="exam-file-badge"></span>
         <input type="file" id="exam-file-input" accept=".pdf,image/*" style="display:none">
@@ -772,10 +772,10 @@
       <div class="session-summary hidden" id="session-summary">
         <div class="summary-card">
           <div class="summary-header">
-            <span class="summary-title">Bilan de session</span>
+            <span class="summary-title">Resumen de sesión</span>
             <button class="summary-close" id="summary-close">✕</button>
           </div>
-          <div class="summary-body" id="summary-body">Analyse en cours…</div>
+          <div class="summary-body" id="summary-body">Analizando…</div>
         </div>
       </div>
 
@@ -826,8 +826,8 @@
       <div class="settings-exam" id="settings-exam">
         <div class="exam-toggle-row">
           <div class="exam-toggle-info">
-            <span class="exam-toggle-label">Mode Examen</span>
-            <span class="exam-toggle-desc">L'IA lit un document et vous interroge</span>
+            <span class="exam-toggle-label">Modo Examen</span>
+            <span class="exam-toggle-desc">La IA lee un documento y te examina</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="exam-toggle">
@@ -1695,7 +1695,7 @@ async function showSessionSummary(snap) {
   const el = document.getElementById('session-summary');
   const body = document.getElementById('summary-body');
   el.classList.remove('hidden');
-  body.textContent = 'Analyse en cours…';
+  body.textContent = 'Analizando…';
   try {
     const r = await fetch(GROQ_CHAT, {
       method:  'POST',
@@ -1766,7 +1766,7 @@ async function extractImageContent(file) {
 async function processExamFile(file) {
   const badge  = document.getElementById('exam-file-badge');
   const label  = document.getElementById('exam-pick-label');
-  badge.textContent = '…traitement…';
+  badge.textContent = '…procesando…';
   badge.className   = 'exam-file-badge';
   label.textContent = file.name;
   try {
@@ -1778,11 +1778,11 @@ async function processExamFile(file) {
     }
     if (!content.trim()) throw new Error('Contenu vide');
     examContent = content;
-    badge.textContent = '✓ prêt';
+    badge.textContent = '✓ listo';
     badge.className   = 'exam-file-badge loaded';
   } catch (e) {
     console.error('[exam]', e.message);
-    badge.textContent = '⚠ erreur';
+    badge.textContent = '⚠ error';
     badge.className   = 'exam-file-badge';
     examContent = '';
   }
@@ -1797,7 +1797,7 @@ function applyExamMode(enabled) {
   // Reset badge
   document.getElementById('exam-file-badge').textContent = '';
   document.getElementById('exam-file-badge').className   = 'exam-file-badge';
-  document.getElementById('exam-pick-label').textContent = 'Charger un document';
+  document.getElementById('exam-pick-label').textContent = 'Subir un documento';
 }
 
 // ──────────────────────────────────────────────────────────────
