@@ -728,8 +728,8 @@
         <span id="voice-counter">01 / 01</span>
       </div>
 
-      <svg id="voices-map" viewBox="0 0 360 290" width="100%" height="290"
-           style="position:absolute;top:212px;left:0;right:0;overflow:visible;display:block;padding:0 16px;max-width:402px;"></svg>
+      <svg id="voices-map" viewBox="0 0 500 380" width="100%" height="380"
+           style="position:absolute;top:212px;left:0;right:0;overflow:visible;display:block;padding:0 16px;max-width:500px;"></svg>
 
       <div class="settings-selected-voice">
         <div class="selected-voice-name" id="selected-voice-name">Elvira</div>
@@ -1401,98 +1401,76 @@ async function speak(text) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Voice data — 44 voix, 22 pays (mapa hispanohablante)
+// Voice data — 22 voix, 22 pays (mapa hispanohablante reconocible)
 // ──────────────────────────────────────────────────────────────
-// Geographic positions mapped to SVG viewBox "0 0 360 290"
+// Geographic positions mapped to SVG viewBox "0 0 500 380"
 // color = hex accent used for orb tint when this voice is active
 const VOICES = [
   // EUROPA — España
-  { id:'es-ES-ElviraNeural',    name:'Elvira',    city:'Madrid',           country:'España',            trait:'paciente',   color:'#E8907A', x:310, y:32  },
-  { id:'es-ES-AlvaroNeural',    name:'Álvaro',    city:'Barcelona',        country:'España',            trait:'directo',    color:'#D4A882', x:320, y:28  },
+  { id:'es-ES-ElviraNeural',    name:'Elvira',    city:'Madrid',           country:'España',            trait:'paciente',   color:'#E8907A', x:420, y:50  },
 
   // NORTEAMÉRICA — EE.UU.
-  { id:'es-US-PalomaNeural',    name:'Paloma',    city:'Miami',            country:'EE. UU.',           trait:'moderna',    color:'#78B8E8', x:170, y:62  },
-  { id:'es-US-AlonsoNeural',    name:'Alonso',    city:'Los Ángeles',      country:'EE. UU.',           trait:'relajado',   color:'#A8C8E8', x:55,  y:48  },
+  { id:'es-US-PalomaNeural',    name:'Paloma',    city:'Miami',            country:'EE. UU.',           trait:'moderna',    color:'#78B8E8', x:200, y:70  },
 
   // MÉXICO
-  { id:'es-MX-DaliaNeural',     name:'Dalia',     city:'Ciudad de México', country:'México',            trait:'animada',    color:'#E8B86A', x:88,  y:85  },
-  { id:'es-MX-JorgeNeural',     name:'Jorge',     city:'Guadalajara',      country:'México',            trait:'amigable',   color:'#D4A050', x:75,  y:78  },
+  { id:'es-MX-DaliaNeural',     name:'Dalia',     city:'Ciudad de México', country:'México',            trait:'animada',    color:'#E8B86A', x:110, y:100 },
 
   // CARAÍBAS — Cuba
-  { id:'es-CU-BelkysNeural',    name:'Belkys',    city:'La Habana',        country:'Cuba',              trait:'musical',    color:'#70D4B8', x:145, y:80  },
-  { id:'es-CU-ManuelNeural',    name:'Manuel',    city:'Santiago',         country:'Cuba',              trait:'cálido',     color:'#58BAA0', x:155, y:85  },
+  { id:'es-CU-BelkysNeural',    name:'Belkys',    city:'La Habana',        country:'Cuba',              trait:'musical',    color:'#70D4B8', x:170, y:105 },
 
-  // CARAÍBAS — República Dominicana
-  { id:'es-DO-RamonaNeural',    name:'Ramona',    city:'Santo Domingo',    country:'Rep. Dominicana',   trait:'cálida',     color:'#F0C840', x:180, y:88  },
-  { id:'es-DO-EmilioNeural',    name:'Emilio',    city:'Santiago',         country:'Rep. Dominicana',   trait:'alegre',     color:'#D8A820', x:188, y:93  },
+  // CARAÍBAS — Rep. Dominicana
+  { id:'es-DO-RamonaNeural',    name:'Ramona',    city:'Santo Domingo',    country:'Rep. Dominicana',   trait:'cálida',     color:'#F0C840', x:210, y:110 },
 
   // CARAÍBAS — Puerto Rico
-  { id:'es-PR-KarinaNeural',    name:'Karina',    city:'San Juan',         country:'Puerto Rico',       trait:'suave',      color:'#D890C8', x:200, y:95  },
-  { id:'es-PR-VictorNeural',    name:'Victor',    city:'San Juan',         country:'Puerto Rico',       trait:'enérgico',   color:'#C070B0', x:208, y:101 },
+  { id:'es-PR-KarinaNeural',    name:'Karina',    city:'San Juan',         country:'Puerto Rico',       trait:'suave',      color:'#D890C8', x:230, y:115 },
 
   // CENTROAMÉRICA — Guatemala
-  { id:'es-GT-MartaNeural',     name:'Marta',     city:'Guatemala',        country:'Guatemala',         trait:'clara',      color:'#F0A860', x:92,  y:105 },
-  { id:'es-GT-AndresNeural',    name:'Andrés',    city:'Guatemala',        country:'Guatemala',         trait:'firme',      color:'#D89040', x:99,  y:110 },
+  { id:'es-GT-MartaNeural',     name:'Marta',     city:'Guatemala',        country:'Guatemala',         trait:'clara',      color:'#F0A860', x:115, y:130 },
 
   // CENTROAMÉRICA — Honduras
-  { id:'es-HN-KarlaNeural',     name:'Karla',     city:'Tegucigalpa',      country:'Honduras',          trait:'dulce',      color:'#C8D870', x:105, y:113 },
-  { id:'es-HN-CarlosNeural',    name:'Carlos',    city:'Tegucigalpa',      country:'Honduras',          trait:'tranquilo',  color:'#A8B850', x:113, y:118 },
+  { id:'es-HN-KarlaNeural',     name:'Karla',     city:'Tegucigalpa',      country:'Honduras',          trait:'dulce',      color:'#C8D870', x:130, y:140 },
 
   // CENTROAMÉRICA — El Salvador
-  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',       trait:'serena',     color:'#E8C870', x:99,  y:123 },
-  { id:'es-SV-RodrigoNeural',   name:'Rodrigo',   city:'San Salvador',     country:'El Salvador',       trait:'tranquilo',  color:'#C8A850', x:107, y:128 },
+  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',       trait:'serena',     color:'#E8C870', x:120, y:148 },
 
   // CENTROAMÉRICA — Nicaragua
-  { id:'es-NI-YolandaNeural',   name:'Yolanda',   city:'Managua',          country:'Nicaragua',         trait:'viva',       color:'#70D4D4', x:102, y:135 },
-  { id:'es-NI-FedericoNeural',  name:'Federico',  city:'Managua',          country:'Nicaragua',         trait:'pausado',    color:'#48B4B4', x:110, y:140 },
+  { id:'es-NI-YolandaNeural',   name:'Yolanda',   city:'Managua',          country:'Nicaragua',         trait:'viva',       color:'#70D4D4', x:125, y:160 },
 
   // CENTROAMÉRICA — Costa Rica
-  { id:'es-CR-MariaNeural',     name:'María',     city:'San José',         country:'Costa Rica',        trait:'amable',     color:'#D870A0', x:108, y:148 },
-  { id:'es-CR-JuanNeural',      name:'Juan',      city:'San José',         country:'Costa Rica',        trait:'relajado',   color:'#B85080', x:116, y:153 },
+  { id:'es-CR-MariaNeural',     name:'María',     city:'San José',         country:'Costa Rica',        trait:'amable',     color:'#D870A0', x:130, y:172 },
 
   // CENTROAMÉRICA — Panamá
-  { id:'es-PA-MargaritaNeural', name:'Margarita', city:'Panamá',           country:'Panamá',            trait:'melodiosa',  color:'#A0D890', x:114, y:161 },
-  { id:'es-PA-RobertoNeural',   name:'Roberto',   city:'Panamá',           country:'Panamá',            trait:'seguro',     color:'#78B870', x:122, y:166 },
+  { id:'es-PA-MargaritaNeural', name:'Margarita', city:'Panamá',           country:'Panamá',            trait:'melodiosa',  color:'#A0D890', x:135, y:185 },
 
   // SUDAMÉRICA NORTE — Colombia
-  { id:'es-CO-SalomeNeural',    name:'Salomé',    city:'Bogotá',           country:'Colombia',          trait:'cálida',     color:'#B090E8', x:122, y:175 },
-  { id:'es-CO-GonzaloNeural',   name:'Gonzalo',   city:'Medellín',         country:'Colombia',          trait:'jovial',     color:'#9878D4', x:112, y:168 },
+  { id:'es-CO-SalomeNeural',    name:'Salomé',    city:'Bogotá',           country:'Colombia',          trait:'cálida',     color:'#B090E8', x:145, y:205 },
 
   // SUDAMÉRICA NORTE — Venezuela
-  { id:'es-VE-PaolaNeural',     name:'Paola',     city:'Caracas',          country:'Venezuela',         trait:'vibrante',   color:'#E8904C', x:158, y:155 },
-  { id:'es-VE-SebastianNeural', name:'Sebastián', city:'Maracaibo',        country:'Venezuela',         trait:'expresivo',  color:'#D07834', x:148, y:148 },
+  { id:'es-VE-PaolaNeural',     name:'Paola',     city:'Caracas',          country:'Venezuela',         trait:'vibrante',   color:'#E8904C', x:185, y:185 },
 
   // SUDAMÉRICA NORTE — Ecuador
-  { id:'es-EC-AndreaNeural',    name:'Andrea',    city:'Quito',            country:'Ecuador',           trait:'serena',     color:'#70C8A8', x:110, y:182 },
-  { id:'es-EC-LuisNeural',      name:'Luis',      city:'Guayaquil',        country:'Ecuador',           trait:'claro',      color:'#58B090', x:104, y:190 },
+  { id:'es-EC-AndreaNeural',    name:'Andrea',    city:'Quito',            country:'Ecuador',           trait:'serena',     color:'#70C8A8', x:130, y:220 },
 
   // COSTA OESTE — Perú
-  { id:'es-PE-CamilaNeural',    name:'Camila',    city:'Lima',             country:'Perú',              trait:'natural',    color:'#C890D8', x:108, y:206 },
-  { id:'es-PE-AlexNeural',      name:'Alex',      city:'Cusco',            country:'Perú',              trait:'formal',     color:'#A870C0', x:118, y:214 },
+  { id:'es-PE-CamilaNeural',    name:'Camila',    city:'Lima',             country:'Perú',              trait:'natural',    color:'#C890D8', x:130, y:260 },
 
   // INTERIOR — Bolivia
-  { id:'es-BO-SofiaNeural',     name:'Sofia',     city:'La Paz',           country:'Bolivia',           trait:'cálida',     color:'#8890E8', x:138, y:222 },
-  { id:'es-BO-MarceloNeural',   name:'Marcelo',   city:'Santa Cruz',       country:'Bolivia',           trait:'directo',    color:'#6870D0', x:148, y:228 },
+  { id:'es-BO-SofiaNeural',     name:'Sofia',     city:'La Paz',           country:'Bolivia',           trait:'cálida',     color:'#8890E8', x:165, y:280 },
 
   // INTERIOR — Paraguay
-  { id:'es-PY-TaniaNeural',     name:'Tania',     city:'Asunción',         country:'Paraguay',          trait:'suave',      color:'#E8A0D0', x:158, y:228 },
-  { id:'es-PY-MarioNeural',     name:'Mario',     city:'Asunción',         country:'Paraguay',          trait:'amigable',   color:'#C880B0', x:166, y:234 },
+  { id:'es-PY-TaniaNeural',     name:'Tania',     city:'Asunción',         country:'Paraguay',          trait:'suave',      color:'#E8A0D0', x:190, y:295 },
 
   // COSTA OESTE — Chile
-  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',             trait:'clara',      color:'#90C870', x:114, y:238 },
-  { id:'es-CL-LorenzoNeural',   name:'Lorenzo',   city:'Valparaíso',       country:'Chile',             trait:'dinámico',   color:'#78B058', x:106, y:230 },
+  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',             trait:'clara',      color:'#90C870', x:135, y:330 },
 
   // SUDESTE — Argentina
-  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',         trait:'expresiva',  color:'#E890A8', x:150, y:252 },
-  { id:'es-AR-TomasNeural',     name:'Tomás',     city:'Córdoba',          country:'Argentina',         trait:'cálido',     color:'#D07890', x:138, y:244 },
+  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',         trait:'expresiva',  color:'#E890A8', x:180, y:345 },
 
   // SUDESTE — Uruguay
-  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',           trait:'fluida',     color:'#88C4E0', x:162, y:250 },
-  { id:'es-UY-MateoNeural',     name:'Mateo',     city:'Montevideo',       country:'Uruguay',           trait:'sereno',     color:'#60A8C8', x:170, y:256 },
+  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',           trait:'fluida',     color:'#88C4E0', x:200, y:352 },
 
   // ÁFRICA — Guinea Ecuatorial
-  { id:'es-GQ-TeresaNeural',    name:'Teresa',    city:'Malabo',           country:'Guinea Ecuatorial', trait:'clara',      color:'#C8A070', x:295, y:168 },
-  { id:'es-GQ-JavierNeural',    name:'Javier',    city:'Bata',             country:'Guinea Ecuatorial', trait:'firme',      color:'#A88050', x:305, y:176 },
+  { id:'es-GQ-TeresaNeural',    name:'Teresa',    city:'Malabo',           country:'Guinea Ecuatorial', trait:'clara',      color:'#C8A070', x:380, y:220 },
 ];
 
 function hexToRgb(hex) {
