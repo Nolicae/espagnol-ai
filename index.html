@@ -590,10 +590,12 @@
       display: flex; align-items: center; justify-content: center;
       padding: 28px; backdrop-filter: blur(6px);
     }
-    /* ── Exam bar (under HUD, above orb, conversation screen) ── */
+    /* ── Exam bar (under HUD controls, top of page) ── */
     .exam-bar {
+      position: absolute;
+      top: 54px; left: 0; right: 0;
       display: flex; align-items: center; gap: 10px;
-      padding: 12px 24px 0; margin-top: 16px;
+      padding: 12px 24px; z-index: 15;
     }
     .exam-bar.hidden { display: none; }
     .exam-pick-btn {
@@ -641,7 +643,8 @@
       transition: transform .2s;
     }
     .switch input:checked + .switch-track {
-      background: linear-gradient(90deg, #A0D890 0%, #78B870 100%);
+      background-image: linear-gradient(90deg, #A0D890 0%, #78B870 100%);
+      background-color: transparent;
     }
     .switch input:checked + .switch-track::after { transform: translateX(18px); }
 
@@ -1662,8 +1665,8 @@ function initVoicesMap() {
       M 160,135 Q 170,140 180,145
     `;
     coastline.setAttribute('d', d);
-    coastline.setAttribute('stroke', 'rgba(255,255,255,0.09)');
-    coastline.setAttribute('stroke-width', '0.8');
+    coastline.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+    coastline.setAttribute('stroke-width', '1.2');
     coastline.setAttribute('fill', 'none');
     coastline.setAttribute('stroke-linecap', 'round');
     coastline.setAttribute('stroke-linejoin', 'round');
