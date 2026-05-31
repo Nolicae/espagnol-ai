@@ -583,6 +583,35 @@
     .voices-grid::-webkit-scrollbar { width: 6px; }
     .voices-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
 
+    /* ── Session summary overlay ── */
+    .session-summary {
+      position: absolute; inset: 0; z-index: 28;
+      background: rgba(10,12,22,0.88);
+      display: flex; align-items: center; justify-content: center;
+      padding: 28px; backdrop-filter: blur(6px);
+    }
+    .session-summary.hidden { display: none; }
+    .summary-card {
+      width: 100%; max-width: 340px;
+      background: var(--bg2); border: 1px solid var(--rule);
+      border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .summary-header {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .summary-title {
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--inkDim);
+    }
+    .summary-close {
+      background: none; border: none; color: var(--inkSoft);
+      font-size: 1rem; cursor: pointer; padding: 4px 8px;
+    }
+    .summary-body {
+      font-family: var(--sans); font-size: 0.88rem; line-height: 1.65;
+      color: var(--inkSoft); white-space: pre-wrap;
+    }
+
     /* ── Groq key panel ── */
     .key-panel {
       position: absolute;
@@ -671,6 +700,17 @@
         </div>
       </div>
 
+      <!-- Session summary overlay -->
+      <div class="session-summary hidden" id="session-summary">
+        <div class="summary-card">
+          <div class="summary-header">
+            <span class="summary-title">Bilan de session</span>
+            <button class="summary-close" id="summary-close">✕</button>
+          </div>
+          <div class="summary-body" id="summary-body">Analyse en cours…</div>
+        </div>
+      </div>
+
     </div><!-- /screen-conversation -->
 
     <!-- ═══ Screen: Settings ═══ -->
@@ -735,9 +775,10 @@ const SYSTEM = `Eres un profesor de español nativo, amigable y natural.
 Hablas con el usuario como en una conversación real.
 Responde SIEMPRE en español. Máximo 1-2 frases — la conversación continúa, no hace falta resumir.
 Intervén cuando el usuario hace una pausa, duda, hace una pregunta o comete un error.
-Si hay un error gramatical o de vocabulario, corrígelo de forma natural dentro de tu respuesta, sin explicar la regla.
+Si hay un error gramatical o de vocabulario, corrígelo de forma natural dentro de tu respuesta — luego pide al usuario que repita la forma correcta él mismo: por ejemplo "¿Puedes repetirlo?" o "Ahora tú". No lo pidas más de una vez por error.
 Nunca repitas literalmente lo que dijo el usuario. Ve directo.
-Si recibes "[silencio]", el usuario no ha respondido después de tu última frase: hazle una pregunta relacionada, dale una pista, corrígelo, o simplemente anímalo — lo que sea más natural según el contexto.`;
+Si recibes "[silencio]", el usuario no ha respondido: hazle una pregunta, dale una pista o simplemente anímalo — lo más natural según el contexto.
+Si recibes "[inicio de sesión]", saluda con naturalidad y propón un tema o una pregunta para empezar.`;
 
 const DEFAULT_KEY   = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI81CPW';
 const DEFAULT_VOICE = 'es-ES-ElviraNeural';
@@ -1027,6 +1068,7 @@ async function startSession() {
     startRecognition();
     setState('session');
     chronoStart(getDuration());
+    setTimeout(aiGreeting, 600); // let recognition initialise first
   } catch (e) {
     console.error('[mic]', e.message);
     setState('inactive');
@@ -1049,8 +1091,14 @@ function stopSession() {
   processing  = false;
   setState('inactive');
   chronoStop();
+  const snap = [...history];
   history = [];
+  showSessionSummary(snap);
 }
+
+document.getElementById('summary-close').addEventListener('click', () => {
+  document.getElementById('session-summary').classList.add('hidden');
+});
 
 // ──────────────────────────────────────────────────────────────
 // Web Speech recognition
@@ -1134,11 +1182,13 @@ async function triggerProcessing() {
     aiSpeaking = true;
     if (sessionActive) setState('ai-speaking');
 
-    const reply = await llm();
-    history.push({ role: 'assistant', content: reply });
-    if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
-
-    await speak(reply);
+    const myToken = speakToken;
+    const messages = [{ role: 'system', content: SYSTEM }, ...history];
+    const reply = await streamAndSpeak(messages, myToken);
+    if (reply.trim()) {
+      history.push({ role: 'assistant', content: reply });
+      if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
+    }
   } catch (e) {
     console.error('[pipeline]', e.message);
   } finally {
@@ -1151,6 +1201,26 @@ async function triggerProcessing() {
   }
 }
 
+// ── AI greeting at session start ─────────────────────────────
+async function aiGreeting() {
+  if (!sessionActive || processing || aiSpeaking) return;
+  processing = true;
+  aiSpeaking = true;
+  setState('ai-speaking');
+  try {
+    const myToken = speakToken;
+    const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: '[inicio de sesión]' }];
+    const greeting = await streamAndSpeak(messages, myToken);
+    if (greeting.trim()) history.push({ role: 'assistant', content: greeting });
+  } catch (e) {
+    console.error('[greeting]', e.message);
+  } finally {
+    aiSpeaking = false;
+    processing  = false;
+    if (sessionActive) { setState('session'); startSilenceTimer(12000); }
+  }
+}
+
 // Called when silence timer fires — AI engages the user proactively
 async function processAiSilencePrompt() {
   if (processing || aiSpeaking || !sessionActive) return;
@@ -1160,23 +1230,10 @@ async function processAiSilencePrompt() {
   aiSpeaking = true;
   if (sessionActive) setState('ai-speaking');
   try {
-    // Inject a silent cue without polluting the real history
-    const r = await fetch(GROQ_CHAT, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
-      body: JSON.stringify({
-        model:      GROQ_MODEL,
-        max_tokens: 120,
-        messages:   [{ role: 'system', content: SYSTEM }, ...history, { role: 'user', content: '[silencio]' }],
-      }),
-    });
-    if (!r.ok) throw new Error(`LLM ${r.status}`);
-    const reply = (await r.json()).choices[0]?.message?.content || '';
-    if (reply.trim()) {
-      // Silence prompts are ephemeral nudges — don't pollute the conversation history.
-      // When the user speaks next, the LLM picks up cleanly from the last real exchange.
-      await speak(reply);
-    }
+    const myToken = speakToken;
+    const messages = [{ role: 'system', content: SYSTEM }, ...history, { role: 'user', content: '[silencio]' }];
+    // Ephemeral — result not added to history so next user reply stays coherent
+    await streamAndSpeak(messages, myToken);
   } catch (e) {
     console.error('[silence]', e.message);
   } finally {
@@ -1191,6 +1248,73 @@ async function processAiSilencePrompt() {
       startSilenceTimer(10000);
     }
   }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Streaming LLM  (Groq — yields tokens, sentences played as they arrive)
+// ──────────────────────────────────────────────────────────────
+
+// Split accumulated text into complete sentences + leftover fragment
+function extractSentences(text) {
+  const sentences = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if ('.!?'.includes(text[i])) {
+      const next = text[i + 1];
+      if (next === undefined || next === ' ' || next === '\n') {
+        const s = text.slice(start, i + 1).trim();
+        if (s.length > 1) sentences.push(s);
+        start = i + 2;
+        i++;
+      }
+    }
+  }
+  return { sentences, remainder: text.slice(start) };
+}
+
+async function* streamLLM(messages) {
+  const r = await fetch(GROQ_CHAT, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
+    body: JSON.stringify({ model: GROQ_MODEL, max_tokens: 200, stream: true, messages }),
+  });
+  if (!r.ok) throw new Error(`LLM ${r.status}`);
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') return;
+      try { const d = JSON.parse(raw).choices?.[0]?.delta?.content; if (d) yield d; }
+      catch (_) {}
+    }
+  }
+}
+
+// Shared helper: stream LLM response and speak sentence-by-sentence
+async function streamAndSpeak(messages, myToken) {
+  let full = '';
+  let buf  = '';
+  for await (const delta of streamLLM(messages)) {
+    if (speakToken !== myToken) break;
+    full += delta;
+    buf  += delta;
+    const { sentences, remainder } = extractSentences(buf);
+    buf = remainder;
+    for (const s of sentences) {
+      if (speakToken !== myToken) break;
+      await speakChunk(s);
+    }
+  }
+  if (buf.trim() && speakToken === myToken) await speakChunk(buf.trim());
+  return full;
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1404,6 +1528,36 @@ function initVoicesMap() {
   const savedId = getVoiceKey();
   const current = VOICES.find(v => v.id === savedId) || VOICES[0];
   selectVoice(current, false);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Session summary
+// ──────────────────────────────────────────────────────────────
+async function showSessionSummary(snap) {
+  if (snap.length < 4) return; // not enough content to summarise
+  const el = document.getElementById('session-summary');
+  const body = document.getElementById('summary-body');
+  el.classList.remove('hidden');
+  body.textContent = 'Analyse en cours…';
+  try {
+    const r = await fetch(GROQ_CHAT, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
+      body: JSON.stringify({
+        model:    GROQ_MODEL,
+        max_tokens: 350,
+        messages: [
+          { role: 'system', content: 'Tu es un assistant pédagogique. Analyse cette session de pratique d\'espagnol et réponds en français. Sois bref, encourageant et concret.' },
+          ...snap,
+          { role: 'user', content: 'Résume cette session en 3 points courts :\n❌ Erreurs corrigées (avec la forme correcte)\n✅ Ce qui était bien\n📚 Vocabulaire clé utilisé' },
+        ],
+      }),
+    });
+    if (!r.ok) throw new Error();
+    body.textContent = (await r.json()).choices[0]?.message?.content || 'Aucun bilan disponible.';
+  } catch (_) {
+    body.textContent = 'Bilan non disponible.';
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
