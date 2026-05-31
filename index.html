@@ -1294,7 +1294,8 @@ function handleSpeechResult(e) {
   }
   if (hasInterim || hasFinal) {
     clearSilenceTimer();
-    userSpokeRecently = true; // flag: user is speaking, block silence prompt
+    userSpokeRecently = true;
+    if (aiSpeaking) interruptTTS(); // user is speaking → stop AI immediately
   }
   if (hasFinal) triggerProcessing();
 }
