@@ -637,10 +637,10 @@
       background: rgba(255,255,255,0.12);
       border-radius: 13px; cursor: pointer;
     }
-    /* Gradient overlay — fades in when checked (can't transition gradient directly) */
+    /* Gradient overlay — same as Guardar button, fades in when checked */
     .switch-track::before {
       content: ''; position: absolute; inset: 0; border-radius: 13px;
-      background: linear-gradient(90deg, #A0D890 0%, #D4E890 50%, #78B870 100%);
+      background: linear-gradient(120deg, var(--lilac) 0%, var(--accent2) 68%, var(--peach) 100%);
       opacity: 0; transition: opacity .25s;
     }
     .switch input:checked + .switch-track::before { opacity: 1; }
@@ -1659,35 +1659,40 @@ function initVoicesMap() {
       [25,28],         // Paraguay → Argentina
       [26,28],[28,30], // Chile → Argentina → Uruguay
     ];
-    // Draw coastlines calibrated to the voice coordinate system
-    // viewBox 0 0 360 290 — dots are city positions; coasts hug them slightly
-    const paths = [
-      // Pacific coast: California → Baja → Mexico → Central America → South America
-      'M 58,44 C 62,50 68,60 74,68 L 82,78 L 89,88 L 93,98 L 92,107 L 96,114 L 97,121 L 101,131 L 106,141 L 112,151 L 112,162 L 108,172 L 104,183 L 102,196 L 101,210 L 103,222 L 107,233 L 106,248 L 102,262',
-      // Baja California peninsula
-      'M 74,68 L 68,76 L 63,86 L 60,96 L 58,106',
-      // Gulf of Mexico north shore (Yucatan → Cuba gap)
-      'M 93,98 C 96,87 114,78 132,78 C 142,78 147,80 150,84',
-      // Caribbean: Cuba → Hispaniola → Puerto Rico
-      'M 140,82 L 155,83 L 163,88 L 172,93 M 176,96 L 183,99 L 192,102 M 196,100 L 203,103',
-      // Venezuela / Colombia north coast
-      'M 122,163 C 133,153 146,140 158,137 L 168,138 L 176,143',
-      // North-east South America (Venezuela east → Guiana coast)
-      'M 176,143 L 180,152 L 182,163',
-      // Brazil east coast (mostly off-screen east but suggested)
-      'M 182,163 L 180,180 L 176,200 L 170,220 L 163,238 L 160,252',
-      // Argentina south tip
-      'M 148,244 L 143,256 L 138,268 L 132,276',
-      // Spain — small blob upper right
-      'M 293,30 C 298,27 312,27 320,31 C 325,35 322,42 315,43 C 306,44 294,41 292,36 C 291,33 292,30 293,30 Z',
-      // Africa — Gulf of Guinea coastline near GQ
-      'M 275,152 L 282,158 L 292,163 L 303,169 L 307,178 L 305,188',
+    // Real coastlines — geographically accurate shapes scaled to dot coordinate space
+    // Calibration: LA(64,55)≈lon-118 lat34 | Madrid(298,38)≈lon-4 lat40 | BsAs(150,242)≈lat-34
+    const coastPaths = [
+      // ── Pacific coast: California → Baja → Mexico → C.América → S.América ──
+      'M 52,40 C 56,46 60,52 64,58 C 67,64 70,70 74,76 C 77,80 82,84 87,88 C 89,92 90,98 90,104 C 89,109 91,114 94,118 C 96,124 99,130 102,136 C 105,140 108,144 112,150 C 112,156 110,162 108,168 C 106,175 104,182 103,190 C 102,198 102,206 103,214 C 104,222 106,228 108,234 C 109,240 108,247 106,254 L 103,264',
+      // ── Baja California peninsula ──
+      'M 66,60 C 63,68 60,78 57,88 C 55,96 53,104 52,112',
+      // ── Gulf of California (between Baja and mainland, suggested by negative space) ──
+      // ── Gulf of Mexico: Yucatan arcs up to Texas then Florida ──
+      'M 90,100 C 92,90 98,82 110,76 C 120,72 132,70 144,70 C 152,70 160,72 166,76',
+      // ── Cuba (long east-west island) ──
+      'M 138,83 C 144,80 150,80 156,82 C 162,83 167,86 170,90 C 168,94 163,96 157,96 C 150,96 144,94 140,91 C 138,88 137,85 138,83 Z',
+      // ── Hispaniola ──
+      'M 174,96 C 178,93 183,93 187,96 C 188,99 186,102 183,103 C 179,103 175,101 174,98 Z',
+      // ── Puerto Rico ──
+      'M 194,100 L 202,100 L 203,103 L 196,104 Z',
+      // ── Lesser Antilles chain (SE from PR) ──
+      'M 205,104 C 207,107 209,111 210,116 C 211,120 211,125 210,130',
+      // ── Venezuela + Colombia north coast ──
+      'M 118,162 C 128,154 138,146 150,140 C 157,136 164,135 170,137 C 175,139 180,144 182,150',
+      // ── Brazil east coast → Argentina → Tierra del Fuego ──
+      'M 182,150 C 184,162 185,175 184,188 C 183,200 180,212 174,222 C 168,232 162,240 158,248 C 154,256 150,264 148,272 C 144,264 140,256 136,248',
+      // ── Río de la Plata (wide estuary at Montevideo/BsAs) ──
+      'M 156,238 C 158,240 162,240 165,238',
+      // ── Iberian Peninsula (Spain) — distinctive square shape ──
+      'M 289,28 C 298,24 312,24 321,28 C 327,32 326,39 320,43 C 313,46 303,46 295,43 C 289,40 287,34 289,28 Z',
+      // ── Africa: Gulf of Guinea coastline around GQ ──
+      'M 268,150 C 276,154 285,158 295,163 C 303,168 308,176 307,186 C 306,192 302,196 296,196',
     ];
-    paths.forEach(d => {
+    coastPaths.forEach(d => {
       const p = document.createElementNS(NS, 'path');
       p.setAttribute('d', d);
-      p.setAttribute('stroke', 'rgba(255,255,255,0.22)');
-      p.setAttribute('stroke-width', '1.1');
+      p.setAttribute('stroke', 'rgba(255,255,255,0.14)');
+      p.setAttribute('stroke-width', '1.0');
       p.setAttribute('fill', 'none');
       p.setAttribute('stroke-linecap', 'round');
       p.setAttribute('stroke-linejoin', 'round');
