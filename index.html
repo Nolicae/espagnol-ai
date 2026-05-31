@@ -1006,6 +1006,24 @@ let chatMode = false;
 function applyChatMode(on) {
   chatMode = on;
   localStorage.setItem('chat_mode', on ? '1' : '0');
+
+  if (!sessionActive) return; // no active session, nothing else to do
+
+  if (on) {
+    // Switching TO chat mid-session: stop mic, show overlay
+    stopRecognition();
+    clearSilenceTimer();
+    document.getElementById('chat-overlay').classList.remove('hidden');
+    document.getElementById('chat-messages').innerHTML = '';
+    setState('session');
+    setTimeout(chatGreeting, 200);
+  } else {
+    // Switching FROM chat mid-session: hide overlay, restart mic
+    document.getElementById('chat-overlay').classList.add('hidden');
+    setState('session');
+    startRecognition();
+    setTimeout(aiGreeting, 400);
+  }
 }
 
 function addChatMessage(role, text, typing = false) {
