@@ -1401,55 +1401,65 @@ async function speak(text) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Voice data — 32 voix: 22 originales + 10 nouvelles (une voix par pays)
+// Voice data — v16 complete + 10 missing countries (1 voice each)
 // ──────────────────────────────────────────────────────────────
 // Geographic positions mapped to SVG viewBox "0 0 360 290"
 // color = hex accent used for orb tint when this voice is active
 const VOICES = [
-  // España
-  { id:'es-ES-ElviraNeural',    name:'Elvira',    city:'Madrid',           country:'España',            trait:'paciente',   color:'#E8907A', x:298, y:38  },
-  // EE. UU.
-  { id:'es-US-PalomaNeural',    name:'Paloma',    city:'Miami',            country:'EE. UU.',           trait:'moderna',    color:'#78B8E8', x:164, y:70  },
-  // México
-  { id:'es-MX-DaliaNeural',     name:'Dalia',     city:'Ciudad de México', country:'México',            trait:'animada',    color:'#E8B86A', x:88,  y:88  },
-  // Cuba
-  { id:'es-CU-BelkysNeural',    name:'Belkys',    city:'La Habana',        country:'Cuba',              trait:'musical',    color:'#70D4B8', x:150, y:84  },
+  // España — upper right
+  { id:'es-ES-ElviraNeural',    name:'Elvira',    city:'Madrid',           country:'España',       trait:'paciente',   color:'#E8907A', x:298, y:38  },
+  { id:'es-ES-AlvaroNeural',    name:'Álvaro',    city:'Barcelona',        country:'España',       trait:'directo',    color:'#D4A882', x:308, y:31  },
+  // EE. UU. — upper left & center-right
+  { id:'es-US-PalomaNeural',    name:'Paloma',    city:'Miami',            country:'EE. UU.',      trait:'moderna',    color:'#78B8E8', x:160, y:65  },
+  { id:'es-US-AlonsoNeural',    name:'Alonso',    city:'Los Ángeles',      country:'EE. UU.',      trait:'relajado',   color:'#A8C8E8', x:64,  y:55  },
+  // México — upper left
+  { id:'es-MX-DaliaNeural',     name:'Dalia',     city:'Ciudad de México', country:'México',       trait:'animada',    color:'#E8B86A', x:88,  y:88  },
+  { id:'es-MX-JorgeNeural',     name:'Jorge',     city:'Guadalajara',      country:'México',       trait:'amigable',   color:'#D4A050', x:78,  y:85  },
+  // Cuba — Caribbean, right of Yucatán
+  { id:'es-CU-BelkysNeural',    name:'Belkys',    city:'La Habana',        country:'Cuba',         trait:'musical',    color:'#70D4B8', x:150, y:84  },
+  { id:'es-CU-ManuelNeural',    name:'Manuel',    city:'Santiago de Cuba', country:'Cuba',         trait:'cálido',     color:'#58BAA0', x:162, y:90  },
   // 🆕 Rep. Dominicana
-  { id:'es-DO-RamonaNeural',    name:'Ramona',    city:'Santo Domingo',    country:'Rep. Dominicana',   trait:'cálida',     color:'#F0C840', x:180, y:98  },
+  { id:'es-DO-RamonaNeural',    name:'Ramona',    city:'Santo Domingo',    country:'Rep. Dominicana', trait:'cálida',   color:'#F0C840', x:180, y:98  },
   // 🆕 Puerto Rico
-  { id:'es-PR-KarinaNeural',    name:'Karina',    city:'San Juan',         country:'Puerto Rico',       trait:'suave',      color:'#D890C8', x:198, y:102 },
+  { id:'es-PR-KarinaNeural',    name:'Karina',    city:'San Juan',         country:'Puerto Rico',  trait:'suave',      color:'#D890C8', x:198, y:102 },
   // 🆕 Guatemala
-  { id:'es-GT-MartaNeural',     name:'Marta',     city:'Guatemala',        country:'Guatemala',         trait:'clara',      color:'#F0A860', x:93,  y:107 },
+  { id:'es-GT-MartaNeural',     name:'Marta',     city:'Guatemala',        country:'Guatemala',    trait:'clara',      color:'#F0A860', x:93,  y:107 },
   // 🆕 Honduras
-  { id:'es-HN-KarlaNeural',     name:'Karla',     city:'Tegucigalpa',      country:'Honduras',          trait:'dulce',      color:'#C8D870', x:108, y:112 },
-  // El Salvador
-  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',       trait:'serena',     color:'#E8C870', x:101, y:118 },
+  { id:'es-HN-KarlaNeural',     name:'Karla',     city:'Tegucigalpa',      country:'Honduras',     trait:'dulce',      color:'#C8D870', x:108, y:112 },
+  // El Salvador — Central America
+  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',  trait:'serena',     color:'#E8C870', x:101, y:118 },
+  { id:'es-SV-RodrigoNeural',   name:'Rodrigo',   city:'San Salvador',     country:'El Salvador',  trait:'tranquilo',  color:'#C8A850', x:110, y:126 },
   // 🆕 Nicaragua
-  { id:'es-NI-YolandaNeural',   name:'Yolanda',   city:'Managua',          country:'Nicaragua',         trait:'viva',       color:'#70D4D4', x:104, y:132 },
+  { id:'es-NI-YolandaNeural',   name:'Yolanda',   city:'Managua',          country:'Nicaragua',    trait:'viva',       color:'#70D4D4', x:104, y:132 },
   // 🆕 Costa Rica
-  { id:'es-CR-MariaNeural',     name:'María',     city:'San José',         country:'Costa Rica',        trait:'amable',     color:'#D870A0', x:110, y:142 },
+  { id:'es-CR-MariaNeural',     name:'María',     city:'San José',         country:'Costa Rica',   trait:'amable',     color:'#D870A0', x:110, y:142 },
   // 🆕 Panamá
-  { id:'es-PA-MargaritaNeural', name:'Margarita', city:'Panamá',           country:'Panamá',            trait:'melodiosa',  color:'#A0D890', x:116, y:152 },
-  // Colombia
-  { id:'es-CO-SalomeNeural',    name:'Salomé',    city:'Bogotá',           country:'Colombia',          trait:'cálida',     color:'#B090E8', x:124, y:162 },
-  // Venezuela
-  { id:'es-VE-PaolaNeural',     name:'Paola',     city:'Caracas',          country:'Venezuela',         trait:'vibrante',   color:'#E8904C', x:158, y:138 },
-  // Ecuador
-  { id:'es-EC-AndreaNeural',    name:'Andrea',    city:'Quito',            country:'Ecuador',           trait:'serena',     color:'#70C8A8', x:112, y:166 },
-  // Perú
-  { id:'es-PE-CamilaNeural',    name:'Camila',    city:'Lima',             country:'Perú',              trait:'natural',    color:'#C890D8', x:110, y:190 },
+  { id:'es-PA-MargaritaNeural', name:'Margarita', city:'Panamá',           country:'Panamá',       trait:'melodiosa',  color:'#A0D890', x:116, y:152 },
+  // Colombia — NW South America
+  { id:'es-CO-SalomeNeural',    name:'Salomé',    city:'Bogotá',           country:'Colombia',     trait:'cálida',     color:'#B090E8', x:124, y:152 },
+  { id:'es-CO-GonzaloNeural',   name:'Gonzalo',   city:'Medellín',         country:'Colombia',     trait:'jovial',     color:'#9878D4', x:114, y:144 },
+  // Venezuela — north coast, right of Colombia
+  { id:'es-VE-PaolaNeural',     name:'Paola',     city:'Caracas',          country:'Venezuela',    trait:'vibrante',   color:'#E8904C', x:158, y:138 },
+  { id:'es-VE-SebastianNeural', name:'Sebastián', city:'Maracaibo',        country:'Venezuela',    trait:'expresivo',  color:'#D07834', x:146, y:131 },
+  // Ecuador — west coast below Colombia
+  { id:'es-EC-AndreaNeural',    name:'Andrea',    city:'Quito',            country:'Ecuador',      trait:'serena',     color:'#70C8A8', x:112, y:166 },
+  { id:'es-EC-LuisNeural',      name:'Luis',      city:'Guayaquil',        country:'Ecuador',      trait:'claro',      color:'#58B090', x:106, y:174 },
+  // Perú — west coast below Ecuador
+  { id:'es-PE-CamilaNeural',    name:'Camila',    city:'Lima',             country:'Perú',         trait:'natural',    color:'#C890D8', x:110, y:190 },
   // 🆕 Bolivia
-  { id:'es-BO-SofiaNeural',     name:'Sofia',     city:'La Paz',           country:'Bolivia',           trait:'cálida',     color:'#8890E8', x:140, y:208 },
+  { id:'es-BO-SofiaNeural',     name:'Sofia',     city:'La Paz',           country:'Bolivia',      trait:'cálida',     color:'#8890E8', x:140, y:208 },
   // 🆕 Paraguay
-  { id:'es-PY-TaniaNeural',     name:'Tania',     city:'Asunción',         country:'Paraguay',          trait:'suave',      color:'#E8A0D0', x:160, y:220 },
-  // Chile
-  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',             trait:'clara',      color:'#90C870', x:114, y:228 },
-  // Argentina
-  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',         trait:'expresiva',  color:'#E890A8', x:150, y:242 },
-  // Uruguay
-  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',           trait:'fluida',     color:'#88C4E0', x:158, y:236 },
-  // 🆕 Guinea Ecuatorial
-  { id:'es-GQ-TeresaNeural',    name:'Teresa',    city:'Malabo',           country:'Guinea Ecuatorial', trait:'clara',      color:'#C8A070', x:296, y:164 },
+  { id:'es-PY-TaniaNeural',     name:'Tania',     city:'Asunción',         country:'Paraguay',     trait:'suave',      color:'#E8A0D0', x:160, y:220 },
+  // Chile — long west coast strip
+  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',        trait:'clara',      color:'#90C870', x:114, y:228 },
+  { id:'es-CL-LorenzoNeural',   name:'Lorenzo',   city:'Valparaíso',       country:'Chile',        trait:'dinámico',   color:'#78B058', x:108, y:220 },
+  // Argentina — east of Chile, south
+  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',    trait:'expresiva',  color:'#E890A8', x:150, y:242 },
+  { id:'es-AR-TomasNeural',     name:'Tomás',     city:'Córdoba',          country:'Argentina',    trait:'cálido',     color:'#D07890', x:136, y:232 },
+  // Uruguay — east of Argentina, mouth of Río de la Plata
+  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',      trait:'fluida',     color:'#88C4E0', x:158, y:236 },
+  // 🆕 Guinea Ecuatorial (Africa)
+  { id:'es-GQ-TeresaNeural',    name:'Teresa',    city:'Malabo',           country:'Guinea Ecuatorial', trait:'clara',  color:'#C8A070', x:296, y:164 },
 ];
 
 function hexToRgb(hex) {
@@ -1481,21 +1491,20 @@ function initVoicesMap() {
     mapSvg.innerHTML = '';
 
     // Faint constellation lines between geographic neighbours
-    // Indices: 0=ES, 1=US, 2=MX, 3=CU, 4=DO, 5=PR, 6=GT, 7=HN, 8=SV, 9=NI, 10=CR, 11=PA,
-    //          12=CO, 13=VE, 14=EC, 15=PE, 16=BO, 17=PY, 18=CL, 19=AR, 20=UY, 21=GQ
+    // 0-1=ES, 2-3=US, 4-5=MX, 6-7=CU, 8=DO, 9=PR, 10=GT, 11=HN, 12-13=SV, 14=NI, 15=CR, 16=PA,
+    // 17-18=CO, 19-20=VE, 21-22=EC, 23=PE, 24=BO, 25=PY, 26-27=CL, 28-29=AR, 30=UY, 31=GQ
     const links = [
-      [0,21],          // España ↔ Guinea Ecuatorial
-      [1,2],           // US → México
-      [2,3],[2,6],     // México → Cuba, Guatemala
-      [3,4],[4,5],     // Cuba → RD → Puerto Rico
-      [6,7],[7,8],[8,9],[9,10],[10,11], // CA chain GT→HN→SV→NI→CR→PA
-      [11,12],         // Panamá → Colombia
-      [12,13],[12,14], // Colombia → Venezuela, Ecuador
-      [14,15],         // Ecuador → Perú
-      [15,16],[15,18], // Perú → Bolivia, Chile
-      [16,17],[16,18], // Bolivia → Paraguay, Chile
-      [17,19],         // Paraguay → Argentina
-      [18,19],[19,20], // Chile → Argentina → Uruguay
+      [0,31],          // España ↔ Guinea Ecuatorial
+      [2,4],[4,10],    // US → México → Guatemala
+      [4,6],[6,8],[8,9],        // México → Cuba → RD → PR
+      [10,11],[11,12],[12,14],[14,15],[15,16], // GT→HN→SV→NI→CR→PA
+      [16,17],         // Panamá → Colombia
+      [17,19],[17,21], // Colombia → Venezuela, Ecuador
+      [21,23],         // Ecuador → Perú
+      [23,24],[23,26], // Perú → Bolivia, Chile
+      [24,25],[24,26], // Bolivia → Paraguay, Chile
+      [25,28],         // Paraguay → Argentina
+      [26,28],[28,30], // Chile → Argentina → Uruguay
     ];
     for (const [a, b] of links) {
       const va = VOICES[a], vb = VOICES[b];
