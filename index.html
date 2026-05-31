@@ -1345,15 +1345,14 @@ async function triggerProcessing() {
       history.push({ role: 'assistant', content: reply });
       if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
     }
+    // Timer starts HERE — only after AI has actually finished speaking
+    if (sessionActive) startSilenceTimer(12000);
   } catch (e) {
     console.error('[pipeline]', e.message);
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) {
-      setState('session');
-      startSilenceTimer(12000); // if user doesn't respond in 12s, AI prompts
-    }
+    if (sessionActive) setState('session');
   }
 }
 
@@ -1368,12 +1367,14 @@ async function aiGreeting() {
     const messages = [{ role: 'system', content: activeSystem() }, { role: 'user', content: '[inicio de sesión]' }];
     const greeting = await streamAndSpeak(messages, myToken);
     if (greeting.trim()) history.push({ role: 'assistant', content: greeting });
+    // Timer starts after greeting finishes, not before
+    if (sessionActive) startSilenceTimer(12000);
   } catch (e) {
     console.error('[greeting]', e.message);
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) { setState('session'); startSilenceTimer(12000); }
+    if (sessionActive) setState('session');
   }
 }
 
