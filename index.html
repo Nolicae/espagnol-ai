@@ -779,6 +779,9 @@ let orbAccent = { r: 185, g: 225, b: 255 }; // default blue
 // WebM init segment — first chunk contains codec headers; must prepend to every blob
 let recorderInitChunk = null;
 
+// Set to true the moment any speech is detected; cleared when triggerProcessing runs
+let userSpokeRecently = false;
+
 // TTS interruption
 let ttsSource  = null;
 let speakToken = 0;
@@ -1086,8 +1089,10 @@ function handleSpeechResult(e) {
     if (e.results[i].isFinal) hasFinal = true;
     else hasInterim = true;
   }
-  // Cancel silence timer the moment any speech activity is detected
-  if (hasInterim || hasFinal) clearSilenceTimer();
+  if (hasInterim || hasFinal) {
+    clearSilenceTimer();
+    userSpokeRecently = true; // flag: user is speaking, block silence prompt
+  }
   if (hasFinal) triggerProcessing();
 }
 
@@ -1106,7 +1111,8 @@ async function triggerProcessing() {
 
   if (processing) return;
 
-  clearSilenceTimer(); // user spoke, cancel the silence prompt
+  clearSilenceTimer();
+  userSpokeRecently = false;
 
   const chunks = audioChunks.splice(0);
   if (chunks.length === 0) return;
@@ -1148,6 +1154,8 @@ async function triggerProcessing() {
 // Called when silence timer fires — AI engages the user proactively
 async function processAiSilencePrompt() {
   if (processing || aiSpeaking || !sessionActive) return;
+  // User spoke since the timer started — let triggerProcessing handle it normally
+  if (userSpokeRecently) { userSpokeRecently = false; return; }
   processing = true;
   aiSpeaking = true;
   if (sessionActive) setState('ai-speaking');
@@ -1174,9 +1182,13 @@ async function processAiSilencePrompt() {
   } finally {
     aiSpeaking = false;
     processing  = false;
+    userSpokeRecently = false;
     if (sessionActive) {
       setState('session');
-      startSilenceTimer(10000); // longer wait after an AI-initiated prompt
+      // Discard audio captured before/during the silence prompt so it can't
+      // produce a queued response that would immediately follow "¿Estás aquí?"
+      audioChunks.splice(0);
+      startSilenceTimer(10000);
     }
   }
 }
