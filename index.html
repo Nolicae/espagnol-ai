@@ -777,6 +777,7 @@ Responde SIEMPRE en español. Máximo 1-2 frases — la conversación continúa,
 Intervén cuando el usuario hace una pausa, duda, hace una pregunta o comete un error.
 Si hay un error gramatical o de vocabulario, corrígelo de forma natural dentro de tu respuesta — luego pide al usuario que repita la forma correcta él mismo: por ejemplo "¿Puedes repetirlo?" o "Ahora tú". No lo pidas más de una vez por error.
 Nunca repitas literalmente lo que dijo el usuario. Ve directo.
+NUNCA digas adiós, hasta luego, ni ninguna frase de despedida o cierre. El usuario controla cuándo termina la sesión — tú sigues hablando siempre.
 Si recibes "[silencio]", el usuario no ha respondido: hazle una pregunta, dale una pista o simplemente anímalo — lo más natural según el contexto.
 Si recibes "[inicio de sesión]", saluda con naturalidad y propón un tema o una pregunta para empezar.`;
 
@@ -1242,10 +1243,9 @@ async function processAiSilencePrompt() {
     userSpokeRecently = false;
     if (sessionActive) {
       setState('session');
-      // Discard audio captured before/during the silence prompt so it can't
-      // produce a queued response that would immediately follow "¿Estás aquí?"
       audioChunks.splice(0);
-      startSilenceTimer(10000);
+      // Don't restart silence timer after a silence prompt — the AI just spoke,
+      // it waits for the user. No back-to-back AI interventions.
     }
   }
 }
@@ -1547,16 +1547,16 @@ async function showSessionSummary(snap) {
         model:    GROQ_MODEL,
         max_tokens: 350,
         messages: [
-          { role: 'system', content: 'Tu es un assistant pédagogique. Analyse cette session de pratique d\'espagnol et réponds en français. Sois bref, encourageant et concret.' },
+          { role: 'system', content: 'Eres un asistente pedagógico. Analiza esta sesión de práctica de español y responde en español. Sé breve, alentador y concreto.' },
           ...snap,
-          { role: 'user', content: 'Résume cette session en 3 points courts :\n❌ Erreurs corrigées (avec la forme correcte)\n✅ Ce qui était bien\n📚 Vocabulaire clé utilisé' },
+          { role: 'user', content: 'Resume esta sesión en 3 puntos:\n❌ Errores corregidos (con la forma correcta)\n✅ Lo que fue bien\n📚 Vocabulario clave usado' },
         ],
       }),
     });
     if (!r.ok) throw new Error();
-    body.textContent = (await r.json()).choices[0]?.message?.content || 'Aucun bilan disponible.';
+    body.textContent = (await r.json()).choices[0]?.message?.content || 'Resumen no disponible.';
   } catch (_) {
-    body.textContent = 'Bilan non disponible.';
+    body.textContent = 'Resumen no disponible.';
   }
 }
 
