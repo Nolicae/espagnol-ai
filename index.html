@@ -1058,7 +1058,7 @@ async function sendChatMessage() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) setState('inactive'); // stay calm — chat mode, no mic
+    if (sessionActive) setState('session');
     input.disabled = false;
     document.getElementById('chat-send').disabled = false;
     input.focus();
@@ -1088,7 +1088,7 @@ async function chatGreeting() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) setState('inactive'); // chat mode — orb calm after greeting
+    if (sessionActive) setState('session');
     document.getElementById('chat-input')?.focus();
   }
 }
@@ -1417,7 +1417,7 @@ async function startSession() {
     sessionActive = true;
     chronoStart(getDuration());
     if (chatMode) {
-      setState('inactive'); // orb calm — no mic active in chat
+      setState('session'); // orb glows — but no mic started
       // Chat mode: no mic, show overlay, text greeting
       document.getElementById('chat-overlay').classList.remove('hidden');
       document.getElementById('chat-messages').innerHTML = '';
