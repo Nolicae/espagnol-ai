@@ -590,12 +590,12 @@
       display: flex; align-items: center; justify-content: center;
       padding: 28px; backdrop-filter: blur(6px);
     }
-    /* ── Exam bar (under HUD controls, top of page) ── */
+    /* ── Exam bar — below HUD row, centered ── */
     .exam-bar {
       position: absolute;
-      top: 54px; left: 0; right: 0;
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px 24px; z-index: 15;
+      top: 100px; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 0 24px; z-index: 15;
     }
     .exam-bar.hidden { display: none; }
     .exam-pick-btn {
@@ -635,16 +635,20 @@
     .switch-track {
       position: absolute; inset: 0;
       background: rgba(255,255,255,0.12);
-      border-radius: 13px; cursor: pointer; transition: background .2s;
+      border-radius: 13px; cursor: pointer;
     }
+    /* Gradient overlay — fades in when checked (can't transition gradient directly) */
+    .switch-track::before {
+      content: ''; position: absolute; inset: 0; border-radius: 13px;
+      background: linear-gradient(90deg, #A0D890 0%, #D4E890 50%, #78B870 100%);
+      opacity: 0; transition: opacity .25s;
+    }
+    .switch input:checked + .switch-track::before { opacity: 1; }
+    /* Thumb — z-index above gradient overlay */
     .switch-track::after {
-      content: ''; position: absolute; left: 3px; top: 3px;
+      content: ''; position: absolute; left: 3px; top: 3px; z-index: 1;
       width: 20px; height: 20px; background: #fff; border-radius: 50%;
-      transition: transform .2s;
-    }
-    .switch input:checked + .switch-track {
-      background-image: linear-gradient(90deg, #A0D890 0%, #78B870 100%);
-      background-color: transparent;
+      transition: transform .25s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     .switch input:checked + .switch-track::after { transform: translateX(18px); }
 
@@ -1655,22 +1659,40 @@ function initVoicesMap() {
       [25,28],         // Paraguay → Argentina
       [26,28],[28,30], // Chile → Argentina → Uruguay
     ];
-    // Draw coastlines instead of constellation lines
-    const coastline = document.createElementNS(NS, 'path');
-    // Approximate coastlines: west coast (Chile/Peru/Ecuador), Caribbean, Central America, Gulf of Mexico
-    const d = `
-      M 60,50 Q 65,55 70,65 L 85,75 Q 95,80 100,90 L 105,105 Q 108,115 110,125 L 112,145 L 115,165 L 112,185 L 110,210 L 112,230 L 115,260
-      M 150,75 Q 160,80 170,85 Q 180,90 190,95 L 200,105
-      M 100,140 Q 105,150 110,160 Q 115,170 120,180 Q 125,200 130,220 Q 135,240 140,265
-      M 160,135 Q 170,140 180,145
-    `;
-    coastline.setAttribute('d', d);
-    coastline.setAttribute('stroke', 'rgba(255,255,255,0.18)');
-    coastline.setAttribute('stroke-width', '1.2');
-    coastline.setAttribute('fill', 'none');
-    coastline.setAttribute('stroke-linecap', 'round');
-    coastline.setAttribute('stroke-linejoin', 'round');
-    mapSvg.appendChild(coastline);
+    // Draw coastlines calibrated to the voice coordinate system
+    // viewBox 0 0 360 290 — dots are city positions; coasts hug them slightly
+    const paths = [
+      // Pacific coast: California → Baja → Mexico → Central America → South America
+      'M 58,44 C 62,50 68,60 74,68 L 82,78 L 89,88 L 93,98 L 92,107 L 96,114 L 97,121 L 101,131 L 106,141 L 112,151 L 112,162 L 108,172 L 104,183 L 102,196 L 101,210 L 103,222 L 107,233 L 106,248 L 102,262',
+      // Baja California peninsula
+      'M 74,68 L 68,76 L 63,86 L 60,96 L 58,106',
+      // Gulf of Mexico north shore (Yucatan → Cuba gap)
+      'M 93,98 C 96,87 114,78 132,78 C 142,78 147,80 150,84',
+      // Caribbean: Cuba → Hispaniola → Puerto Rico
+      'M 140,82 L 155,83 L 163,88 L 172,93 M 176,96 L 183,99 L 192,102 M 196,100 L 203,103',
+      // Venezuela / Colombia north coast
+      'M 122,163 C 133,153 146,140 158,137 L 168,138 L 176,143',
+      // North-east South America (Venezuela east → Guiana coast)
+      'M 176,143 L 180,152 L 182,163',
+      // Brazil east coast (mostly off-screen east but suggested)
+      'M 182,163 L 180,180 L 176,200 L 170,220 L 163,238 L 160,252',
+      // Argentina south tip
+      'M 148,244 L 143,256 L 138,268 L 132,276',
+      // Spain — small blob upper right
+      'M 293,30 C 298,27 312,27 320,31 C 325,35 322,42 315,43 C 306,44 294,41 292,36 C 291,33 292,30 293,30 Z',
+      // Africa — Gulf of Guinea coastline near GQ
+      'M 275,152 L 282,158 L 292,163 L 303,169 L 307,178 L 305,188',
+    ];
+    paths.forEach(d => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('stroke', 'rgba(255,255,255,0.22)');
+      p.setAttribute('stroke-width', '1.1');
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      mapSvg.appendChild(p);
+    });
 
     // dots
     for (const v of VOICES) {
