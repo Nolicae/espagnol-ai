@@ -726,6 +726,7 @@
     }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 </head>
 <body>
 
@@ -1643,61 +1644,17 @@ function initVoicesMap() {
   function renderMap(selectedId) {
     mapSvg.innerHTML = '';
 
-    // Faint constellation lines between geographic neighbours
-    // 0-1=ES, 2-3=US, 4-5=MX, 6-7=CU, 8=DO, 9=PR, 10=GT, 11=HN, 12-13=SV, 14=NI, 15=CR, 16=PA,
-    // 17-18=CO, 19-20=VE, 21-22=EC, 23=PE, 24=BO, 25=PY, 26-27=CL, 28-29=AR, 30=UY, 31=GQ
-    const links = [
-      [0,31],          // España ↔ Guinea Ecuatorial
-      [2,4],[4,10],    // US → México → Guatemala
-      [4,6],[6,8],[8,9],        // México → Cuba → RD → PR
-      [10,11],[11,12],[12,14],[14,15],[15,16], // GT→HN→SV→NI→CR→PA
-      [16,17],         // Panamá → Colombia
-      [17,19],[17,21], // Colombia → Venezuela, Ecuador
-      [21,23],         // Ecuador → Perú
-      [23,24],[23,26], // Perú → Bolivia, Chile
-      [24,25],[24,26], // Bolivia → Paraguay, Chile
-      [25,28],         // Paraguay → Argentina
-      [26,28],[28,30], // Chile → Argentina → Uruguay
-    ];
-    // Real coastlines — geographically accurate shapes scaled to dot coordinate space
-    // Calibration: LA(64,55)≈lon-118 lat34 | Madrid(298,38)≈lon-4 lat40 | BsAs(150,242)≈lat-34
-    const coastPaths = [
-      // ── Pacific coast: California → Baja → Mexico → C.América → S.América ──
-      'M 52,40 C 56,46 60,52 64,58 C 67,64 70,70 74,76 C 77,80 82,84 87,88 C 89,92 90,98 90,104 C 89,109 91,114 94,118 C 96,124 99,130 102,136 C 105,140 108,144 112,150 C 112,156 110,162 108,168 C 106,175 104,182 103,190 C 102,198 102,206 103,214 C 104,222 106,228 108,234 C 109,240 108,247 106,254 L 103,264',
-      // ── Baja California peninsula ──
-      'M 66,60 C 63,68 60,78 57,88 C 55,96 53,104 52,112',
-      // ── Gulf of California (between Baja and mainland, suggested by negative space) ──
-      // ── Gulf of Mexico: Yucatan arcs up to Texas then Florida ──
-      'M 90,100 C 92,90 98,82 110,76 C 120,72 132,70 144,70 C 152,70 160,72 166,76',
-      // ── Cuba (long east-west island) ──
-      'M 138,83 C 144,80 150,80 156,82 C 162,83 167,86 170,90 C 168,94 163,96 157,96 C 150,96 144,94 140,91 C 138,88 137,85 138,83 Z',
-      // ── Hispaniola ──
-      'M 174,96 C 178,93 183,93 187,96 C 188,99 186,102 183,103 C 179,103 175,101 174,98 Z',
-      // ── Puerto Rico ──
-      'M 194,100 L 202,100 L 203,103 L 196,104 Z',
-      // ── Lesser Antilles chain (SE from PR) ──
-      'M 205,104 C 207,107 209,111 210,116 C 211,120 211,125 210,130',
-      // ── Venezuela + Colombia north coast ──
-      'M 118,162 C 128,154 138,146 150,140 C 157,136 164,135 170,137 C 175,139 180,144 182,150',
-      // ── Brazil east coast → Argentina → Tierra del Fuego ──
-      'M 182,150 C 184,162 185,175 184,188 C 183,200 180,212 174,222 C 168,232 162,240 158,248 C 154,256 150,264 148,272 C 144,264 140,256 136,248',
-      // ── Río de la Plata (wide estuary at Montevideo/BsAs) ──
-      'M 156,238 C 158,240 162,240 165,238',
-      // ── Iberian Peninsula (Spain) — distinctive square shape ──
-      'M 289,28 C 298,24 312,24 321,28 C 327,32 326,39 320,43 C 313,46 303,46 295,43 C 289,40 287,34 289,28 Z',
-      // ── Africa: Gulf of Guinea coastline around GQ ──
-      'M 268,150 C 276,154 285,158 295,163 C 303,168 308,176 307,186 C 306,192 302,196 296,196',
-    ];
-    coastPaths.forEach(d => {
-      const p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', d);
-      p.setAttribute('stroke', 'rgba(255,255,255,0.14)');
-      p.setAttribute('stroke-width', '1.0');
-      p.setAttribute('fill', 'none');
-      p.setAttribute('stroke-linecap', 'round');
-      p.setAttribute('stroke-linejoin', 'round');
-      mapSvg.appendChild(p);
-    });
+    // Real coastlines from Natural Earth — injected once loaded (see bottom of initVoicesMap)
+    if (window._coastPathD) {
+      const cp = document.createElementNS(NS, 'path');
+      cp.setAttribute('d', window._coastPathD);
+      cp.setAttribute('fill', 'none');
+      cp.setAttribute('stroke', 'rgba(255,255,255,0.10)');
+      cp.setAttribute('stroke-width', '0.75');
+      cp.setAttribute('stroke-linecap', 'round');
+      cp.setAttribute('stroke-linejoin', 'round');
+      mapSvg.appendChild(cp);
+    }
 
     // dots
     for (const v of VOICES) {
@@ -1739,6 +1696,43 @@ function initVoicesMap() {
   const savedId = getVoiceKey();
   const current = VOICES.find(v => v.id === savedId) || VOICES[0];
   selectVoice(current, false);
+
+  // Load real coastlines from Natural Earth 110m (async, re-renders once ready)
+  (async () => {
+    try {
+      if (typeof topojson === 'undefined') return;
+      const world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(r => r.json());
+      const coast = topojson.mesh(world, world.objects.land);
+
+      // Projection calibrated to dot coordinate space:
+      // Anchors: LA(lon=-118,lat=34)→(64,55)  Madrid(lon=-4,lat=40)→(298,38)  BsAs(lon=-58,lat=-34)→(150,242)
+      const sx = (298 - 64) / (-4 - (-118));    // 2.053 px/deg lon
+      const sy = (242 - 55) / (-34 - 34);       // -2.75 px/deg lat
+
+      function proj(lon, lat) {
+        return [+(64 + (lon - (-118)) * sx).toFixed(1),
+                +(55 + (lat - 34) * sy).toFixed(1)];
+      }
+
+      let d = '';
+      coast.coordinates.forEach(line => {
+        let move = true;
+        line.forEach(([lon, lat]) => {
+          // Only the Hispanic-world region (Americas + Spain + Africa)
+          if (lon < -145 || lon > 28 || lat < -58 || lat > 62) { move = true; return; }
+          const [x, y] = proj(lon, lat);
+          d += move ? `M${x},${y} ` : `L${x},${y} `;
+          move = false;
+        });
+      });
+
+      window._coastPathD = d;
+      // Re-render map with coastlines now available
+      renderMap(getVoiceKey() || VOICES[0].id);
+    } catch (e) {
+      console.warn('[coastlines]', e.message);
+    }
+  })();
 }
 
 // ──────────────────────────────────────────────────────────────
