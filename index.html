@@ -369,7 +369,7 @@
 
     .settings-section-label {
       position: absolute;
-      top: 184px;
+      top: 164px;
       left: 24px; right: 24px;
       display: flex;
       justify-content: space-between;
@@ -437,12 +437,15 @@
       text-align: center;
     }
 
+    /* Voice-color theme vars — updated dynamically by JS on voice selection */
+    :root { --vc: #E8907A; --vc-l: #F8C0A8; --vc-d: #C87060; }
+
     .selected-voice-name {
       font-family: var(--serif);
       font-weight: 400;
       font-size: 34px;
       line-height: 1;
-      background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, var(--accent2) 55%, rgba(255,255,255,0.55) 100%);
+      background: linear-gradient(135deg, var(--vc-l) 0%, var(--vc) 60%, var(--vc-d) 100%);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -567,7 +570,7 @@
       width: calc(100% - 48px);
       padding: 16px;
       background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0) 100%),
-                  linear-gradient(120deg, var(--lilac) 0%, var(--accent2) 68%, var(--peach) 100%);
+                  linear-gradient(120deg, var(--vc-l) 0%, var(--vc) 65%, var(--vc-d) 100%);
       border: none;
       border-radius: 999px;
       color: #1A1424;
@@ -622,16 +625,33 @@
       position: absolute; top: 808px; left: 24px; right: 24px;
     }
 
-    /* ── Chat overlay (conversation screen) ── */
+    /* ── Chat overlay (conversation screen) — fullscreen ── */
     .chat-overlay {
       position: absolute;
-      top: 78px; left: 0; right: 0; bottom: 0;
+      inset: 0;
       z-index: 20;
-      background: rgba(10, 12, 22, 0.78);
-      backdrop-filter: blur(10px);
+      background: rgba(10, 12, 22, 0.82);
+      backdrop-filter: blur(12px);
       display: flex; flex-direction: column;
-      padding: 12px 16px 16px;
+      padding: 0 0 16px;
     }
+    .chat-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 52px 24px 12px;
+      border-bottom: 1px solid var(--rule);
+      flex-shrink: 0;
+    }
+    .chat-topbar-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--inkDim);
+    }
+    .chat-settings-icon {
+      background: none; border: none; cursor: pointer;
+      color: var(--inkSoft); padding: 6px; border-radius: 8px;
+      transition: color .15s;
+    }
+    .chat-settings-icon:hover { color: var(--ink); }
+    .chat-messages { padding: 12px 16px 4px; }
     .chat-overlay.hidden { display: none; }
     .chat-messages {
       flex: 1; overflow-y: auto;
@@ -697,10 +717,10 @@
       background: rgba(255,255,255,0.12);
       border-radius: 13px; cursor: pointer;
     }
-    /* Gradient overlay — same as Guardar button, fades in when checked */
+    /* Gradient overlay — matches Guardar + voice color, fades in when checked */
     .switch-track::before {
       content: ''; position: absolute; inset: 0; border-radius: 13px;
-      background: linear-gradient(120deg, var(--lilac) 0%, var(--accent2) 68%, var(--peach) 100%);
+      background: linear-gradient(120deg, var(--vc-l) 0%, var(--vc) 65%, var(--vc-d) 100%);
       opacity: 0; transition: opacity .25s;
     }
     .switch input:checked + .switch-track::before { opacity: 1; }
@@ -854,10 +874,20 @@
         </div>
       </div>
 
-      <!-- Chat mode overlay — covers orb when chat mode is active -->
+      <!-- Chat mode overlay — fullscreen, orb visible through blur -->
       <div class="chat-overlay hidden" id="chat-overlay">
+        <div class="chat-topbar">
+          <span class="chat-topbar-label">Modo Chat</span>
+          <button class="chat-settings-icon" id="chat-settings-btn" title="Ajustes">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+                 stroke-width="1.4" stroke-linecap="round">
+              <circle cx="8" cy="8" r="1.6"/>
+              <path d="M8 2v1.4M8 12.6V14M2 8h1.4M12.6 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1"/>
+            </svg>
+          </button>
+        </div>
         <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input-row">
+        <div class="chat-input-row" style="padding: 10px 16px 0; border-top: 1px solid var(--rule);">
           <input class="chat-input" id="chat-input" type="text"
                  placeholder="Escribe en español…" autocomplete="off" spellcheck="false"/>
           <button class="chat-send" id="chat-send" aria-label="Enviar">
@@ -897,8 +927,8 @@
         <span id="voice-counter">01 / 01</span>
       </div>
 
-      <svg id="voices-map" viewBox="0 0 360 290" width="100%" height="290"
-           style="position:absolute;top:212px;left:0;right:0;overflow:visible;display:block;padding:0 16px;max-width:402px;"></svg>
+      <svg id="voices-map" viewBox="0 0 360 296" width="100%" height="296"
+           style="position:absolute;top:186px;left:0;right:0;overflow:visible;display:block;padding:0 16px;max-width:402px;"></svg>
 
       <div class="settings-selected-voice">
         <div class="selected-voice-name" id="selected-voice-name">Elvira</div>
@@ -1028,7 +1058,7 @@ async function sendChatMessage() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) setState('session');
+    if (sessionActive) setState('inactive'); // stay calm — chat mode, no mic
     input.disabled = false;
     document.getElementById('chat-send').disabled = false;
     input.focus();
@@ -1058,7 +1088,7 @@ async function chatGreeting() {
   } finally {
     aiSpeaking = false;
     processing  = false;
-    if (sessionActive) setState('session');
+    if (sessionActive) setState('inactive'); // chat mode — orb calm after greeting
     document.getElementById('chat-input')?.focus();
   }
 }
@@ -1385,14 +1415,15 @@ async function startSession() {
     };
     recorder.start(100);
     sessionActive = true;
-    setState('session');
     chronoStart(getDuration());
     if (chatMode) {
+      setState('inactive'); // orb calm — no mic active in chat
       // Chat mode: no mic, show overlay, text greeting
       document.getElementById('chat-overlay').classList.remove('hidden');
       document.getElementById('chat-messages').innerHTML = '';
       setTimeout(chatGreeting, 300);
     } else {
+      setState('session');
       startRecognition();
       setTimeout(aiGreeting, 600);
     }
@@ -1439,6 +1470,9 @@ chatToggle.addEventListener('change', () => applyChatMode(chatToggle.checked));
 document.getElementById('chat-send').addEventListener('click', sendChatMessage);
 document.getElementById('chat-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+});
+document.getElementById('chat-settings-btn').addEventListener('click', () => {
+  document.getElementById('screen-settings').classList.remove('hidden');
 });
 
 // ── Exam mode wiring ─────────────────────────────────────────
@@ -1783,14 +1817,14 @@ const VOICES = [
   // Puerto Rico
   { id:'es-PR-KarinaNeural',    name:'Karina',    city:'San Juan',         country:'Puerto Rico',       trait:'suave',     color:'#D890C8', x:152, y:94  },
   // Guatemala
-  { id:'es-GT-MartaNeural',     name:'Marta',     city:'Guatemala',        country:'Guatemala',         trait:'clara',     color:'#F0A860', x:89,  y:108 },
+  { id:'es-GT-MartaNeural',     name:'Marta',     city:'Guatemala',        country:'Guatemala',         trait:'clara',     color:'#F0A860', x:88,  y:106 },
   // Honduras
-  { id:'es-HN-KarlaNeural',     name:'Karla',     city:'Tegucigalpa',      country:'Honduras',          trait:'dulce',     color:'#C8D870', x:97,  y:108 },
+  { id:'es-HN-KarlaNeural',     name:'Karla',     city:'Tegucigalpa',      country:'Honduras',          trait:'dulce',     color:'#C8D870', x:98,  y:111 },
   // El Salvador
-  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',       trait:'serena',    color:'#E8C870', x:91,  y:113 },
-  { id:'es-SV-RodrigoNeural',   name:'Rodrigo',   city:'San Salvador',     country:'El Salvador',       trait:'tranquilo', color:'#C8A850', x:93,  y:116 },
+  { id:'es-SV-LorenaNeural',    name:'Lorena',    city:'San Salvador',     country:'El Salvador',       trait:'serena',    color:'#E8C870', x:89,  y:115 },
+  { id:'es-SV-RodrigoNeural',   name:'Rodrigo',   city:'San Salvador',     country:'El Salvador',       trait:'tranquilo', color:'#C8A850', x:97,  y:118 },
   // Nicaragua
-  { id:'es-NI-YolandaNeural',   name:'Yolanda',   city:'Managua',          country:'Nicaragua',         trait:'viva',      color:'#70D4D4', x:100, y:116 },
+  { id:'es-NI-YolandaNeural',   name:'Yolanda',   city:'Managua',          country:'Nicaragua',         trait:'viva',      color:'#70D4D4', x:103, y:119 },
   // Costa Rica
   { id:'es-CR-MariaNeural',     name:'María',     city:'San José',         country:'Costa Rica',        trait:'amable',    color:'#D870A0', x:105, y:122 },
   // Panamá
@@ -1811,13 +1845,13 @@ const VOICES = [
   // Paraguay
   { id:'es-PY-TaniaNeural',     name:'Tania',     city:'Asunción',         country:'Paraguay',          trait:'suave',     color:'#E8A0D0', x:173, y:230 },
   // Chile
-  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',             trait:'clara',     color:'#90C870', x:140, y:255 },
-  { id:'es-CL-LorenzoNeural',   name:'Lorenzo',   city:'Valparaíso',       country:'Chile',             trait:'dinámico',  color:'#78B058', x:137, y:253 },
+  { id:'es-CL-CatalinaNeural',  name:'Catalina',  city:'Santiago',         country:'Chile',             trait:'clara',     color:'#90C870', x:142, y:257 },
+  { id:'es-CL-LorenzoNeural',   name:'Lorenzo',   city:'Valparaíso',       country:'Chile',             trait:'dinámico',  color:'#78B058', x:134, y:252 },
   // Argentina
-  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',         trait:'expresiva', color:'#E890A8', x:171, y:258 },
-  { id:'es-AR-TomasNeural',     name:'Tomás',     city:'Córdoba',          country:'Argentina',         trait:'cálido',    color:'#D07890', x:156, y:249 },
+  { id:'es-AR-ElenaNeural',     name:'Elena',     city:'Buenos Aires',     country:'Argentina',         trait:'expresiva', color:'#E890A8', x:169, y:261 },
+  { id:'es-AR-TomasNeural',     name:'Tomás',     city:'Córdoba',          country:'Argentina',         trait:'cálido',    color:'#D07890', x:155, y:251 },
   // Uruguay
-  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',           trait:'fluida',    color:'#88C4E0', x:178, y:260 },
+  { id:'es-UY-ValentinaNeural', name:'Valentina', city:'Montevideo',       country:'Uruguay',           trait:'fluida',    color:'#88C4E0', x:180, y:263 },
   // Guinea Ecuatorial (Africa)
   { id:'es-GQ-TeresaNeural',    name:'Teresa',    city:'Malabo',           country:'Guinea Ecuatorial', trait:'clara',     color:'#C8A070', x:344, y:141 },
 ];
@@ -1825,6 +1859,16 @@ const VOICES = [
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function applyVoiceTheme(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const clamp = v => Math.min(255, Math.max(0, v));
+  const toHex = (r, g, b) => `#${[r,g,b].map(c => clamp(c).toString(16).padStart(2,'0')).join('')}`;
+  const root = document.documentElement;
+  root.style.setProperty('--vc',   hex);
+  root.style.setProperty('--vc-l', toHex(r + 48, g + 36, b + 24));
+  root.style.setProperty('--vc-d', toHex(r - 32, g - 28, b - 24));
 }
 
 function initVoicesMap() {
@@ -1839,6 +1883,7 @@ function initVoicesMap() {
     if (save) localStorage.setItem('voice_key', v.id);
     // Update orb accent color
     orbAccent = hexToRgb(v.color);
+    applyVoiceTheme(v.color);
     nameEl.textContent = v.name;
     cityEl.textContent = v.city;
     metaEl.textContent = `${v.country} · ${v.trait}`;
@@ -1881,7 +1926,7 @@ function initVoicesMap() {
 
       const dot = document.createElementNS(NS, 'circle');
       dot.setAttribute('cx', v.x); dot.setAttribute('cy', v.y);
-      dot.setAttribute('r', isSel ? '4.5' : '3');
+      dot.setAttribute('r', isSel ? '4' : '2.5');
       dot.setAttribute('fill', isSel ? v.color : v.color.replace(/^#/, '') && `${v.color}66`);
       if (isSel) dot.setAttribute('filter', `drop-shadow(0 0 5px ${v.color})`);
       g.appendChild(dot);
