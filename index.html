@@ -467,6 +467,26 @@
       text-transform: uppercase;
       margin-top: 8px;
     }
+    .voice-pts {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: 1.5px;
+      color: var(--vc);
+      margin-top: 12px;
+      opacity: 0.85;
+    }
+    .voice-pts-zero { color: var(--inkDim); opacity: 0.5; }
+
+    /* Points earned notification (in summary header) */
+    .summary-pts-earned {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      color: var(--vc); text-align: center; padding-bottom: 4px;
+      border-bottom: 1px solid var(--rule); margin-bottom: 4px;
+    }
+
+    /* keep the rest: */
+    .settings-selected-voice .selected-voice-meta { margin-top: 8px;
+    }
 
     .settings-duration {
       position: absolute;
@@ -934,6 +954,7 @@
         <div class="selected-voice-name" id="selected-voice-name">Elvira</div>
         <div class="selected-voice-city" id="selected-voice-city">Madrid</div>
         <div class="selected-voice-meta" id="selected-voice-meta">España · paciente</div>
+        <div class="voice-pts voice-pts-zero" id="voice-pts">0 pts</div>
       </div>
 
       <div class="settings-duration">
@@ -999,6 +1020,78 @@ const GROQ_STT   = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
+
+// ──────────────────────────────────────────────────────────────
+// Reward / Points system
+// ──────────────────────────────────────────────────────────────
+
+let chronoCompletedNaturally = false; // true only when the timer reaches 0
+
+function getVoicePoints() {
+  return JSON.parse(localStorage.getItem('voice_points') || '{}');
+}
+function getSessionDates() {
+  return JSON.parse(localStorage.getItem('session_dates') || '[]');
+}
+function getCurrentStreak() {
+  const dates = getSessionDates();
+  if (!dates.length) return 0;
+  const fmt = d => { const dt = new Date(d); dt.setHours(0,0,0,0); return dt.toISOString().split('T')[0]; };
+  const today = fmt(new Date());
+  const set   = new Set(dates.map(fmt));
+  // Start from today or yesterday (streak still alive if today not yet done)
+  let check = new Date(); check.setHours(0,0,0,0);
+  if (!set.has(fmt(check))) check.setDate(check.getDate() - 1);
+  if (!set.has(fmt(check))) return 0;
+  let streak = 0;
+  while (set.has(fmt(check))) { streak++; check.setDate(check.getDate() - 1); }
+  return streak;
+}
+function getMultiplier(streak) {
+  if (streak >= 10) return 2.0;
+  if (streak >= 5)  return 1.5;
+  return 1.0;
+}
+function fmtPts(n) {
+  // "1 250 pts" with thin-space thousands separator
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' pts';
+}
+function awardSessionPoints() {
+  const voiceId  = getVoiceKey() || VOICES[0].id;
+  const durMins  = getDuration(); // user-configured duration in minutes
+  const isChat   = chatMode;
+
+  // Record today
+  const dates   = getSessionDates();
+  const today   = new Date().toISOString().split('T')[0];
+  if (!dates.includes(today)) {
+    dates.push(today);
+    const cutoff = Date.now() - 90 * 86400000;
+    localStorage.setItem('session_dates', JSON.stringify(dates.filter(d => new Date(d) >= cutoff)));
+  }
+
+  const streak  = getCurrentStreak();
+  const mult    = getMultiplier(streak);
+  const base    = Math.round(durMins * (isChat ? 5 : 10));
+  const earned  = Math.round(base * mult);
+
+  const pts     = getVoicePoints();
+  pts[voiceId]  = (pts[voiceId] || 0) + earned;
+  localStorage.setItem('voice_points', JSON.stringify(pts));
+
+  return { earned, streak, mult, total: pts[voiceId] };
+}
+function updateVoicePtsDisplay(voiceId) {
+  const el     = document.getElementById('voice-pts');
+  if (!el) return;
+  const pts    = getVoicePoints()[voiceId] || 0;
+  const streak = getCurrentStreak();
+  const mult   = getMultiplier(streak);
+  let text = fmtPts(pts);
+  if (streak >= 5) text += `  ·  ×${mult}`;
+  el.textContent = text;
+  el.className   = pts > 0 ? 'voice-pts' : 'voice-pts voice-pts-zero';
+}
 
 // ── Chat mode state ──────────────────────────────────────────
 let chatMode = false;
@@ -1372,6 +1465,7 @@ function chronoTick() {
   if (chronoSeconds <= 0) {
     clearInterval(chronoInterval);
     chronoInterval = null;
+    chronoCompletedNaturally = true; // session ran to completion → award points
     stopSession();
     return;
   }
@@ -1467,7 +1561,10 @@ function stopSession() {
   chronoStop();
   const snap = [...history];
   history = [];
-  showSessionSummary(snap);
+  // Award points only if session ran to completion (timer reached 0)
+  const reward = chronoCompletedNaturally ? awardSessionPoints() : null;
+  chronoCompletedNaturally = false;
+  showSessionSummary(snap, reward);
 }
 
 document.getElementById('summary-close').addEventListener('click', () => {
@@ -1899,6 +1996,7 @@ function initVoicesMap() {
     // Update orb accent color
     orbAccent = hexToRgb(v.color);
     applyVoiceTheme(v.color);
+    updateVoicePtsDisplay(v.id);
     nameEl.textContent = v.name;
     cityEl.textContent = v.city;
     metaEl.textContent = `${v.country} · ${v.trait}`;
@@ -2005,11 +2103,24 @@ function initVoicesMap() {
 // ──────────────────────────────────────────────────────────────
 // Session summary
 // ──────────────────────────────────────────────────────────────
-async function showSessionSummary(snap) {
-  if (snap.length < 4) return; // not enough content to summarise
-  const el = document.getElementById('session-summary');
+async function showSessionSummary(snap, reward = null) {
+  if (snap.length < 4) return;
+  const el   = document.getElementById('session-summary');
   const body = document.getElementById('summary-body');
   el.classList.remove('hidden');
+
+  // Points earned header — remove previous if any
+  el.querySelectorAll('.summary-pts-earned').forEach(n => n.remove());
+  if (reward) {
+    const ptsEl = document.createElement('div');
+    ptsEl.className = 'summary-pts-earned';
+    let txt = `+ ${fmtPts(reward.earned)}`;
+    if (reward.mult > 1) txt += `  ·  ×${reward.mult}`;
+    txt += `   →   ${fmtPts(reward.total)}`;
+    ptsEl.textContent = txt;
+    el.querySelector('.summary-card').insertBefore(ptsEl, body);
+  }
+
   body.textContent = 'Analizando…';
   try {
     const r = await fetch(GROQ_CHAT, {
