@@ -562,7 +562,7 @@
 
     .settings-save {
       position: absolute;
-      bottom: 62px;
+      top: 840px;
       left: 24px; right: 24px;
       width: calc(100% - 48px);
       padding: 16px;
@@ -590,6 +590,61 @@
       display: flex; align-items: center; justify-content: center;
       padding: 28px; backdrop-filter: blur(6px);
     }
+    /* ── Exam bar (above orb, conversation screen) ── */
+    .exam-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 24px; margin-bottom: 8px;
+    }
+    .exam-bar.hidden { display: none; }
+    .exam-pick-btn {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--rule);
+      border-radius: 20px; padding: 7px 14px;
+      color: var(--inkSoft); font-family: var(--mono); font-size: 10px;
+      letter-spacing: 1px; cursor: pointer; transition: background .15s;
+    }
+    .exam-pick-btn:hover { background: rgba(255,255,255,0.1); }
+    .exam-pick-btn svg { flex-shrink: 0; }
+    .exam-file-badge {
+      font-family: var(--mono); font-size: 9px; letter-spacing: .8px;
+      color: var(--inkDim); overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; max-width: 160px;
+    }
+    .exam-file-badge.loaded { color: #7ecfa0; }
+
+    /* ── Exam toggle (settings screen) ── */
+    .settings-exam {
+      position: absolute; top: 748px; left: 24px; right: 24px;
+    }
+    .exam-toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+    }
+    .exam-toggle-info { display: flex; flex-direction: column; gap: 3px; }
+    .exam-toggle-label {
+      font-family: var(--sans); font-size: .9rem; color: var(--ink); font-weight: 500;
+    }
+    .exam-toggle-desc {
+      font-family: var(--mono); font-size: 9.5px; letter-spacing: .8px; color: var(--inkDim);
+    }
+    /* Toggle switch */
+    .switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-track {
+      position: absolute; inset: 0; background: rgba(255,255,255,0.12);
+      border-radius: 13px; cursor: pointer; transition: background .2s;
+    }
+    .switch-track::after {
+      content: ''; position: absolute; left: 3px; top: 3px;
+      width: 20px; height: 20px; background: #fff; border-radius: 50%;
+      transition: transform .2s;
+    }
+    .switch input:checked + .switch-track { background: var(--accent); }
+    .switch input:checked + .switch-track::after { transform: translateX(18px); }
+
+    /* Settings spacer — forces scroll height (absolute children don't) */
+    .settings-spacer { height: 940px; pointer-events: none; }
+
     .session-summary.hidden { display: none; }
     .summary-card {
       width: 100%; max-width: 340px;
@@ -645,6 +700,7 @@
       font-weight: 600; font-size: 1rem; cursor: pointer;
     }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -671,6 +727,18 @@
             </svg>
           </button>
         </div>
+      </div>
+
+      <!-- Exam document bar — only visible in exam mode -->
+      <div class="exam-bar hidden" id="exam-bar">
+        <button class="exam-pick-btn" id="exam-pick-btn">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M3 13h10M8 2v8M5 7l3 3 3-3"/>
+          </svg>
+          <span id="exam-pick-label">Charger un document</span>
+        </button>
+        <span class="exam-file-badge" id="exam-file-badge"></span>
+        <input type="file" id="exam-file-input" accept=".pdf,image/*" style="display:none">
       </div>
 
       <!-- Orb -->
@@ -754,7 +822,23 @@
         <div class="duration-labels"><span>1 MIN</span><span>15</span><span>30 MIN</span></div>
       </div>
 
+      <!-- Exam mode toggle -->
+      <div class="settings-exam" id="settings-exam">
+        <div class="exam-toggle-row">
+          <div class="exam-toggle-info">
+            <span class="exam-toggle-label">Mode Examen</span>
+            <span class="exam-toggle-desc">L'IA lit un document et vous interroge</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="exam-toggle">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+      </div>
+
       <button class="settings-save" id="btn-save">Guardar</button>
+      <!-- Spacer forces the scroll container height (absolute children don't) -->
+      <div class="settings-spacer"></div>
     </div><!-- /screen-settings -->
 
   </div><!-- /app-container -->
@@ -770,6 +854,32 @@ const GROQ_STT   = 'https://api.groq.com/openai/v1/audio/transcriptions';
 const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
+
+// ── Exam mode state ──────────────────────────────────────────
+let examMode    = false;   // toggled in settings
+let examContent = '';      // extracted text/description from uploaded doc
+
+function buildExamSystem(content) {
+  return `Eres un examinador de español estricto pero amigable. El usuario te ha proporcionado el siguiente material de estudio:
+
+---
+${content}
+---
+
+Tu misión durante esta sesión:
+- Interrogar al usuario sobre este material, en español, con preguntas concretas y progresivas
+- Evaluar sus respuestas: valida lo correcto, corrige lo erróneo de forma natural
+- Si comete un error de español, corrígelo y pídele que repita la forma correcta
+- Avanza por el material de forma estructurada, un concepto a la vez
+- Máximo 1-2 frases por turno
+NUNCA digas adiós ni cierres la sesión — el usuario controla cuándo termina.
+Si recibes "[silencio]", reformula la última pregunta de otra manera.
+Si recibes "[inicio de sesión]", preséntate como examinador en una frase et lance immédiatement la première question sur le matériel.`;
+}
+
+function activeSystem() {
+  return examMode && examContent ? buildExamSystem(examContent) : SYSTEM;
+}
 
 const SYSTEM = `Eres un profesor de español nativo, amigable y natural.
 Hablas con el usuario como en una conversación real.
@@ -1101,6 +1211,24 @@ document.getElementById('summary-close').addEventListener('click', () => {
   document.getElementById('session-summary').classList.add('hidden');
 });
 
+// ── Exam mode wiring ─────────────────────────────────────────
+const examToggle = document.getElementById('exam-toggle');
+// Restore persisted state
+if (localStorage.getItem('exam_mode') === '1') {
+  examToggle.checked = true;
+  applyExamMode(true);
+}
+examToggle.addEventListener('change', () => applyExamMode(examToggle.checked));
+
+document.getElementById('exam-pick-btn').addEventListener('click', () => {
+  document.getElementById('exam-file-input').click();
+});
+document.getElementById('exam-file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) processExamFile(file);
+  e.target.value = ''; // allow re-uploading same file
+});
+
 // ──────────────────────────────────────────────────────────────
 // Web Speech recognition
 // ──────────────────────────────────────────────────────────────
@@ -1184,7 +1312,7 @@ async function triggerProcessing() {
     if (sessionActive) setState('ai-speaking');
 
     const myToken = speakToken;
-    const messages = [{ role: 'system', content: SYSTEM }, ...history];
+    const messages = [{ role: 'system', content: activeSystem() }, ...history];
     const reply = await streamAndSpeak(messages, myToken);
     if (reply.trim()) {
       history.push({ role: 'assistant', content: reply });
@@ -1210,7 +1338,7 @@ async function aiGreeting() {
   setState('ai-speaking');
   try {
     const myToken = speakToken;
-    const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: '[inicio de sesión]' }];
+    const messages = [{ role: 'system', content: activeSystem() }, { role: 'user', content: '[inicio de sesión]' }];
     const greeting = await streamAndSpeak(messages, myToken);
     if (greeting.trim()) history.push({ role: 'assistant', content: greeting });
   } catch (e) {
@@ -1232,7 +1360,7 @@ async function processAiSilencePrompt() {
   if (sessionActive) setState('ai-speaking');
   try {
     const myToken = speakToken;
-    const messages = [{ role: 'system', content: SYSTEM }, ...history, { role: 'user', content: '[silencio]' }];
+    const messages = [{ role: 'system', content: activeSystem() }, ...history, { role: 'user', content: '[silencio]' }];
     // Ephemeral — result not added to history so next user reply stays coherent
     await streamAndSpeak(messages, myToken);
   } catch (e) {
@@ -1352,7 +1480,7 @@ async function llm() {
     body: JSON.stringify({
       model:      GROQ_MODEL,
       max_tokens: 200,
-      messages:   [{ role: 'system', content: SYSTEM }, ...history],
+      messages:   [{ role: 'system', content: activeSystem() }, ...history],
     }),
   });
   if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `LLM ${r.status}`); }
@@ -1587,6 +1715,89 @@ async function showSessionSummary(snap) {
   } catch (_) {
     body.textContent = 'Resumen no disponible.';
   }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Exam mode — file processing
+// ──────────────────────────────────────────────────────────────
+
+async function extractPDFText(file) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF.js not loaded');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const buf  = await file.arrayBuffer();
+  const pdf  = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page    = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  return text.trim();
+}
+
+async function extractImageContent(file) {
+  const b64 = await new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload  = () => res(reader.result.split(',')[1]);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+  const mime = file.type || 'image/jpeg';
+  const r = await fetch(GROQ_CHAT, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKey()}` },
+    body: JSON.stringify({
+      model: 'llama-3.2-11b-vision-preview',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:${mime};base64,${b64}` } },
+          { type: 'text', text: 'Extrait et décris de façon détaillée tout le contenu de cette image. C\'est du matériel pédagogique à mémoriser.' }
+        ]
+      }]
+    })
+  });
+  if (!r.ok) throw new Error(`Vision ${r.status}`);
+  return (await r.json()).choices[0]?.message?.content || '';
+}
+
+async function processExamFile(file) {
+  const badge  = document.getElementById('exam-file-badge');
+  const label  = document.getElementById('exam-pick-label');
+  badge.textContent = '…traitement…';
+  badge.className   = 'exam-file-badge';
+  label.textContent = file.name;
+  try {
+    let content;
+    if (file.type === 'application/pdf') {
+      content = await extractPDFText(file);
+    } else {
+      content = await extractImageContent(file);
+    }
+    if (!content.trim()) throw new Error('Contenu vide');
+    examContent = content;
+    badge.textContent = '✓ prêt';
+    badge.className   = 'exam-file-badge loaded';
+  } catch (e) {
+    console.error('[exam]', e.message);
+    badge.textContent = '⚠ erreur';
+    badge.className   = 'exam-file-badge';
+    examContent = '';
+  }
+}
+
+function applyExamMode(enabled) {
+  examMode = enabled;
+  localStorage.setItem('exam_mode', enabled ? '1' : '0');
+  const bar = document.getElementById('exam-bar');
+  if (enabled) bar.classList.remove('hidden');
+  else { bar.classList.add('hidden'); examContent = ''; }
+  // Reset badge
+  document.getElementById('exam-file-badge').textContent = '';
+  document.getElementById('exam-file-badge').className   = 'exam-file-badge';
+  document.getElementById('exam-pick-label').textContent = 'Charger un document';
 }
 
 // ──────────────────────────────────────────────────────────────
