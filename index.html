@@ -1146,7 +1146,7 @@ async function triggerProcessing() {
     processing  = false;
     if (sessionActive) {
       setState('session');
-      startSilenceTimer(9000); // if user doesn't respond in 9s, AI prompts
+      startSilenceTimer(12000); // if user doesn't respond in 12s, AI prompts
     }
   }
 }
