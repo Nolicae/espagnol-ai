@@ -1018,11 +1018,8 @@ function applyChatMode(on) {
     setState('session');
     setTimeout(chatGreeting, 200);
   } else {
-    // Switching FROM chat mid-session: hide overlay, restart mic
-    document.getElementById('chat-overlay').classList.add('hidden');
-    setState('session');
-    startRecognition();
-    setTimeout(aiGreeting, 400);
+    // Switching FROM chat: stop session entirely — user presses orb to restart
+    stopSession();
   }
 }
 
