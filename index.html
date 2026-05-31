@@ -590,10 +590,10 @@
       display: flex; align-items: center; justify-content: center;
       padding: 28px; backdrop-filter: blur(6px);
     }
-    /* ── Exam bar (above orb, conversation screen) ── */
+    /* ── Exam bar (under HUD, above orb, conversation screen) ── */
     .exam-bar {
       display: flex; align-items: center; gap: 10px;
-      padding: 0 24px; margin-bottom: 8px;
+      padding: 12px 24px 0; margin-top: 16px;
     }
     .exam-bar.hidden { display: none; }
     .exam-pick-btn {
@@ -631,7 +631,8 @@
     .switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .switch-track {
-      position: absolute; inset: 0; background: rgba(255,255,255,0.12);
+      position: absolute; inset: 0;
+      background: rgba(255,255,255,0.12);
       border-radius: 13px; cursor: pointer; transition: background .2s;
     }
     .switch-track::after {
@@ -639,8 +640,25 @@
       width: 20px; height: 20px; background: #fff; border-radius: 50%;
       transition: transform .2s;
     }
-    .switch input:checked + .switch-track { background: var(--accent); }
+    .switch input:checked + .switch-track {
+      background: linear-gradient(90deg, #A0D890 0%, #78B870 100%);
+    }
     .switch input:checked + .switch-track::after { transform: translateX(18px); }
+
+    /* Settings scrollbar — custom track & thumb */
+    .screen-settings::-webkit-scrollbar {
+      width: 6px;
+    }
+    .screen-settings::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .screen-settings::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      border-radius: 3px;
+    }
+    .screen-settings::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.08));
+    }
 
     /* Settings spacer — forces scroll height (absolute children don't) */
     .settings-spacer { height: 940px; pointer-events: none; }
@@ -1634,16 +1652,22 @@ function initVoicesMap() {
       [25,28],         // Paraguay → Argentina
       [26,28],[28,30], // Chile → Argentina → Uruguay
     ];
-    for (const [a, b] of links) {
-      const va = VOICES[a], vb = VOICES[b];
-      if (!va || !vb) continue;
-      const line = document.createElementNS(NS, 'line');
-      line.setAttribute('x1', va.x); line.setAttribute('y1', va.y);
-      line.setAttribute('x2', vb.x); line.setAttribute('y2', vb.y);
-      line.setAttribute('stroke', 'rgba(255,255,255,0.07)');
-      line.setAttribute('stroke-width', '0.7');
-      mapSvg.appendChild(line);
-    }
+    // Draw coastlines instead of constellation lines
+    const coastline = document.createElementNS(NS, 'path');
+    // Approximate coastlines: west coast (Chile/Peru/Ecuador), Caribbean, Central America, Gulf of Mexico
+    const d = `
+      M 60,50 Q 65,55 70,65 L 85,75 Q 95,80 100,90 L 105,105 Q 108,115 110,125 L 112,145 L 115,165 L 112,185 L 110,210 L 112,230 L 115,260
+      M 150,75 Q 160,80 170,85 Q 180,90 190,95 L 200,105
+      M 100,140 Q 105,150 110,160 Q 115,170 120,180 Q 125,200 130,220 Q 135,240 140,265
+      M 160,135 Q 170,140 180,145
+    `;
+    coastline.setAttribute('d', d);
+    coastline.setAttribute('stroke', 'rgba(255,255,255,0.09)');
+    coastline.setAttribute('stroke-width', '0.8');
+    coastline.setAttribute('fill', 'none');
+    coastline.setAttribute('stroke-linecap', 'round');
+    coastline.setAttribute('stroke-linejoin', 'round');
+    mapSvg.appendChild(coastline);
 
     // dots
     for (const v of VOICES) {
