@@ -476,6 +476,22 @@
       opacity: 0.85;
     }
     .voice-pts-zero { color: var(--inkDim); opacity: 0.5; }
+    .voice-level {
+      font-family: var(--mono); font-size: 9px; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--vc); opacity: 0.6;
+      margin-top: 4px;
+    }
+    .voice-level.hidden { display: none; }
+
+    /* Fun fact block in session summary */
+    .summary-fact {
+      font-family: var(--serif); font-style: italic;
+      font-size: 0.85rem; line-height: 1.65;
+      color: var(--inkSoft); padding: 12px 14px;
+      border-left: 2px solid var(--vc);
+      background: rgba(255,255,255,0.03);
+      border-radius: 0 10px 10px 0;
+    }
 
     /* Points earned notification (in summary header) */
     .summary-pts-earned {
@@ -957,6 +973,7 @@
         <div class="selected-voice-city" id="selected-voice-city">Madrid</div>
         <div class="selected-voice-meta" id="selected-voice-meta">España · paciente</div>
         <div class="voice-pts voice-pts-zero" id="voice-pts">0 pts</div>
+        <div class="voice-level hidden" id="voice-level"></div>
       </div>
 
       <div class="settings-duration">
@@ -1085,6 +1102,7 @@ function awardSessionPoints() {
 }
 function updateVoicePtsDisplay(voiceId) {
   const el     = document.getElementById('voice-pts');
+  const lvlEl  = document.getElementById('voice-level');
   if (!el) return;
   const pts    = getVoicePoints()[voiceId] || 0;
   const streak = getCurrentStreak();
@@ -1093,6 +1111,16 @@ function updateVoicePtsDisplay(voiceId) {
   if (streak >= 5) text += `  ·  ×${mult}`;
   el.textContent = text;
   el.className   = pts > 0 ? 'voice-pts' : 'voice-pts voice-pts-zero';
+  // Level title
+  if (lvlEl) {
+    const title = getVoiceLevelTitle(voiceId);
+    if (title && pts > 0) {
+      lvlEl.textContent = title;
+      lvlEl.classList.remove('hidden');
+    } else {
+      lvlEl.classList.add('hidden');
+    }
+  }
 }
 
 // ── Chat mode state ──────────────────────────────────────────
@@ -1225,8 +1253,72 @@ Si recibes "[silencio]", reformula la última pregunta de otra manera.
 Si recibes "[inicio de sesión]", preséntate como examinador en una frase et lance immédiatement la première question sur le matériel.`;
 }
 
+// ──────────────────────────────────────────────────────────────
+// Voice metadata — level titles + fun facts
+// Thresholds: 0 pts = level 0, 250 pts = level 1, 750 pts = level 2
+// ──────────────────────────────────────────────────────────────
+const VOICE_META = {
+  'es-ES-ElviraNeural':    { levels: ['Madrileña','Ciudadana del Imperio','Guardiana del Siglo de Oro'], fact: 'Madrid toma su nombre del árabe «Mayrit», que significa «lugar de canales de agua». Fundada como asentamiento islámico, fue reconquistada en 1083 y tardó siglos en convertirse en capital.' },
+  'es-ES-AlvaroNeural':    { levels: ['Barcelonès','Caballero del Mediterráneo','Heredero de la Corona de Aragón'], fact: 'La Sagrada Família lleva en construcción desde 1882 — más de 140 años. Cuando se termine, será la basílica más alta de Europa, superando a la Catedral de Colonia.' },
+  'es-US-PalomaNeural':    { levels: ['Recién llegada','Calle Ocho','Tejedora de puentes'], fact: 'Miami es la única ciudad importante de EE. UU. fundada por una mujer: Julia Tuttle, en 1896. Convenció a Henry Flagler de extender su ferrocarril hacia el sur enviándole flores de naranjo durante una helada.' },
+  'es-US-AlonsoNeural':    { levels: ['Angelino','Hijo del Camino Real','Señor de los Ángeles'], fact: 'El nombre completo de Los Ángeles es «El Pueblo de Nuestra Señora la Reina de los Ángeles del Río de Porciúncula» — 44 letras. El río que lo bautizó hoy es casi un canal de cemento.' },
+  'es-MX-DaliaNeural':     { levels: ['Capitalina','Hija del Anáhuac','Heredera de los Aztecas'], fact: 'Ciudad de México se hunde unos 10 cm al año porque está construida sobre el lago desecado de Texcoco. El Palacio de Bellas Artes ha bajado más de 4 metros desde su inauguración en 1934.' },
+  'es-MX-JorgeNeural':     { levels: ['Tapatío','Jinete de Jalisco','Guardián del Mariachi'], fact: 'Guadalajara es la cuna simultánea del mariachi y del tequila. El «Grito de Independencia» de 1810 no fue en Ciudad de México sino en Dolores, a unas horas de Guadalajara, y Jalisco aportó la mayoría de los insurgentes.' },
+  'es-CU-BelkysNeural':    { levels: ['Habanera','Trovadora del Malecón','Hija de la Revolución'], fact: 'La Habana tiene más coches americanos de los años 50 que cualquier otro lugar del mundo. Estos «almendrones» siguen circulando gracias a motores soviéticos injertados bajo capós de Chevrolet y Buick.' },
+  'es-CU-ManuelNeural':    { levels: ['Santiaguero','Tambor de la Sierra','Heredero de Maceo'], fact: 'El género «son» — origen directo de la salsa — nació en las montañas cerca de Santiago de Cuba. La primera destilería de ron Bacardí del mundo abrió también en Santiago, en 1862.' },
+  'es-DO-RamonaNeural':    { levels: ['Dominicana','Hija de La Española','Guardiana del Ozama'], fact: 'Santo Domingo es la ciudad europea más antigua del continente americano, fundada en 1498. Su zona colonial alberga la primera catedral, el primer hospital y la primera universidad de América.' },
+  'es-PR-KarinaNeural':    { levels: ['Boricua','Guardiana del Morro','Voz del Caribe'], fact: 'El Bosque Nacional El Yunque en Puerto Rico es el único bosque tropical dentro del sistema de Bosques Nacionales de EE. UU. Recibe más de 100 mil millones de litros de lluvia al año.' },
+  'es-GT-MartaNeural':     { levels: ['Guatemalteca','Descendiente de los Mayas','Guardiana de Tikal'], fact: 'Las ruinas de Tikal aparecen en la primera película de Star Wars (1977) como la base rebelde de Yavin 4. Guatemala tiene más de 30 volcanes activos y es uno de los países con mayor biodiversidad del planeta.' },
+  'es-HN-KarlaNeural':     { levels: ['Catracha','Hija de Copán','Guardiana del Mestizaje'], fact: 'Copán alberga los glifos mayas más complejos jamás descubiertos: el «Altar Q» narra 400 años de historia dinástica en piedra. Honduras posee además el segundo arrecife de coral más largo del mundo.' },
+  'es-SV-LorenaNeural':    { levels: ['Cuscatleca','Hija del Cerro Verde','Heredera de Atlácatl'], fact: 'El Salvador fue en 2021 el primer país del mundo en adoptar el Bitcoin como moneda de curso legal. También es el país más pequeño y más denso de América Central, con la misma extensión que Galicia.' },
+  'es-NI-YolandaNeural':   { levels: ['Nica','Hija de Rubén Darío','Guardiana de los Lagos'], fact: 'El Lago Nicaragua (Cocibolca) contiene tiburones de agua dulce — los únicos del mundo que aprendieron a adaptarse desde el océano. El poeta nicaragüense Rubén Darío transformó toda la literatura en español con el modernismo.' },
+  'es-CR-MariaNeural':     { levels: ['Tica','Ciudadana sin ejército','Guardiana del Pura Vida'], fact: 'Costa Rica abolió su ejército en 1948 y destina ese presupuesto a educación y sanidad. Aunque representa solo el 0,03 % de la superficie terrestre, alberga el 5 % de la biodiversidad del planeta.' },
+  'es-PA-MargaritaNeural': { levels: ['Panameña','Guardiana del Canal','Hija de los Dos Mares'], fact: 'Por la curvatura del istmo, al cruzar el Canal de Panamá de este a oeste se viaja del Atlántico al Pacífico, pero se termina MÁS al este de donde se empezó. Ciudad de Panamá fue la primera ciudad europea en la costa del Pacífico americano.' },
+  'es-CO-SalomeNeural':    { levels: ['Cachacha','Hija de la Sabana','Heredera de El Dorado'], fact: 'El Museo del Oro de Bogotá custodia la mayor colección de oro precolombino del mundo: más de 55.000 piezas. La «Ciclovía» bogotana cierra 120 km de calles a los coches cada domingo — es el evento ciclista urbano más grande del mundo.' },
+  'es-CO-GonzaloNeural':   { levels: ['Paisa','Hijo de la Montaña','Señor de la Eterna Primavera'], fact: 'Medellín pasó de ser la ciudad más peligrosa del mundo a principios de los 90 a ganar el premio a ciudad más innovadora del planeta en 2013. Sus teleféricos urbanos conectaron comunas antes aisladas y transformaron la movilidad social.' },
+  'es-VE-PaolaNeural':     { levels: ['Caraqueña','Hija del Libertador','Heredera de Bolívar'], fact: 'El Salto Ángel, en Venezuela, es la catarata más alta del mundo con 979 m — casi 20 veces la altura de las cataratas del Niágara. Simón Bolívar, nacido en Caracas en 1783, liberó seis países americanos.' },
+  'es-VE-SebastianNeural': { levels: ['Maracucho','Hijo del Lago','Relámpago del Catatumbo'], fact: 'El Relámpago del Catatumbo, sobre el lago de Maracaibo, genera unos 1,2 millones de rayos al año, convirtiendo la zona en el lugar más eléctrico de la Tierra. El lago Maracaibo es también uno de los más antiguos del mundo, con unos 36 millones de años.' },
+  'es-EC-AndreaNeural':    { levels: ['Quiteña','Hija del Centro del Mundo','Guardiana de los Andes'], fact: 'Quito fue la primera ciudad declarada Patrimonio de la Humanidad por la UNESCO (1978). Estar en el ecuador y a 2.850 m de altitud tiene un efecto curioso: allí se pesa ligeramente menos que en cualquier otro lugar del planeta.' },
+  'es-EC-LuisNeural':      { levels: ['Guayaco','Hijo del Malecón','Señor del Puerto Mayor'], fact: 'En Guayaquil tuvo lugar en 1822 el encuentro más misterioso de la historia americana: Simón Bolívar y José de San Martín se reunieron en secreto. Nadie sabe qué se dijeron — al día siguiente San Martín se retiró de la política para siempre.' },
+  'es-PE-CamilaNeural':    { levels: ['Limeña','Hija de los Incas','Guardiana de Machu Picchu'], fact: 'Lima es la segunda ciudad desértica más grande del mundo tras El Cairo, pero está permanentemente cubierta de niebla («garúa») y casi nunca llueve. Tiene más restaurantes en el ranking mundial S. Pellegrino que cualquier otra ciudad de Latinoamérica.' },
+  'es-BO-SofiaNeural':     { levels: ['Paceña','Hija del Altiplano','Heredera de Tiwanaku'], fact: 'La Paz tiene la red de teleféricos urbanos más alta del mundo — «Mi Teleférico» — conectando la ciudad con El Alto a más de 4.000 m. Bolivia tiene dos capitales: La Paz (gobierno) y Sucre (constitucional), un acuerdo que lleva desde 1899.' },
+  'es-PY-TaniaNeural':     { levels: ['Asuncena','Hija de las Misiones','Guardiana del Guaraní'], fact: 'Paraguay es uno de los dos únicos países de América del Sur sin costa marítima. Comparte con Brasil la represa de Itaipú, que durante décadas fue la mayor central hidroeléctrica del mundo. El guaraní es lengua co-oficial y la hablan el 90 % de los paraguayos.' },
+  'es-CL-CatalinaNeural':  { levels: ['Santiaguina','Hija de la Araucanía','Guardiana del Fin del Mundo'], fact: 'Chile es el país más largo del mundo de norte a sur: 4.300 km. El desierto de Atacama es el más árido del planeta fuera de los polos — algunas zonas no han registrado lluvia en toda la historia.' },
+  'es-CL-LorenzoNeural':   { levels: ['Porteño','Bohemio del Cerro','Almirante de los Cerros'], fact: 'Valparaíso tiene 42 cerros y una cultura de ascensores (funiculares) desde 1883, algunos todavía en funcionamiento. Pablo Neruda vivió y escribió parte de su obra más célebre con vistas al puerto, en su casa «La Sebastiana».' },
+  'es-AR-ElenaNeural':     { levels: ['Porteña','Hija del Río de la Plata','Señora del Tango'], fact: 'Buenos Aires tiene más librerías per cápita que cualquier ciudad del mundo. La Avenida 9 de Julio, con 16 carriles, es la avenida más ancha del planeta. El tango nació simultáneamente en los arrabales de Buenos Aires y Montevideo.' },
+  'es-AR-TomasNeural':     { levels: ['Cordobés','Hijo de la Docta','Guardián de la Reforma'], fact: 'La Universidad Nacional de Córdoba (1613) es la más antigua de Argentina. La Reforma Universitaria de 1918, nacida en Córdoba, transformó los sistemas de educación superior de toda América Latina y sigue siendo referencia mundial.' },
+  'es-UY-ValentinaNeural': { levels: ['Montevideana','Hija de la Banda Oriental','Guardiana del Río de la Plata'], fact: 'Uruguay fue el primer país del mundo en legalizar el cannabis (2013) y el primero en separar Iglesia y Estado en América Latina (1917). Tiene la mayor tasa de lectura de Sudamérica y menos desigualdad que cualquier país vecino.' },
+  'es-GQ-TeresaNeural':    { levels: ['Ecuatoguineana','Hija del Golfo de Guinea','Guardiana del Español Africano'], fact: 'Guinea Ecuatorial es el único país hispanohablante de África. Su isla Bioko, donde está Malabo, tiene uno de los ecosistemas de primates más ricos del mundo. El país se convirtió en productor de petróleo en los 90, transformando radicalmente su economía.' },
+};
+
+const LEVEL_THRESHOLDS = [0, 250, 750];
+
+function getVoiceLevel(voiceId) {
+  const pts = getVoicePoints()[voiceId] || 0;
+  let level = 0;
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (pts >= LEVEL_THRESHOLDS[i]) { level = i; break; }
+  }
+  return level;
+}
+
+function getVoiceLevelTitle(voiceId) {
+  const meta = VOICE_META[voiceId];
+  if (!meta) return null;
+  return meta.levels[getVoiceLevel(voiceId)];
+}
+
+const DIFFICULTY_SUFFIX = [
+  '\nNivel del estudiante: principiante. Usa vocabulario sencillo, frases cortas y mucha paciencia. Corrige con calma.',
+  '\nNivel del estudiante: intermedio. Puedes usar gramática más compleja, expresiones idiomáticas locales y un ritmo natural. Corrige de forma fluida.',
+  '\nNivel del estudiante: avanzado. Habla como un nativo, usa jerga y referencias culturales de tu región. No simplifiques — el usuario puede seguirte.',
+];
+
 function activeSystem() {
-  return examMode && examContent ? buildExamSystem(examContent) : SYSTEM;
+  const base = examMode && examContent ? buildExamSystem(examContent) : SYSTEM;
+  if (examMode) return base;
+  const level = getVoiceLevel(getVoiceKey());
+  return base + DIFFICULTY_SUFFIX[level];
 }
 
 const SYSTEM = `Eres un profesor de español nativo, amigable y natural.
@@ -2117,6 +2209,17 @@ async function showSessionSummary(snap, reward = null) {
   const el   = document.getElementById('session-summary');
   const body = document.getElementById('summary-body');
   el.classList.remove('hidden');
+
+  // Fun fact — remove previous if any
+  el.querySelectorAll('.summary-fact').forEach(n => n.remove());
+  const voiceId = getVoiceKey();
+  const meta = VOICE_META[voiceId];
+  if (meta?.fact) {
+    const factEl = document.createElement('div');
+    factEl.className = 'summary-fact';
+    factEl.textContent = meta.fact;
+    el.querySelector('.summary-card').insertBefore(factEl, body);
+  }
 
   // Points earned header — remove previous if any
   el.querySelectorAll('.summary-pts-earned').forEach(n => n.remove());
