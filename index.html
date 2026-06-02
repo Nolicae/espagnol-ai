@@ -1291,7 +1291,7 @@ const VOICE_META = {
   'es-GQ-TeresaNeural':    { levels: ['Ecuatoguineana','Hija del Golfo de Guinea','Guardiana del Español Africano'], fact: 'Guinea Ecuatorial es el único país hispanohablante de África. Su isla Bioko, donde está Malabo, tiene uno de los ecosistemas de primates más ricos del mundo. El país se convirtió en productor de petróleo en los 90, transformando radicalmente su economía.' },
 };
 
-const LEVEL_THRESHOLDS = [0, 250, 750];
+const LEVEL_THRESHOLDS = [0, 150, 400];
 
 function getVoiceLevel(voiceId) {
   const pts = getVoicePoints()[voiceId] || 0;
