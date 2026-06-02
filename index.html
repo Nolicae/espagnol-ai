@@ -610,8 +610,9 @@
     .session-summary {
       position: absolute; inset: 0; z-index: 28;
       background: rgba(10,12,22,0.88);
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: flex-start; justify-content: center;
       padding: 28px; backdrop-filter: blur(6px);
+      overflow-y: auto;
     }
     /* ── Exam bar — below HUD row, centered ── */
     .exam-bar {
@@ -775,6 +776,7 @@
       width: 100%; max-width: 340px;
       background: var(--bg2); border: 1px solid var(--rule);
       border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+      margin: auto 0; /* vertical centering when content is short */
     }
     .summary-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -1509,6 +1511,11 @@ function unlockAudio() {
   audioCtx.resume().catch(() => {});
 }
 
+// Keep audioCtx alive — browsers suspend it after ~1min of silence
+setInterval(() => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+}, 20000);
+
 // ──────────────────────────────────────────────────────────────
 // Session lifecycle
 // ──────────────────────────────────────────────────────────────
@@ -1520,6 +1527,8 @@ async function startSession() {
       if (e.data.size > 0) {
         if (!recorderInitChunk) recorderInitChunk = e.data; // save codec init segment
         audioChunks.push(e.data);
+        // Cap rolling buffer to last ~30s (300 × 100ms chunks) to prevent huge blobs
+        if (audioChunks.length > 300) audioChunks.splice(1, audioChunks.length - 300);
       }
     };
     recorder.start(100);
