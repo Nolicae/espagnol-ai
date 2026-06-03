@@ -1059,16 +1059,32 @@ const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
 
 // ──────────────────────────────────────────────────────────────
+// Language runtime
+// ──────────────────────────────────────────────────────────────
+let currentLang = localStorage.getItem('app_lang') || 'es';
+
+// localStorage key helpers — all keys are language-prefixed
+const lk = {
+  voiceKey:      () => `voice_key_${currentLang}`,
+  voicePoints:   () => `voice_points_${currentLang}`,
+  sessionDates:  () => 'session_dates',               // streak is shared across languages
+  factThreshold: (id) => `fact_thr_${currentLang}_${id}`,
+  factsSeen:     (id) => `facts_seen_${currentLang}_${id}`,
+  chatMode:      () => `chat_mode_${currentLang}`,
+  duration:      () => `session_duration_${currentLang}`,
+};
+
+// ──────────────────────────────────────────────────────────────
 // Reward / Points system
 // ──────────────────────────────────────────────────────────────
 
 let chronoCompletedNaturally = false; // true only when the timer reaches 0
 
 function getVoicePoints() {
-  return JSON.parse(localStorage.getItem('voice_points') || '{}');
+  return JSON.parse(localStorage.getItem(lk.voicePoints()) || '{}');
 }
 function getSessionDates() {
-  return JSON.parse(localStorage.getItem('session_dates') || '[]');
+  return JSON.parse(localStorage.getItem(lk.sessionDates()) || '[]');
 }
 function getCurrentStreak() {
   const dates = getSessionDates();
@@ -1099,7 +1115,7 @@ const FIXED_THRESHOLDS = [150, 400]; // must match LEVEL_THRESHOLDS indices 1 & 
 
 // Random fun-fact thresholds — generated once per voice, stored in localStorage
 function getFactThresholds(voiceId) {
-  const key = `fact_thr_${voiceId}`;
+  const key = lk.factThreshold(voiceId);
   let t = JSON.parse(localStorage.getItem(key) || 'null');
   if (!t) {
     const r = () => Math.floor(Math.random() * 100);
@@ -1123,7 +1139,7 @@ function checkNewRewards(voiceId, prevPts, newPts) {
 
   // Random: fun facts
   const factThresholds = getFactThresholds(voiceId);
-  const seenKey = `facts_seen_${voiceId}`;
+  const seenKey = lk.factsSeen(voiceId);
   const seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
   const meta = VOICE_META[voiceId];
 
@@ -1149,7 +1165,7 @@ function awardSessionPoints() {
   if (!dates.includes(today)) {
     dates.push(today);
     const cutoff = Date.now() - 90 * 86400000;
-    localStorage.setItem('session_dates', JSON.stringify(dates.filter(d => new Date(d) >= cutoff)));
+    localStorage.setItem(lk.sessionDates(), JSON.stringify(dates.filter(d => new Date(d) >= cutoff)));
   }
 
   const streak  = getCurrentStreak();
@@ -1160,7 +1176,7 @@ function awardSessionPoints() {
   const pts     = getVoicePoints();
   const prevPts = pts[voiceId] || 0;
   pts[voiceId]  = prevPts + earned;
-  localStorage.setItem('voice_points', JSON.stringify(pts));
+  localStorage.setItem(lk.voicePoints(), JSON.stringify(pts));
 
   const unlocked = checkNewRewards(voiceId, prevPts, pts[voiceId]);
   return { earned, streak, mult, total: pts[voiceId], unlocked };
@@ -1193,7 +1209,7 @@ let chatMode = false;
 
 function applyChatMode(on) {
   chatMode = on;
-  localStorage.setItem('chat_mode', on ? '1' : '0');
+  localStorage.setItem(lk.chatMode(), on ? '1' : '0');
 
   if (!sessionActive) return; // no active session, nothing else to do
 
@@ -1617,8 +1633,8 @@ const DEFAULT_KEY   = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI8
 const DEFAULT_VOICE = 'es-ES-ElviraNeural';
 
 const groqKey    = () => localStorage.getItem('groq_key')   || DEFAULT_KEY;
-const getVoiceKey = () => localStorage.getItem('voice_key') || DEFAULT_VOICE;
-const getDuration = () => parseInt(localStorage.getItem('session_duration') || '10', 10);
+const getVoiceKey  = () => localStorage.getItem(lk.voiceKey())  || (typeof LANGUAGES !== 'undefined' ? LANGUAGES[currentLang]?.defaultVoice : DEFAULT_VOICE) || DEFAULT_VOICE;
+const getDuration  = () => parseInt(localStorage.getItem(lk.duration()) || '10', 10);
 
 // ──────────────────────────────────────────────────────────────
 // DOM refs
@@ -1956,7 +1972,7 @@ document.getElementById('summary-close').addEventListener('click', () => {
 
 // ── Chat mode wiring ─────────────────────────────────────────
 const chatToggle = document.getElementById('chat-toggle');
-if (localStorage.getItem('chat_mode') === '1') {
+if (localStorage.getItem(lk.chatMode()) === '1') {
   chatToggle.checked = true;
   applyChatMode(true);
 }
@@ -2390,7 +2406,7 @@ function initVoicesMap() {
   const ctrEl  = document.getElementById('voice-counter');
 
   function selectVoice(v, save) {
-    if (save) localStorage.setItem('voice_key', v.id);
+    if (save) localStorage.setItem(lk.voiceKey(), v.id);
     // Update orb accent color
     orbAccent = hexToRgb(v.color);
     applyVoiceTheme(v.color);
@@ -2681,7 +2697,7 @@ function updateDurationSlider(v) {
 durationSlider.addEventListener('input', () => updateDurationSlider(parseInt(durationSlider.value, 10)));
 
 document.getElementById('btn-save').addEventListener('click', () => {
-  localStorage.setItem('session_duration', durationSlider.value);
+  localStorage.setItem(lk.duration(), durationSlider.value);
   document.getElementById('screen-settings').classList.add('hidden');
 });
 
