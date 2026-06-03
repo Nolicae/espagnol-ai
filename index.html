@@ -1941,6 +1941,22 @@ function getVoiceLevelTitle(voiceId) {
   return meta.levels[getVoiceLevel(voiceId)];
 }
 
+const BG_UNLOCKS = {
+  es: {
+    'es-ES-ElviraNeural':  { url: '/backgrounds/madrid.webp',       unlock: 250 },
+    'es-US-AlonsoNeural':  { url: '/backgrounds/los-angeles.webp',  unlock: 300 },
+    'es-AR-ElenaNeural':   { url: '/backgrounds/buenos-aires.webp', unlock: 400 },
+  },
+  pt: {},
+};
+
+function getBackgroundUnlock(voiceId) {
+  const unlock = (BG_UNLOCKS[currentLang] || {})[voiceId];
+  if (!unlock) return null;
+  const pts = getVoicePoints()[voiceId] || 0;
+  return pts >= unlock.unlock ? unlock : null;
+}
+
 const DIFFICULTY_SUFFIX = [
   '\nNivel del estudiante: principiante. Usa vocabulario sencillo, frases cortas y mucha paciencia. Corrige con calma.',
   '\nNivel del estudiante: intermedio. Puedes usar gramática más compleja, expresiones idiomáticas locales y un ritmo natural. Corrige de forma fluida.',
