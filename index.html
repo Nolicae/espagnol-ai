@@ -1107,6 +1107,7 @@ const UI_STRINGS = {
     newTitle:           'Nuevo título',
     summaryPrompt:      'Resume esta sesión en 3 puntos:\n❌ Errores corregidos (con la forma correcta)\n✅ Lo que fue bien\n📚 Vocabulario clave usado',
     summarySystem:      'Eres un asistente pedagógico. Analiza esta sesión de práctica de español y responde en español. Sé breve, alentador y concreto.',
+    summaryError:       'Resumen no disponible.',
     silencePrompt:      '[silencio]',
     sessionStart:       '[inicio de sesión]',
     fallbackGreeting:   '¡Hola! ¿De qué quieres hablar hoy?',
@@ -1155,6 +1156,7 @@ Si recibes "[inicio de sesión]", preséntate como examinador en una frase y lan
     newTitle:           'Novo título',
     summaryPrompt:      'Resume esta sessão em 3 pontos:\n❌ Erros corrigidos (com a forma correta)\n✅ O que correu bem\n📚 Vocabulário-chave usado',
     summarySystem:      'És um assistente pedagógico. Analisa esta sessão de prática de português e responde em português. Sê breve, encorajador e concreto.',
+    summaryError:       'Resumo não disponível.',
     silencePrompt:      '[silêncio]',
     sessionStart:       '[início de sessão]',
     fallbackGreeting:   'Olá! Sobre o que queres falar hoje?',
@@ -2657,9 +2659,9 @@ async function showSessionSummary(snap, reward = null) {
       }),
     });
     if (!r.ok) throw new Error();
-    body.textContent = (await r.json()).choices[0]?.message?.content || 'Resumen no disponible.';
+    body.textContent = (await r.json()).choices[0]?.message?.content || ui('summaryError');
   } catch (_) {
-    body.textContent = 'Resumen no disponible.';
+    body.textContent = ui('summaryError');
   }
 }
 
