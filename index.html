@@ -1238,7 +1238,7 @@ function checkNewRewards(voiceId, prevPts, newPts) {
   // Fixed: level titles + difficulty
   FIXED_THRESHOLDS.forEach((threshold, idx) => {
     if (prevPts < threshold && newPts >= threshold) {
-      const meta = VOICE_META[voiceId];
+      const meta = getVoiceMeta(voiceId);
       unlocked.push({ type: 'level', level: idx + 1, title: meta?.levels[idx + 1] });
     }
   });
@@ -1247,7 +1247,7 @@ function checkNewRewards(voiceId, prevPts, newPts) {
   const factThresholds = getFactThresholds(voiceId);
   const seenKey = lk.factsSeen(voiceId);
   const seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
-  const meta = VOICE_META[voiceId];
+  const meta = getVoiceMeta(voiceId);
 
   factThresholds.forEach((threshold, idx) => {
     if (prevPts < threshold && newPts >= threshold && !seen.includes(idx) && meta?.facts?.[idx]) {
@@ -1261,7 +1261,7 @@ function checkNewRewards(voiceId, prevPts, newPts) {
 }
 
 function awardSessionPoints() {
-  const voiceId  = getVoiceKey() || VOICES[0].id;
+  const voiceId  = getVoiceKey() || getLangVoices()[0].id;
   const durMins  = getDuration();
   const isChat   = chatMode;
 
@@ -1680,6 +1680,7 @@ const VOICE_META = {
     ]
   },
 };
+LANGUAGES.es.meta = VOICE_META;
 
 const LEVEL_THRESHOLDS = [0, 150, 400];
 
@@ -1693,7 +1694,7 @@ function getVoiceLevel(voiceId) {
 }
 
 function getVoiceLevelTitle(voiceId) {
-  const meta = VOICE_META[voiceId];
+  const meta = getVoiceMeta(voiceId);
   if (!meta) return null;
   return meta.levels[getVoiceLevel(voiceId)];
 }
@@ -1703,12 +1704,17 @@ const DIFFICULTY_SUFFIX = [
   '\nNivel del estudiante: intermedio. Puedes usar gramática más compleja, expresiones idiomáticas locales y un ritmo natural. Corrige de forma fluida.',
   '\nNivel del estudiante: avanzado. Habla como un nativo, usa jerga y referencias culturales de tu región. No simplifiques — el usuario puede seguirte.',
 ];
+LANGUAGES.es.diff = DIFFICULTY_SUFFIX;
+
+function getLangVoices() { return LANGUAGES[currentLang].voices || LANGUAGES.es.voices; }
+function getVoiceMeta(voiceId) { return (LANGUAGES[currentLang].meta || LANGUAGES.es.meta)?.[voiceId]; }
 
 function activeSystem() {
-  const base = examMode && examContent ? buildExamSystem(examContent) : SYSTEM;
-  if (examMode) return base;
+  if (examMode && examContent) return buildExamSystem(examContent);
+  const base  = LANGUAGES[currentLang].system || LANGUAGES.es.system;
   const level = getVoiceLevel(getVoiceKey());
-  return base + DIFFICULTY_SUFFIX[level];
+  const diff  = LANGUAGES[currentLang].diff || LANGUAGES.es.diff;
+  return base + diff[level];
 }
 
 const SYSTEM = `Eres un profesor de español nativo, amigable y natural.
@@ -1720,12 +1726,13 @@ Nunca repitas literalmente lo que dijo el usuario. Ve directo.
 NUNCA digas adiós, hasta luego, ni ninguna frase de despedida o cierre. El usuario controla cuándo termina la sesión — tú sigues hablando siempre.
 Si recibes "[silencio]", el usuario no ha respondido: hazle una pregunta, dale una pista o simplemente anímalo — lo más natural según el contexto.
 Si recibes "[inicio de sesión]", saluda con naturalidad y propón un tema o una pregunta para empezar.`;
+LANGUAGES.es.system = SYSTEM;
 
 const DEFAULT_KEY   = 'gsk_35UnVKG48PEbowk6YTWE' + 'WGdyb3FYvcIaFYQLE5JjOJ6asJI81CPW';
 const DEFAULT_VOICE = 'es-ES-ElviraNeural';
 
 const groqKey    = () => localStorage.getItem('groq_key')   || DEFAULT_KEY;
-const getVoiceKey  = () => localStorage.getItem(lk.voiceKey())  || (typeof LANGUAGES !== 'undefined' ? LANGUAGES[currentLang]?.defaultVoice : DEFAULT_VOICE) || DEFAULT_VOICE;
+const getVoiceKey  = () => localStorage.getItem(lk.voiceKey()) || LANGUAGES[currentLang].defaultVoice;
 const getDuration  = () => parseInt(localStorage.getItem(lk.duration()) || '10', 10);
 
 // ──────────────────────────────────────────────────────────────
@@ -2105,7 +2112,7 @@ function startRecognition() {
   recognition = new SR();
   recognition.continuous     = true;
   recognition.interimResults = true;
-  recognition.lang           = 'es-ES';
+  recognition.lang           = LANGUAGES[currentLang]?.srLang || 'es-ES';
   recognition.onresult    = handleSpeechResult;
   recognition.onspeechend = () => setTimeout(triggerProcessing, 300);
   recognition.onerror = e => { if (e.error !== 'no-speech') console.warn('[SR]', e.error); };
@@ -2413,6 +2420,30 @@ async function speak(text) {
 }
 
 // ──────────────────────────────────────────────────────────────
+// Language definitions — data filled below after each const declaration
+// ──────────────────────────────────────────────────────────────
+const LANGUAGES = {
+  es: {
+    defaultVoice: 'es-ES-ElviraNeural',
+    srLang: 'es-ES',
+    map: { lonMin: -125, lonMax: 15, latMax: 50, latMin: -45, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
+  pt: {
+    defaultVoice: 'pt-BR-FranciscaNeural',
+    srLang: 'pt-BR',
+    map: { lonMin: -75, lonMax: 40, latMax: 55, latMin: -35, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
+};
+
+// ──────────────────────────────────────────────────────────────
 // Voice data — positions derived from real coordinates
 // Projection: x = (lon+125)*2.571  y = (50-lat)*3.053
 // Zoom window: lon -125→+15, lat +50→-45 (no Canada, no Patagonia)
@@ -2473,6 +2504,7 @@ const VOICES = [
   // Guinea Ecuatorial (Africa)
   { id:'es-GQ-TeresaNeural',    name:'Teresa',    city:'Malabo',           country:'Guinea Ecuatorial', trait:'clara',     color:'#C8A070', x:344, y:141 },
 ];
+LANGUAGES.es.voices = VOICES;
 
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
@@ -2506,8 +2538,8 @@ function initVoicesMap() {
     nameEl.textContent = v.name;
     cityEl.textContent = v.city;
     metaEl.textContent = `${v.country} · ${v.trait}`;
-    const idx = VOICES.findIndex(x => x.id === v.id) + 1;
-    ctrEl.textContent  = `${String(idx).padStart(2,'0')} / ${VOICES.length}`;
+    const idx = getLangVoices().findIndex(x => x.id === v.id) + 1;
+    ctrEl.textContent  = `${String(idx).padStart(2,'0')} / ${getLangVoices().length}`;
     renderMap(v.id);
   }
 
@@ -2527,7 +2559,7 @@ function initVoicesMap() {
     }
 
     // dots
-    for (const v of VOICES) {
+    for (const v of getLangVoices()) {
       const isSel = v.id === selectedId;
       const g = document.createElementNS(NS, 'g');
       g.style.cursor = 'pointer';
@@ -2564,7 +2596,7 @@ function initVoicesMap() {
 
   // Init with saved or default voice
   const savedId = getVoiceKey();
-  const current = VOICES.find(v => v.id === savedId) || VOICES[0];
+  const current = getLangVoices().find(v => v.id === savedId) || getLangVoices()[0];
   selectVoice(current, false);
 
   // Load real coastlines from Natural Earth 110m (async, re-renders once ready)
@@ -2599,7 +2631,7 @@ function initVoicesMap() {
 
       window._coastPathD = d;
       // Re-render map with coastlines now available
-      renderMap(getVoiceKey() || VOICES[0].id);
+      renderMap(getVoiceKey() || getLangVoices()[0].id);
     } catch (e) {
       console.warn('[coastlines]', e.message);
     }
