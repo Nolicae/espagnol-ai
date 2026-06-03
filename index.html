@@ -369,7 +369,7 @@
 
     .settings-section-label {
       position: absolute;
-      top: 164px;
+      top: 204px;
       left: 24px; right: 24px;
       display: flex;
       justify-content: space-between;
@@ -432,7 +432,7 @@
 
     .settings-selected-voice {
       position: absolute;
-      top: 524px;
+      top: 564px;
       left: 24px; right: 24px;
       text-align: center;
     }
@@ -524,7 +524,7 @@
 
     .settings-duration {
       position: absolute;
-      top: 614px;
+      top: 654px;
       left: 24px; right: 24px;
     }
 
@@ -619,7 +619,7 @@
 
     .settings-save {
       position: absolute;
-      top: 876px;
+      top: 916px;
       left: 24px; right: 24px;
       width: calc(100% - 48px);
       padding: 16px;
@@ -674,10 +674,10 @@
 
     /* ── Exam + Chat toggles (settings screen) ── */
     .settings-exam {
-      position: absolute; top: 748px; left: 24px; right: 24px;
+      position: absolute; top: 788px; left: 24px; right: 24px;
     }
     .settings-chat {
-      position: absolute; top: 808px; left: 24px; right: 24px;
+      position: absolute; top: 848px; left: 24px; right: 24px;
     }
 
     /* ── Chat overlay (conversation screen) — fullscreen ── */
@@ -803,7 +803,7 @@
     }
 
     /* Settings spacer — forces scroll height (absolute children don't) */
-    .settings-spacer { height: 1000px; pointer-events: none; }
+    .settings-spacer { height: 1040px; pointer-events: none; }
 
     .session-summary.hidden { display: none; }
     .summary-card {
@@ -860,6 +860,91 @@
       background: var(--accent); color: #fff;
       font-weight: 600; font-size: 1rem; cursor: pointer;
     }
+
+    /* ── Onboarding: language selection ── */
+    #screen-onboarding {
+      position: absolute; inset: 0; z-index: 50;
+      background: var(--bg3);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 40px 32px;
+      animation: onboardFade 1.2s ease both;
+    }
+    #screen-onboarding.hidden { display: none; }
+
+    @keyframes onboardFade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .onboard-tagline {
+      font-family: var(--serif); font-style: italic;
+      font-size: 1.1rem; color: var(--inkDim);
+      text-align: center; margin-bottom: 56px;
+      letter-spacing: 0.02em; line-height: 1.5;
+    }
+
+    .onboard-langs {
+      display: flex; flex-direction: column;
+      gap: 18px; width: 100%; max-width: 280px;
+    }
+
+    .onboard-lang-btn {
+      display: flex; align-items: center; gap: 20px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 20px; padding: 20px 24px;
+      cursor: pointer; transition: background .2s, border-color .2s;
+      text-align: left; width: 100%;
+    }
+    .onboard-lang-btn:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .onboard-lang-glyph {
+      width: 44px; height: 44px; flex-shrink: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--serif); font-size: 1.3rem;
+      color: var(--ink);
+    }
+    .onboard-lang-glyph.es {
+      background: radial-gradient(circle at 35% 35%, #E8C870, #C89040, #8B5A20);
+      box-shadow: 0 0 18px rgba(232,200,112,0.25);
+    }
+    .onboard-lang-glyph.pt {
+      background: radial-gradient(circle at 35% 35%, #78D4A8, #3A9E6C, #1A6040);
+      box-shadow: 0 0 18px rgba(120,212,168,0.25);
+    }
+
+    .onboard-lang-info { flex: 1; }
+    .onboard-lang-name {
+      font-family: var(--serif); font-size: 1.25rem;
+      color: var(--ink); line-height: 1;
+    }
+    .onboard-lang-sub {
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--inkDim); margin-top: 4px;
+    }
+
+    /* ── Language chip row (settings) ── */
+    .settings-lang-row {
+      position: absolute; top: 120px; left: 24px; right: 24px;
+      display: flex; gap: 10px;
+    }
+    .lang-chip {
+      flex: 1; padding: 8px 12px; border-radius: 20px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+      text-transform: uppercase; cursor: pointer;
+      border: 1px solid var(--rule); background: rgba(255,255,255,0.04);
+      color: var(--inkSoft); transition: background .15s, border-color .15s;
+    }
+    .lang-chip.active {
+      background: rgba(255,255,255,0.10);
+      border-color: var(--vc); color: var(--ink);
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
@@ -868,6 +953,27 @@
 
 <div id="app">
   <div class="app-container">
+
+    <!-- ═══ Screen: Onboarding (language selection) ═══ -->
+    <div id="screen-onboarding" class="hidden">
+      <p class="onboard-tagline">Que língua queres<br>explorar hoje?</p>
+      <div class="onboard-langs">
+        <button class="onboard-lang-btn" data-lang="es">
+          <div class="onboard-lang-glyph es">E</div>
+          <div class="onboard-lang-info">
+            <div class="onboard-lang-name">Español</div>
+            <div class="onboard-lang-sub">Castelhano · 31 vozes</div>
+          </div>
+        </button>
+        <button class="onboard-lang-btn" data-lang="pt">
+          <div class="onboard-lang-glyph pt">P</div>
+          <div class="onboard-lang-info">
+            <div class="onboard-lang-name">Português</div>
+            <div class="onboard-lang-sub">Brasil + Portugal · 16 vozes</div>
+          </div>
+        </button>
+      </div>
+    </div>
 
     <!-- ═══ Screen: Conversation ═══ -->
     <div class="screen-conversation" id="screen-conversation">
@@ -978,13 +1084,19 @@
         <h2 class="settings-subtitle">Elige una <span style="font-style:italic;">voz</span></h2>
       </div>
 
+      <!-- Language selector -->
+      <div class="settings-lang-row">
+        <button class="lang-chip" data-lang="es">Español</button>
+        <button class="lang-chip" data-lang="pt">Português</button>
+      </div>
+
       <div class="settings-section-label">
         <span>Mundo hispanohablante</span>
         <span id="voice-counter">01 / 01</span>
       </div>
 
       <svg id="voices-map" viewBox="0 0 360 296" width="100%" height="296"
-           style="position:absolute;top:186px;left:0;right:0;overflow:visible;display:block;padding:0 16px;max-width:402px;"></svg>
+           style="position:absolute;top:226px;left:0;right:0;overflow:visible;display:block;padding:0 16px;max-width:402px;"></svg>
 
       <div class="settings-selected-voice">
         <div class="selected-voice-name" id="selected-voice-name">Elvira</div>
@@ -3054,6 +3166,32 @@ function applyUIStrings() {
   setState(appState || 'inactive');
 }
 applyUIStrings();
+
+// ── Onboarding — show on first use (no app_lang set) ────────
+(function initOnboarding() {
+  const screen = document.getElementById('screen-onboarding');
+  if (!localStorage.getItem('app_lang')) {
+    screen.classList.remove('hidden');
+    screen.querySelectorAll('.onboard-lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        localStorage.setItem('app_lang', btn.dataset.lang);
+        screen.style.transition = 'opacity 0.5s';
+        screen.style.opacity = '0';
+        setTimeout(() => location.reload(), 520);
+      });
+    });
+  }
+})();
+
+// ── Language chips (settings) ────────────────────────────────
+document.querySelectorAll('.lang-chip').forEach(chip => {
+  if (chip.dataset.lang === currentLang) chip.classList.add('active');
+  chip.addEventListener('click', () => {
+    if (chip.dataset.lang === currentLang) return;
+    localStorage.setItem('app_lang', chip.dataset.lang);
+    location.reload();
+  });
+});
 
 // Init voice map
 initVoicesMap();
