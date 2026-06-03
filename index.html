@@ -2506,6 +2506,29 @@ const VOICES = [
 ];
 LANGUAGES.es.voices = VOICES;
 
+LANGUAGES.pt.voices = [
+  // Brasil — Southeast
+  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:89,  y:257 },
+  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:101, y:253 },
+  { id:'pt-BR-GiovannaNeural',  name:'Giovanna',  city:'Belo Horizonte', country:'Brasil',   trait:'clara',       color:'#B090E8', x:97,  y:244 },
+  { id:'pt-BR-DonatoNeural',    name:'Donato',    city:'Brasília',       country:'Brasil',   trait:'preciso',     color:'#D4A050', x:85,  y:231 },
+  // Brasil — Northeast
+  { id:'pt-BR-BrendaNeural',    name:'Brenda',    city:'Salvador',       country:'Brasil',   trait:'musical',     color:'#E8B86A', x:116, y:222 },
+  { id:'pt-BR-LeticiaNeural',   name:'Letícia',   city:'Fortaleza',      country:'Brasil',   trait:'viva',        color:'#70D4B8', x:117, y:191 },
+  { id:'pt-BR-ElzaNeural',      name:'Elza',      city:'Recife',         country:'Brasil',   trait:'expressiva',  color:'#F0C840', x:128, y:206 },
+  { id:'pt-BR-ValerioNeural',   name:'Valério',   city:'Natal',          country:'Brasil',   trait:'direto',      color:'#C8D870', x:129, y:198 },
+  // Brasil — North & South
+  { id:'pt-BR-ManuelaNeural',   name:'Manuela',   city:'Manaus',         country:'Brasil',   trait:'serena',      color:'#70C8A8', x:47,  y:189 },
+  { id:'pt-BR-YaraNeural',      name:'Yara',      city:'Belém',          country:'Brasil',   trait:'suave',       color:'#D890C8', x:83,  y:184 },
+  { id:'pt-BR-FabioNeural',     name:'Fábio',     city:'Porto Alegre',   country:'Brasil',   trait:'cálido',      color:'#90C870', x:75,  y:276 },
+  { id:'pt-BR-NicolauNeural',   name:'Nicolau',   city:'Florianópolis',  country:'Brasil',   trait:'jovial',      color:'#E8904C', x:83,  y:269 },
+  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:80,  y:261 },
+  // Portugal
+  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:206, y:54  },
+  { id:'pt-PT-FernandaNeural',  name:'Fernanda',  city:'Porto',          country:'Portugal', trait:'calorosa',    color:'#D07890', x:205, y:46  },
+  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:211, y:50  },
+];
+
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
@@ -2524,6 +2547,10 @@ function applyVoiceTheme(hex) {
 function initVoicesMap() {
   const NS     = 'http://www.w3.org/2000/svg';
   const mapSvg = document.getElementById('voices-map');
+  const mapCfgOuter = LANGUAGES[currentLang].map;
+  mapSvg.setAttribute('viewBox', `0 0 ${mapCfgOuter.w} ${mapCfgOuter.h}`);
+  mapSvg.setAttribute('height', String(mapCfgOuter.h));
+  mapSvg.style.height = mapCfgOuter.h + 'px';
   const nameEl = document.getElementById('selected-voice-name');
   const cityEl = document.getElementById('selected-voice-city');
   const metaEl = document.getElementById('selected-voice-meta');
@@ -2607,10 +2634,11 @@ function initVoicesMap() {
       const coast = topojson.mesh(world, world.objects.land);
 
       // Projection: matches dot coordinate space exactly
-      // Zoom window: lon -125→+15, lat +50→-45 → viewBox 360×290
-      const lonMin = -125, latMax = 50;
-      const sx = 360 / (15 - (-125));  // 2.5714 px/deg lon
-      const sy = 290 / (50 - (-45));   // 3.0526 px/deg lat
+      const mapCfg = LANGUAGES[currentLang].map;
+      const lonMin = mapCfg.lonMin;
+      const latMax = mapCfg.latMax;
+      const sx = mapCfg.w / (mapCfg.lonMax - mapCfg.lonMin);
+      const sy = mapCfg.h / (mapCfg.latMax - mapCfg.latMin);
 
       function proj(lon, lat) {
         return [+((lon - lonMin) * sx).toFixed(1),
@@ -2622,7 +2650,8 @@ function initVoicesMap() {
         let move = true;
         line.forEach(([lon, lat]) => {
           // Clip to our zoom window (with small margin)
-          if (lon < -130 || lon > 20 || lat < -48 || lat > 55) { move = true; return; }
+          if (lon < mapCfg.lonMin - 5 || lon > mapCfg.lonMax + 5 ||
+              lat < mapCfg.latMin - 5 || lat > mapCfg.latMax + 5) { move = true; return; }
           const [x, y] = proj(lon, lat);
           d += move ? `M${x},${y} ` : `L${x},${y} `;
           move = false;
