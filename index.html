@@ -1075,6 +1075,110 @@ const lk = {
 };
 
 // ──────────────────────────────────────────────────────────────
+// UI strings — all visible text, keyed by language
+// ──────────────────────────────────────────────────────────────
+const UI_STRINGS = {
+  es: {
+    inactive:           'INACTIVO',
+    live:               'EN VIVO',
+    speaking:           'HABLANDO',
+    pressToTalk:        'Pulsa para hablar',
+    chatMode:           'CHAT',
+    settingsTitle:      'Ajustes',
+    settingsClose:      'cerrar ✕',
+    settingsSubtitle:   'Elige una',
+    settingsSubItalic:  'voz',
+    worldLabel:         'Mundo hispanohablante',
+    durationLabel:      'Duración',
+    durationMin:        'min',
+    dur1:               '1 MIN',
+    dur15:              '15',
+    dur30:              '30 MIN',
+    examLabel:          'Modo Examen',
+    examDesc:           'La IA lee un documento y te examina',
+    chatLabel:          'Modo Chat',
+    chatDesc:           'Practica en silencio — sin micrófono ni audio',
+    saveBtn:            'Guardar',
+    chatPlaceholder:    'Escribe en español…',
+    chatTopbar:         'Modo Chat',
+    uploadDoc:          'Subir un documento',
+    sessionSummary:     'Resumen de sesión',
+    analyzing:          'Analizando…',
+    newTitle:           'Nuevo título',
+    summaryPrompt:      'Resume esta sesión en 3 puntos:\n❌ Errores corregidos (con la forma correcta)\n✅ Lo que fue bien\n📚 Vocabulario clave usado',
+    summarySystem:      'Eres un asistente pedagógico. Analiza esta sesión de práctica de español y responde en español. Sé breve, alentador y concreto.',
+    silencePrompt:      '[silencio]',
+    sessionStart:       '[inicio de sesión]',
+    fallbackGreeting:   '¡Hola! ¿De qué quieres hablar hoy?',
+    examSystemFn: (content) =>
+      `Eres un profesor de español y examinador estricto pero justo.
+El usuario ha subido el siguiente material de estudio:
+----
+${content}
+----
+Tu misión durante esta sesión:
+- Interrogar al usuario sobre este material, en español, con preguntas concretas y progresivas
+- Evaluar sus respuestas: valida lo correcto, corrige lo erróneo de forma natural
+- Si comete un error de español, corrígelo y pídele que repita la forma correcta
+- Avanza por el material de forma estructurada, un concepto a la vez
+- Máximo 1-2 frases por turno
+NUNCA digas adiós ni cierres la sesión — el usuario controla cuándo termina.
+Si recibes "[silencio]", reformula la última pregunta de otra manera.
+Si recibes "[inicio de sesión]", preséntate como examinador en una frase y lanza inmediatamente la primera pregunta sobre el material.`,
+  },
+  pt: {
+    inactive:           'INATIVO',
+    live:               'AO VIVO',
+    speaking:           'FALANDO',
+    pressToTalk:        'Toca para falar',
+    chatMode:           'CHAT',
+    settingsTitle:      'Configurações',
+    settingsClose:      'fechar ✕',
+    settingsSubtitle:   'Escolhe uma',
+    settingsSubItalic:  'voz',
+    worldLabel:         'Mundo lusófono',
+    durationLabel:      'Duração',
+    durationMin:        'min',
+    dur1:               '1 MIN',
+    dur15:              '15',
+    dur30:              '30 MIN',
+    examLabel:          'Modo Exame',
+    examDesc:           'A IA lê um documento e examina-te',
+    chatLabel:          'Modo Chat',
+    chatDesc:           'Pratica em silêncio — sem microfone nem áudio',
+    saveBtn:            'Guardar',
+    chatPlaceholder:    'Escreve em português…',
+    chatTopbar:         'Modo Chat',
+    uploadDoc:          'Enviar um documento',
+    sessionSummary:     'Resumo da sessão',
+    analyzing:          'A analisar…',
+    newTitle:           'Novo título',
+    summaryPrompt:      'Resume esta sessão em 3 pontos:\n❌ Erros corrigidos (com a forma correta)\n✅ O que correu bem\n📚 Vocabulário-chave usado',
+    summarySystem:      'És um assistente pedagógico. Analisa esta sessão de prática de português e responde em português. Sê breve, encorajador e concreto.',
+    silencePrompt:      '[silêncio]',
+    sessionStart:       '[início de sessão]',
+    fallbackGreeting:   'Olá! Sobre o que queres falar hoje?',
+    examSystemFn: (content) =>
+      `És um professor de português e examinador exigente mas justo.
+O utilizador enviou o seguinte material de estudo:
+----
+${content}
+----
+A tua missão durante esta sessão:
+- Interrogar o utilizador sobre este material, em português, com perguntas concretas e progressivas
+- Avaliar as suas respostas: valida o que está correto, corrige o que está errado de forma natural
+- Se cometer um erro de português, corrige-o e pede-lhe que repita a forma correta
+- Avança pelo material de forma estruturada, um conceito de cada vez
+- Máximo 1-2 frases por turno
+NUNCA digas adeus nem encerres a sessão — o utilizador controla quando termina.
+Se recebes "[silêncio]", reformula a última pergunta de outra forma.
+Se recebes "[início de sessão]", apresenta-te como examinador numa frase e lança imediatamente a primeira pergunta sobre o material.`,
+  },
+};
+
+function ui(key) { return UI_STRINGS[currentLang]?.[key] ?? UI_STRINGS.es[key]; }
+
+// ──────────────────────────────────────────────────────────────
 // Reward / Points system
 // ──────────────────────────────────────────────────────────────
 
@@ -1292,7 +1396,7 @@ async function chatGreeting() {
   const typingEl = addChatMessage('ai', '…', true);
   try {
     const messages = [{ role: 'system', content: activeSystem() },
-                      { role: 'user', content: '[inicio de sesión]' }];
+                      { role: 'user', content: ui('sessionStart') }];
     let reply = '';
     for await (const delta of streamLLM(messages)) {
       if (!sessionActive) break;
@@ -1302,7 +1406,7 @@ async function chatGreeting() {
     typingEl.classList.remove('typing');
     if (reply.trim()) history.push({ role: 'assistant', content: reply });
   } catch (e) {
-    typingEl.textContent = '¡Hola! ¿De qué quieres hablar hoy?';
+    typingEl.textContent = ui('fallbackGreeting');
     typingEl.classList.remove('typing');
   } finally {
     aiSpeaking = false;
@@ -1317,21 +1421,7 @@ let examMode    = false;   // toggled in settings
 let examContent = '';      // extracted text/description from uploaded doc
 
 function buildExamSystem(content) {
-  return `Eres un examinador de español estricto pero amigable. El usuario te ha proporcionado el siguiente material de estudio:
-
----
-${content}
----
-
-Tu misión durante esta sesión:
-- Interrogar al usuario sobre este material, en español, con preguntas concretas y progresivas
-- Evaluar sus respuestas: valida lo correcto, corrige lo erróneo de forma natural
-- Si comete un error de español, corrígelo y pídele que repita la forma correcta
-- Avanza por el material de forma estructurada, un concepto a la vez
-- Máximo 1-2 frases por turno
-NUNCA digas adiós ni cierres la sesión — el usuario controla cuándo termina.
-Si recibes "[silencio]", reformula la última pregunta de otra manera.
-Si recibes "[inicio de sesión]", preséntate como examinador en una frase et lance immédiatement la première question sur le matériel.`;
+  return ui('examSystemFn')(content);
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -1713,9 +1803,9 @@ function clearSilenceTimer() {
 function setState(s) {
   appState = s;
   const map = {
-    inactive:      { label: 'INACTIVO', dot: '',         orbLabel: 'Pulsa para hablar' },
-    session:       { label: 'EN VIVO',  dot: 'listening', orbLabel: '' },
-    'ai-speaking': { label: 'HABLANDO', dot: 'speaking',  orbLabel: '' },
+    inactive:      { label: ui('inactive'),    dot: '',           orbLabel: ui('pressToTalk') },
+    session:       { label: ui('live'),        dot: 'listening',  orbLabel: '' },
+    'ai-speaking': { label: ui('speaking'),    dot: 'speaking',   orbLabel: '' },
   };
   const info = map[s] || map.inactive;
   statusText.textContent  = info.label;
@@ -2123,7 +2213,7 @@ async function aiGreeting() {
   setState('ai-speaking');
   try {
     const myToken = speakToken;
-    const messages = [{ role: 'system', content: activeSystem() }, { role: 'user', content: '[inicio de sesión]' }];
+    const messages = [{ role: 'system', content: activeSystem() }, { role: 'user', content: ui('sessionStart') }];
     const greeting = await streamAndSpeak(messages, myToken);
     if (greeting.trim()) history.push({ role: 'assistant', content: greeting });
     // Timer starts after greeting finishes, not before
@@ -2147,7 +2237,7 @@ async function processAiSilencePrompt() {
   if (sessionActive) setState('ai-speaking');
   try {
     const myToken = speakToken;
-    const messages = [{ role: 'system', content: activeSystem() }, ...history, { role: 'user', content: '[silencio]' }];
+    const messages = [{ role: 'system', content: activeSystem() }, ...history, { role: 'user', content: ui('silencePrompt') }];
     // Ephemeral — result not added to history so next user reply stays coherent
     await streamAndSpeak(messages, myToken);
   } catch (e) {
@@ -2542,7 +2632,7 @@ async function showSessionSummary(snap, reward = null) {
       const rewardEl = document.createElement('div');
       if (r.type === 'level') {
         rewardEl.className = 'summary-reward summary-reward-level';
-        rewardEl.innerHTML = `<span class="summary-reward-label">Nuevo título</span><span class="summary-reward-value">${r.title}</span>`;
+        rewardEl.innerHTML = `<span class="summary-reward-label">${ui('newTitle')}</span><span class="summary-reward-value">${r.title}</span>`;
       } else {
         rewardEl.className = 'summary-reward summary-fact';
         rewardEl.textContent = r.text;
@@ -2551,7 +2641,7 @@ async function showSessionSummary(snap, reward = null) {
     });
   }
 
-  body.textContent = 'Analizando…';
+  body.textContent = ui('analyzing');
   try {
     const r = await fetch(GROQ_CHAT, {
       method:  'POST',
@@ -2560,9 +2650,9 @@ async function showSessionSummary(snap, reward = null) {
         model:    GROQ_MODEL,
         max_tokens: 350,
         messages: [
-          { role: 'system', content: 'Eres un asistente pedagógico. Analiza esta sesión de práctica de español y responde en español. Sé breve, alentador y concreto.' },
+          { role: 'system', content: ui('summarySystem') },
           ...snap,
-          { role: 'user', content: 'Resume esta sesión en 3 puntos:\n❌ Errores corregidos (con la forma correcta)\n✅ Lo que fue bien\n📚 Vocabulario clave usado' },
+          { role: 'user', content: ui('summaryPrompt') },
         ],
       }),
     });
@@ -2714,6 +2804,47 @@ updateDurationSlider(savedDuration);
 
 // Start orb animation loop
 requestAnimationFrame(drawOrbFrame);
+
+// ── Apply UI strings for current language ────────────────────
+function applyUIStrings() {
+  const U = UI_STRINGS[currentLang] || UI_STRINGS.es;
+  const settingsTitle = document.querySelector('#screen-settings .settings-title-row span');
+  if (settingsTitle) settingsTitle.textContent = U.settingsTitle;
+  const settingsCloseBtn = document.getElementById('btn-settings-close');
+  if (settingsCloseBtn) settingsCloseBtn.textContent = U.settingsClose;
+  const settingsSubtitle = document.querySelector('.settings-subtitle');
+  if (settingsSubtitle) settingsSubtitle.innerHTML = `${U.settingsSubtitle} <span style="font-style:italic;">${U.settingsSubItalic}</span>`;
+  const worldLabel = document.querySelector('.settings-section-label span:first-child');
+  if (worldLabel) worldLabel.textContent = U.worldLabel;
+  const durationLabelEl = document.querySelector('.duration-label-text');
+  if (durationLabelEl) durationLabelEl.textContent = U.durationLabel;
+  const durMinEl = document.querySelector('.duration-min');
+  if (durMinEl) durMinEl.textContent = U.durationMin;
+  const durSpans = document.querySelectorAll('.duration-labels span');
+  if (durSpans[0]) durSpans[0].textContent = U.dur1;
+  if (durSpans[1]) durSpans[1].textContent = U.dur15;
+  if (durSpans[2]) durSpans[2].textContent = U.dur30;
+  const examLabelEl = document.querySelector('#settings-exam .exam-toggle-label');
+  if (examLabelEl) examLabelEl.textContent = U.examLabel;
+  const examDescEl = document.querySelector('#settings-exam .exam-toggle-desc');
+  if (examDescEl) examDescEl.textContent = U.examDesc;
+  const chatLabelEl = document.querySelector('.settings-chat .exam-toggle-label');
+  if (chatLabelEl) chatLabelEl.textContent = U.chatLabel;
+  const chatDescEl = document.querySelector('.settings-chat .exam-toggle-desc');
+  if (chatDescEl) chatDescEl.textContent = U.chatDesc;
+  const saveBtnEl = document.getElementById('btn-save');
+  if (saveBtnEl) saveBtnEl.textContent = U.saveBtn;
+  const chatInputEl = document.getElementById('chat-input');
+  if (chatInputEl) chatInputEl.placeholder = U.chatPlaceholder;
+  const chatTopbarEl = document.querySelector('.chat-topbar-label');
+  if (chatTopbarEl) chatTopbarEl.textContent = U.chatTopbar;
+  const uploadLabelEl = document.getElementById('exam-pick-label');
+  if (uploadLabelEl) uploadLabelEl.textContent = U.uploadDoc;
+  const summaryTitleEl = document.querySelector('.summary-title');
+  if (summaryTitleEl) summaryTitleEl.textContent = U.sessionSummary;
+  setState(appState || 'inactive');
+}
+applyUIStrings();
 
 // Init voice map
 initVoicesMap();
