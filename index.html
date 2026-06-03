@@ -483,6 +483,24 @@
     }
     .voice-level.hidden { display: none; }
 
+    /* Reward blocks in session summary */
+    .summary-reward {
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--vc);
+    }
+    .summary-reward-level {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .summary-reward-label {
+      font-family: var(--mono); font-size: 8px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--vc); opacity: 0.7;
+    }
+    .summary-reward-value {
+      font-family: var(--serif); font-size: 1.1rem; color: var(--vc);
+    }
+
     /* Fun fact block in session summary */
     .summary-fact {
       font-family: var(--serif); font-style: italic;
@@ -1075,9 +1093,54 @@ function fmtPts(n) {
   // "1 250 pts" with thin-space thousands separator
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' pts';
 }
+// ── Reward thresholds ────────────────────────────────────────
+// Fixed: title + difficulty level-ups
+const FIXED_THRESHOLDS = [150, 400]; // must match LEVEL_THRESHOLDS indices 1 & 2
+
+// Random fun-fact thresholds — generated once per voice, stored in localStorage
+function getFactThresholds(voiceId) {
+  const key = `fact_thr_${voiceId}`;
+  let t = JSON.parse(localStorage.getItem(key) || 'null');
+  if (!t) {
+    const r = () => Math.floor(Math.random() * 100);
+    t = [ 50 + r(), 200 + r() * 2, 500 + r() * 3 ]; // ~50-149, ~200-399, ~500-799
+    localStorage.setItem(key, JSON.stringify(t));
+  }
+  return t;
+}
+
+// Check which rewards were just unlocked by crossing from prevPts → newPts
+function checkNewRewards(voiceId, prevPts, newPts) {
+  const unlocked = [];
+
+  // Fixed: level titles + difficulty
+  FIXED_THRESHOLDS.forEach((threshold, idx) => {
+    if (prevPts < threshold && newPts >= threshold) {
+      const meta = VOICE_META[voiceId];
+      unlocked.push({ type: 'level', level: idx + 1, title: meta?.levels[idx + 1] });
+    }
+  });
+
+  // Random: fun facts
+  const factThresholds = getFactThresholds(voiceId);
+  const seenKey = `facts_seen_${voiceId}`;
+  const seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
+  const meta = VOICE_META[voiceId];
+
+  factThresholds.forEach((threshold, idx) => {
+    if (prevPts < threshold && newPts >= threshold && !seen.includes(idx) && meta?.facts?.[idx]) {
+      seen.push(idx);
+      localStorage.setItem(seenKey, JSON.stringify(seen));
+      unlocked.push({ type: 'fact', text: meta.facts[idx] });
+    }
+  });
+
+  return unlocked;
+}
+
 function awardSessionPoints() {
   const voiceId  = getVoiceKey() || VOICES[0].id;
-  const durMins  = getDuration(); // user-configured duration in minutes
+  const durMins  = getDuration();
   const isChat   = chatMode;
 
   // Record today
@@ -1095,10 +1158,12 @@ function awardSessionPoints() {
   const earned  = Math.round(base * mult);
 
   const pts     = getVoicePoints();
-  pts[voiceId]  = (pts[voiceId] || 0) + earned;
+  const prevPts = pts[voiceId] || 0;
+  pts[voiceId]  = prevPts + earned;
   localStorage.setItem('voice_points', JSON.stringify(pts));
 
-  return { earned, streak, mult, total: pts[voiceId] };
+  const unlocked = checkNewRewards(voiceId, prevPts, pts[voiceId]);
+  return { earned, streak, mult, total: pts[voiceId], unlocked };
 }
 function updateVoicePtsDisplay(voiceId) {
   const el     = document.getElementById('voice-pts');
@@ -2441,27 +2506,11 @@ async function showSessionSummary(snap, reward = null) {
   const body = document.getElementById('summary-body');
   el.classList.remove('hidden');
 
-  // Fun fact — only on naturally completed sessions (reward !== null), pick unseen randomly
-  el.querySelectorAll('.summary-fact').forEach(n => n.remove());
-  const voiceId = getVoiceKey();
-  const meta = VOICE_META[voiceId];
-  if (reward && meta?.facts?.length) {
-    const seenKey = `facts_seen_${voiceId}`;
-    const seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
-    const unseen = meta.facts.map((_, i) => i).filter(i => !seen.includes(i));
-    if (unseen.length > 0) {
-      const idx = unseen[Math.floor(Math.random() * unseen.length)];
-      seen.push(idx);
-      localStorage.setItem(seenKey, JSON.stringify(seen));
-      const factEl = document.createElement('div');
-      factEl.className = 'summary-fact';
-      factEl.textContent = meta.facts[idx];
-      el.querySelector('.summary-card').insertBefore(factEl, body);
-    }
-  }
+  // Clear previous reward blocks
+  el.querySelectorAll('.summary-fact, .summary-pts-earned, .summary-reward').forEach(n => n.remove());
+  const card = el.querySelector('.summary-card');
 
-  // Points earned header — remove previous if any
-  el.querySelectorAll('.summary-pts-earned').forEach(n => n.remove());
+  // Points earned header
   if (reward) {
     const ptsEl = document.createElement('div');
     ptsEl.className = 'summary-pts-earned';
@@ -2469,7 +2518,20 @@ async function showSessionSummary(snap, reward = null) {
     if (reward.mult > 1) txt += `  ·  ×${reward.mult}`;
     txt += `   →   ${fmtPts(reward.total)}`;
     ptsEl.textContent = txt;
-    el.querySelector('.summary-card').insertBefore(ptsEl, body);
+    card.insertBefore(ptsEl, body);
+
+    // Unlocked rewards (title and/or fun facts)
+    (reward.unlocked || []).forEach(r => {
+      const rewardEl = document.createElement('div');
+      if (r.type === 'level') {
+        rewardEl.className = 'summary-reward summary-reward-level';
+        rewardEl.innerHTML = `<span class="summary-reward-label">Nuevo título</span><span class="summary-reward-value">${r.title}</span>`;
+      } else {
+        rewardEl.className = 'summary-reward summary-fact';
+        rewardEl.textContent = r.text;
+      }
+      card.insertBefore(rewardEl, body);
+    });
   }
 
   body.textContent = 'Analizando…';
