@@ -1938,10 +1938,12 @@ function startRecognition() {
   recognition.onerror = e => { if (e.error !== 'no-speech') console.warn('[SR]', e.error); };
   recognition.onend = () => {
     if (!sessionActive) return;
-    try { recognition.start(); }
-    catch (_) {
-      setTimeout(() => { if (sessionActive) { stopRecognition(); startRecognition(); } }, 150);
-    }
+    // Always do a full reinit on end — simple restart can silently fail after ~4min
+    setTimeout(() => {
+      if (!sessionActive) return;
+      stopRecognition();
+      startRecognition();
+    }, 150);
   };
   recognition.start();
 }
@@ -1949,9 +1951,17 @@ function startRecognition() {
 function stopRecognition() {
   if (!recognition) return;
   recognition.onend = null;
-  recognition.stop();
+  try { recognition.stop(); } catch (_) {}
   recognition = null;
 }
+
+// Watchdog — if session is active but recognition died, restart it every 30s
+setInterval(() => {
+  if (sessionActive && !chatMode && !recognition) {
+    console.warn('[SR watchdog] recognition was null — restarting');
+    startRecognition();
+  }
+}, 30000);
 
 function handleSpeechResult(e) {
   let hasFinal = false;
@@ -2199,6 +2209,10 @@ function splitText(text, max = 180) {
 }
 
 async function speakChunk(text) {
+  // Resume AudioContext before every playback — Chrome suspends it after ~4min inactivity
+  if (audioCtx && audioCtx.state === 'suspended') {
+    try { await audioCtx.resume(); } catch (_) {}
+  }
   const voice = getVoiceKey();
   const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
   if (!r.ok) throw new Error(`TTS ${r.status}`);
@@ -2427,11 +2441,11 @@ async function showSessionSummary(snap, reward = null) {
   const body = document.getElementById('summary-body');
   el.classList.remove('hidden');
 
-  // Fun fact — pick a random unseen one, mark as seen
+  // Fun fact — only on naturally completed sessions (reward !== null), pick unseen randomly
   el.querySelectorAll('.summary-fact').forEach(n => n.remove());
   const voiceId = getVoiceKey();
   const meta = VOICE_META[voiceId];
-  if (meta?.facts?.length) {
+  if (reward && meta?.facts?.length) {
     const seenKey = `facts_seen_${voiceId}`;
     const seen = JSON.parse(localStorage.getItem(seenKey) || '[]');
     const unseen = meta.facts.map((_, i) => i).filter(i => !seen.includes(i));
