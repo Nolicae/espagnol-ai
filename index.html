@@ -1187,6 +1187,30 @@ const lk = {
 };
 
 // ──────────────────────────────────────────────────────────────
+// Language definitions — data filled below after each const declaration
+// ──────────────────────────────────────────────────────────────
+const LANGUAGES = {
+  es: {
+    defaultVoice: 'es-ES-ElviraNeural',
+    srLang: 'es-ES',
+    map: { lonMin: -125, lonMax: 15, latMax: 50, latMin: -45, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
+  pt: {
+    defaultVoice: 'pt-BR-FranciscaNeural',
+    srLang: 'pt-BR',
+    map: { lonMin: -75, lonMax: 40, latMax: 55, latMin: -35, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
+};
+
+// ──────────────────────────────────────────────────────────────
 // UI strings — all visible text, keyed by language
 // ──────────────────────────────────────────────────────────────
 const UI_STRINGS = {
@@ -2692,30 +2716,6 @@ async function speak(text) {
     await speakChunk(chunk);
   }
 }
-
-// ──────────────────────────────────────────────────────────────
-// Language definitions — data filled below after each const declaration
-// ──────────────────────────────────────────────────────────────
-const LANGUAGES = {
-  es: {
-    defaultVoice: 'es-ES-ElviraNeural',
-    srLang: 'es-ES',
-    map: { lonMin: -125, lonMax: 15, latMax: 50, latMin: -45, w: 360, h: 296 },
-    voices: null,
-    meta:   null,
-    system: null,
-    diff:   null,
-  },
-  pt: {
-    defaultVoice: 'pt-BR-FranciscaNeural',
-    srLang: 'pt-BR',
-    map: { lonMin: -75, lonMax: 40, latMax: 55, latMin: -35, w: 360, h: 296 },
-    voices: null,
-    meta:   null,
-    system: null,
-    diff:   null,
-  },
-};
 
 // ──────────────────────────────────────────────────────────────
 // Voice data — positions derived from real coordinates
