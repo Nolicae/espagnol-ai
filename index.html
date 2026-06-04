@@ -804,6 +804,14 @@
     /* Settings spacer — forces scroll height (absolute children don't) */
     .settings-spacer { height: 1040px; pointer-events: none; }
 
+    /* ── Session summary overlay ──────────────────────────────── */
+    .session-summary {
+      position: absolute; inset: 0; z-index: 28;
+      background: rgba(10,12,22,0.88);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 28px; backdrop-filter: blur(6px);
+      overflow-y: auto;
+    }
     .session-summary.hidden { display: none; }
     .summary-card {
       width: 100%; max-width: 340px;
@@ -1583,7 +1591,7 @@ const VOICE_META = {
     ]
   },
   'es-US-PalomaNeural': {
-    levels: ['Recién llegada','Calle Ocho','Tejedora de puentes'],
+    levels: ['Recién llegada', 'Calle Ocho', 'Tejedora de puentes'],
     facts: [
       'Miami es la única ciudad importante de EE. UU. fundada por una mujer: Julia Tuttle, en 1896. Convenció a Henry Flagler de extender su ferrocarril hacia el sur enviándole flores de naranjo durante una helada.',
       'Miami es la única ciudad continental de EE. UU. sin ningún punto a más de 12 metros sobre el nivel del mar. En un siglo, parte de la ciudad podría estar bajo el agua.',
@@ -1591,7 +1599,7 @@ const VOICE_META = {
     ]
   },
   'es-US-AlonsoNeural': {
-    levels: ['Angelino','Hijo del Camino Real','Señor de los Ángeles'],
+    levels: ['Angelino', 'Hijo del Camino Real', 'Señor de los Ángeles'],
     facts: [
       'El nombre completo de Los Ángeles es «El Pueblo de Nuestra Señora la Reina de los Ángeles del Río de Porciúncula» — 44 letras. El río que lo bautizó hoy es casi un canal de cemento.',
       'Los Ángeles tiene el segundo sistema de metro más subutilizado del mundo respecto a su tamaño. La ciudad desmanteló en los años 50 la mayor red de tranvías del planeta para favorecer el automóvil.',
@@ -1599,7 +1607,7 @@ const VOICE_META = {
     ]
   },
   'es-MX-DaliaNeural': {
-    levels: ['Capitalina','Hija del Anáhuac','Heredera de los Aztecas'],
+    levels: ['Capitalina', 'Hija del Anáhuac', 'Heredera de los Aztecas'],
     facts: [
       'Ciudad de México se hunde unos 10 cm al año porque está construida sobre el lago desecado de Texcoco. El Palacio de Bellas Artes ha bajado más de 4 metros desde su inauguración en 1934.',
       'La CDMX tiene más museos que cualquier otra ciudad del mundo excepto Londres: más de 150. Incluye el único museo del mundo dedicado exclusivamente al tequila y otro a la lucha libre.',
@@ -1607,7 +1615,7 @@ const VOICE_META = {
     ]
   },
   'es-MX-JorgeNeural': {
-    levels: ['Tapatío','Jinete de Jalisco','Guardián del Mariachi'],
+    levels: ['Tapatío', 'Jinete de Jalisco', 'Guardián del Mariachi'],
     facts: [
       'Guadalajara es la cuna simultánea del mariachi y del tequila. El «Grito de Independencia» de 1810 no fue en Ciudad de México sino en Dolores, a unas horas de Guadalajara, y Jalisco aportó la mayoría de los insurgentes.',
       'El hospicio Cabañas de Guadalajara alberga los murales de José Clemente Orozco considerados los más grandes del mundo pintados por una sola mano. El «Hombre de Fuego» del techo mide 16 metros.',
@@ -1615,7 +1623,7 @@ const VOICE_META = {
     ]
   },
   'es-CU-BelkysNeural': {
-    levels: ['Habanera','Trovadora del Malecón','Hija de la Revolución'],
+    levels: ['Habanera', 'Trovadora del Malecón', 'Hija de la Revolución'],
     facts: [
       'La Habana tiene más coches americanos de los años 50 que cualquier otro lugar del mundo. Estos «almendrones» siguen circulando gracias a motores soviéticos injertados bajo capós de Chevrolet y Buick.',
       'Cuba tiene la mayor proporción de médicos por habitante del mundo: un médico por cada 150 personas. Exporta médicos a más de 60 países como parte de su política exterior.',
@@ -1623,7 +1631,7 @@ const VOICE_META = {
     ]
   },
   'es-CU-ManuelNeural': {
-    levels: ['Santiaguero','Tambor de la Sierra','Heredero de Maceo'],
+    levels: ['Santiaguero', 'Tambor de la Sierra', 'Heredero de Maceo'],
     facts: [
       'El género «son» — origen directo de la salsa — nació en las montañas cerca de Santiago de Cuba. La primera destilería de ron Bacardí del mundo abrió también en Santiago, en 1862.',
       'Antonio Maceo, el «Titán de Bronce» nacido en Santiago, era hijo de una mujer libre afrocubana y lideró más de 900 acciones militares. Se convirtió en el símbolo de la resistencia sin haber perdido una sola batalla campal.',
@@ -1631,7 +1639,7 @@ const VOICE_META = {
     ]
   },
   'es-DO-RamonaNeural': {
-    levels: ['Dominicana','Hija de La Española','Guardiana del Ozama'],
+    levels: ['Dominicana', 'Hija de La Española', 'Guardiana del Ozama'],
     facts: [
       'Santo Domingo es la ciudad europea más antigua del continente americano, fundada en 1498. Su zona colonial alberga la primera catedral, el primer hospital y la primera universidad de América.',
       'La República Dominicana comparte la isla de La Española con Haití, pero ambos lados tienen climas radicalmente distintos: el dominicano es verde y húmedo; el haitiano, árido y erosionado, resultado de siglos de deforestación diferencial.',
@@ -1639,7 +1647,7 @@ const VOICE_META = {
     ]
   },
   'es-PR-KarinaNeural': {
-    levels: ['Boricua','Guardiana del Morro','Voz del Caribe'],
+    levels: ['Boricua', 'Guardiana del Morro', 'Voz del Caribe'],
     facts: [
       'El Bosque Nacional El Yunque en Puerto Rico es el único bosque tropical dentro del sistema de Bosques Nacionales de EE. UU. Recibe más de 100 mil millones de litros de lluvia al año.',
       'Puerto Rico tiene el radiotelescopio más grande del mundo, Arecibo, que funcionó desde 1963 hasta 2020. Fue el instrumento que envió el primer mensaje intencional al espacio profundo en 1974.',
@@ -1647,7 +1655,7 @@ const VOICE_META = {
     ]
   },
   'es-GT-MartaNeural': {
-    levels: ['Guatemalteca','Descendiente de los Mayas','Guardiana de Tikal'],
+    levels: ['Guatemalteca', 'Descendiente de los Mayas', 'Guardiana de Tikal'],
     facts: [
       'Las ruinas de Tikal aparecen en la primera película de Star Wars (1977) como la base rebelde de Yavin 4. Guatemala tiene más de 30 volcanes activos y es uno de los países con mayor biodiversidad del planeta.',
       'El quetzal, ave nacional de Guatemala y nombre de su moneda, no puede sobrevivir en cautiverio. Para los mayas era sagrado y sus plumas valían más que el oro; matar uno era pena de muerte.',
@@ -1655,7 +1663,7 @@ const VOICE_META = {
     ]
   },
   'es-HN-KarlaNeural': {
-    levels: ['Catracha','Hija de Copán','Guardiana del Mestizaje'],
+    levels: ['Catracha', 'Hija de Copán', 'Guardiana del Mestizaje'],
     facts: [
       'Copán alberga los glifos mayas más complejos jamás descubiertos: el «Altar Q» narra 400 años de historia dinástica en piedra. Honduras posee además el segundo arrecife de coral más largo del mundo.',
       'El nombre «catracho» con el que se conoce a los hondureños viene del general Florencio Xatruch, que lideró tropas centroamericanas contra el filibustero William Walker en 1857. Sus soldados eran llamados «los xatruches».',
@@ -1663,7 +1671,7 @@ const VOICE_META = {
     ]
   },
   'es-SV-LorenaNeural': {
-    levels: ['Cuscatleca','Hija del Cerro Verde','Heredera de Atlácatl'],
+    levels: ['Cuscatleca', 'Hija del Cerro Verde', 'Heredera de Atlácatl'],
     facts: [
       'El Salvador fue en 2021 el primer país del mundo en adoptar el Bitcoin como moneda de curso legal. También es el país más pequeño y más denso de América Central, con la misma extensión que Galicia.',
       'El pupusa, plato nacional salvadoreño, tiene una fecha oficial: el segundo domingo de noviembre es el «Día Nacional de la Pupusa». En 2011 se batió el récord Guinness cocinando una pupusa de 4 metros de diámetro.',
@@ -1671,7 +1679,7 @@ const VOICE_META = {
     ]
   },
   'es-NI-YolandaNeural': {
-    levels: ['Nica','Hija de Rubén Darío','Guardiana de los Lagos'],
+    levels: ['Nica', 'Hija de Rubén Darío', 'Guardiana de los Lagos'],
     facts: [
       'El Lago Nicaragua (Cocibolca) contiene tiburones de agua dulce — los únicos del mundo que aprendieron a adaptarse desde el océano. El poeta nicaragüense Rubén Darío transformó toda la literatura en español con el modernismo.',
       'Nicaragua tiene la mayor área de selva virgen de Centroamérica: la Reserva de la Biosfera de Bosawás, en el norte, es el segundo bosque tropical más grande del hemisferio occidental tras el Amazonas.',
@@ -1679,7 +1687,7 @@ const VOICE_META = {
     ]
   },
   'es-CR-MariaNeural': {
-    levels: ['Tica','Ciudadana sin ejército','Guardiana del Pura Vida'],
+    levels: ['Tica', 'Ciudadana sin ejército', 'Guardiana del Pura Vida'],
     facts: [
       'Costa Rica abolió su ejército en 1948 y destina ese presupuesto a educación y sanidad. Aunque representa solo el 0,03 % de la superficie terrestre, alberga el 5 % de la biodiversidad del planeta.',
       'Costa Rica fue el primer país del mundo en alcanzar el 100 % de electricidad renovable durante más de 300 días consecutivos al año. Toda su energía proviene de agua, viento, sol y volcanes.',
@@ -1687,7 +1695,7 @@ const VOICE_META = {
     ]
   },
   'es-PA-MargaritaNeural': {
-    levels: ['Panameña','Guardiana del Canal','Hija de los Dos Mares'],
+    levels: ['Panameña', 'Guardiana del Canal', 'Hija de los Dos Mares'],
     facts: [
       'Por la curvatura del istmo, al cruzar el Canal de Panamá de este a oeste se viaja del Atlántico al Pacífico, pero se termina MÁS al este de donde se empezó. Ciudad de Panamá fue la primera ciudad europea en la costa del Pacífico americano.',
       'El Canal de Panamá ahorra a los barcos hasta 15.000 km de viaje rodeando el Cabo de Hornos. Cada barco que lo cruza paga un peaje calculado por tonelada — el más caro registrado fue de 400.000 dólares.',
@@ -1695,7 +1703,7 @@ const VOICE_META = {
     ]
   },
   'es-CO-SalomeNeural': {
-    levels: ['Cachacha','Hija de la Sabana','Heredera de El Dorado'],
+    levels: ['Cachacha', 'Hija de la Sabana', 'Heredera de El Dorado'],
     facts: [
       'El Museo del Oro de Bogotá custodia la mayor colección de oro precolombino del mundo: más de 55.000 piezas. La «Ciclovía» bogotana cierra 120 km de calles a los coches cada domingo — es el evento ciclista urbano más grande del mundo.',
       'Colombia es el único país de Sudamérica con costas en dos océanos: el Pacífico y el Atlántico. Es también el segundo país más biodiverso del mundo, tras Brasil, y el primero en especies de aves.',
@@ -1703,7 +1711,7 @@ const VOICE_META = {
     ]
   },
   'es-CO-GonzaloNeural': {
-    levels: ['Paisa','Hijo de la Montaña','Señor de la Eterna Primavera'],
+    levels: ['Paisa', 'Hijo de la Montaña', 'Señor de la Eterna Primavera'],
     facts: [
       'Medellín pasó de ser la ciudad más peligrosa del mundo a principios de los 90 a ganar el premio a ciudad más innovadora del planeta en 2013. Sus teleféricos urbanos conectaron comunas antes aisladas y transformaron la movilidad social.',
       'Medellín se llama «Ciudad de la Eterna Primavera» porque mantiene una temperatura media de 22 °C durante todo el año, gracias a su altitud de 1.500 m en el valle del río Aburrá.',
@@ -1711,7 +1719,7 @@ const VOICE_META = {
     ]
   },
   'es-VE-PaolaNeural': {
-    levels: ['Caraqueña','Hija del Libertador','Heredera de Bolívar'],
+    levels: ['Caraqueña', 'Hija del Libertador', 'Heredera de Bolívar'],
     facts: [
       'El Salto Ángel, en Venezuela, es la catarata más alta del mundo con 979 m — casi 20 veces la altura de las cataratas del Niágara. Simón Bolívar, nacido en Caracas en 1783, liberó seis países americanos.',
       'Venezuela posee las mayores reservas probadas de petróleo del mundo, superando a Arabia Saudí desde 2011. Irónicamente, también tiene la gasolina más barata del planeta: costaba menos de un céntimo de dólar por litro antes de 2016.',
@@ -1719,7 +1727,7 @@ const VOICE_META = {
     ]
   },
   'es-VE-SebastianNeural': {
-    levels: ['Maracucho','Hijo del Lago','Relámpago del Catatumbo'],
+    levels: ['Maracucho', 'Hijo del Lago', 'Relámpago del Catatumbo'],
     facts: [
       'El Relámpago del Catatumbo, sobre el lago de Maracaibo, genera unos 1,2 millones de rayos al año, convirtiendo la zona en el lugar más eléctrico de la Tierra. El lago Maracaibo es también uno de los más antiguos del mundo, con unos 36 millones de años.',
       'El lago de Maracaibo es técnicamente una bahía conectada al mar, no un lago cerrado — lo que lo convierte en uno de los accidentes geográficos más debatidos de la cartografía. Sus aguas contienen petróleo natural que sube a la superficie desde hace siglos.',
@@ -1727,7 +1735,7 @@ const VOICE_META = {
     ]
   },
   'es-EC-AndreaNeural': {
-    levels: ['Quiteña','Hija del Centro del Mundo','Guardiana de los Andes'],
+    levels: ['Quiteña', 'Hija del Centro del Mundo', 'Guardiana de los Andes'],
     facts: [
       'Quito fue la primera ciudad declarada Patrimonio de la Humanidad por la UNESCO (1978). Estar en el ecuador y a 2.850 m de altitud tiene un efecto curioso: allí se pesa ligeramente menos que en cualquier otro lugar del planeta.',
       'Ecuador es el mayor exportador de bananas del mundo y el origen del cacao más fino («arriba»), usado en el chocolate belga y suizo de alta gama. También produce el 70 % de las rosas de tallo largo que se venden en EE. UU.',
@@ -1735,7 +1743,7 @@ const VOICE_META = {
     ]
   },
   'es-EC-LuisNeural': {
-    levels: ['Guayaco','Hijo del Malecón','Señor del Puerto Mayor'],
+    levels: ['Guayaco', 'Hijo del Malecón', 'Señor del Puerto Mayor'],
     facts: [
       'En Guayaquil tuvo lugar en 1822 el encuentro más misterioso de la historia americana: Simón Bolívar y José de San Martín se reunieron en secreto. Nadie sabe qué se dijeron — al día siguiente San Martín se retiró de la política para siempre.',
       'Guayaquil fue fundada dos veces: la primera en 1535 en un lugar diferente, destruida por incendios e inundaciones; la segunda en 1547 en su ubicación actual. Es la ciudad más poblada de Ecuador y su principal puerto.',
@@ -1743,7 +1751,7 @@ const VOICE_META = {
     ]
   },
   'es-PE-CamilaNeural': {
-    levels: ['Limeña','Hija de los Incas','Guardiana de Machu Picchu'],
+    levels: ['Limeña', 'Hija de los Incas', 'Guardiana de Machu Picchu'],
     facts: [
       'Lima es la segunda ciudad desértica más grande del mundo tras El Cairo, pero está permanentemente cubierta de niebla («garúa») y casi nunca llueve. Tiene más restaurantes en el ranking mundial S. Pellegrino que cualquier otra ciudad de Latinoamérica.',
       'Machu Picchu fue construido alrededor de 1450 y abandonado solo 100 años después, antes de que los españoles lo descubrieran. Permaneció oculto hasta 1911, cuando Hiram Bingham lo «redescubrió» guiado por un campesino local de 11 años.',
@@ -1751,7 +1759,7 @@ const VOICE_META = {
     ]
   },
   'es-BO-SofiaNeural': {
-    levels: ['Paceña','Hija del Altiplano','Heredera de Tiwanaku'],
+    levels: ['Paceña', 'Hija del Altiplano', 'Heredera de Tiwanaku'],
     facts: [
       'La Paz tiene la red de teleféricos urbanos más alta del mundo — «Mi Teleférico» — conectando la ciudad con El Alto a más de 4.000 m. Bolivia tiene dos capitales: La Paz (gobierno) y Sucre (constitucional), un acuerdo que lleva desde 1899.',
       'El Salar de Uyuni, en Bolivia, es el desierto de sal más grande del mundo con 10.000 km². Cuando llueve, se convierte en el espejo natural más grande del planeta, reflejando el cielo con tanta precisión que se usa para calibrar satélites.',
@@ -1759,7 +1767,7 @@ const VOICE_META = {
     ]
   },
   'es-PY-TaniaNeural': {
-    levels: ['Asuncena','Hija de las Misiones','Guardiana del Guaraní'],
+    levels: ['Asuncena', 'Hija de las Misiones', 'Guardiana del Guaraní'],
     facts: [
       'Paraguay es uno de los dos únicos países de América del Sur sin costa marítima. Comparte con Brasil la represa de Itaipú, que durante décadas fue la mayor central hidroeléctrica del mundo. El guaraní es lengua co-oficial y la hablan el 90 % de los paraguayos.',
       'Paraguay es el único país del mundo con una bandera diferente por cada lado: el anverso muestra el escudo nacional y el reverso el sello del tesoro público. Esta peculiaridad existe desde su primera constitución.',
@@ -1767,7 +1775,7 @@ const VOICE_META = {
     ]
   },
   'es-CL-CatalinaNeural': {
-    levels: ['Santiaguina','Hija de la Araucanía','Guardiana del Fin del Mundo'],
+    levels: ['Santiaguina', 'Hija de la Araucanía', 'Guardiana del Fin del Mundo'],
     facts: [
       'Chile es el país más largo del mundo de norte a sur: 4.300 km. El desierto de Atacama es el más árido del planeta fuera de los polos — algunas zonas no han registrado lluvia en toda la historia.',
       'Los mapuches de Chile y Argentina son el único pueblo indígena de América que nunca fue conquistado completamente por los españoles. Mantuvieron su independencia durante 350 años mediante el «parlamento», sistema de negociación que los europeos tuvieron que respetar.',
@@ -1775,7 +1783,7 @@ const VOICE_META = {
     ]
   },
   'es-CL-LorenzoNeural': {
-    levels: ['Porteño','Bohemio del Cerro','Almirante de los Cerros'],
+    levels: ['Porteño', 'Bohemio del Cerro', 'Almirante de los Cerros'],
     facts: [
       'Valparaíso tiene 42 cerros y una cultura de ascensores (funiculares) desde 1883, algunos todavía en funcionamiento. Pablo Neruda vivió y escribió parte de su obra más célebre con vistas al puerto, en su casa «La Sebastiana».',
       'Valparaíso fue el puerto más importante del Pacífico Sur durante el siglo XIX, antes de que abriera el Canal de Panamá en 1914. Ese día, la ciudad perdió el 70 % de su tráfico marítimo de la noche a la mañana.',
@@ -1783,7 +1791,7 @@ const VOICE_META = {
     ]
   },
   'es-AR-ElenaNeural': {
-    levels: ['Porteña','Hija del Río de la Plata','Señora del Tango'],
+    levels: ['Porteña', 'Hija del Río de la Plata', 'Señora del Tango'],
     facts: [
       'Buenos Aires tiene más librerías per cápita que cualquier ciudad del mundo. La Avenida 9 de Julio, con 16 carriles, es la avenida más ancha del planeta. El tango nació simultáneamente en los arrabales de Buenos Aires y Montevideo.',
       'Argentina tiene más psicólogos por habitante que cualquier otro país del mundo: uno por cada 100 personas en Buenos Aires, el doble que en Nueva York. La ciudad tiene más teatros que Broadway y el West End juntos.',
@@ -1791,7 +1799,7 @@ const VOICE_META = {
     ]
   },
   'es-AR-TomasNeural': {
-    levels: ['Cordobés','Hijo de la Docta','Guardián de la Reforma'],
+    levels: ['Cordobés', 'Hijo de la Docta', 'Guardián de la Reforma'],
     facts: [
       'La Universidad Nacional de Córdoba (1613) es la más antigua de Argentina. La Reforma Universitaria de 1918, nacida en Córdoba, transformó los sistemas de educación superior de toda América Latina y sigue siendo referencia mundial.',
       'El «tonito» cordobés —el acento cantado que sube y baja como una melodía— es tan reconocible que los argentinos lo imitan para reírse. Tiene raíces en el español andaluz del siglo XVII mezclado con lenguas indígenas de la región.',
@@ -1799,7 +1807,7 @@ const VOICE_META = {
     ]
   },
   'es-UY-ValentinaNeural': {
-    levels: ['Montevideana','Hija de la Banda Oriental','Guardiana del Río de la Plata'],
+    levels: ['Montevideana', 'Hija de la Banda Oriental', 'Guardiana del Río de la Plata'],
     facts: [
       'Uruguay fue el primer país del mundo en legalizar el cannabis (2013) y el primero en separar Iglesia y Estado en América Latina (1917). Tiene la mayor tasa de lectura de Sudamérica y menos desigualdad que cualquier país vecino.',
       'Uruguay fue el primer país del mundo en dar acceso a internet y un portátil a cada niño en edad escolar, en 2007, a través del plan «Ceibal». Hoy tiene la mayor tasa de informatización educativa de América Latina.',
@@ -1807,7 +1815,7 @@ const VOICE_META = {
     ]
   },
   'es-GQ-TeresaNeural': {
-    levels: ['Ecuatoguineana','Hija del Golfo de Guinea','Guardiana del Español Africano'],
+    levels: ['Ecuatoguineana', 'Hija del Golfo de Guinea', 'Guardiana del Español Africano'],
     facts: [
       'Guinea Ecuatorial es el único país hispanohablante de África. Su isla Bioko, donde está Malabo, tiene uno de los ecosistemas de primates más ricos del mundo. El país se convirtió en productor de petróleo en los 90, transformando radicalmente su economía.',
       'El español de Guinea Ecuatorial tiene influencias del fang, el bubi y el pidgin inglés, creando un dialecto único que incluso los hispanohablantes nativos encuentran difícil de entender a primera escucha.',
