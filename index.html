@@ -2916,18 +2916,23 @@ function initVoicesMap() {
         const ring = document.createElementNS(NS, 'circle');
         ring.setAttribute('cx', v.x); ring.setAttribute('cy', v.y);
         ring.setAttribute('r', '12');
+        ring.setAttribute('data-base-r', '12');
+        ring.setAttribute('data-base-sw', '1');
         ring.setAttribute('fill', 'none');
         ring.setAttribute('stroke', v.color);
         ring.setAttribute('stroke-opacity', '0.4');
         ring.setAttribute('stroke-width', '1');
+        ring.setAttribute('class', 'voice-ring');
         g.appendChild(ring);
       }
 
       const dot = document.createElementNS(NS, 'circle');
       dot.setAttribute('cx', v.x); dot.setAttribute('cy', v.y);
       dot.setAttribute('r', isSel ? '6' : '4');
+      dot.setAttribute('data-base-r', isSel ? '6' : '4');
       dot.setAttribute('fill', isSel ? v.color : v.color.replace(/^#/, '') && `${v.color}66`);
       if (isSel) dot.setAttribute('filter', `drop-shadow(0 0 5px ${v.color})`);
+      dot.setAttribute('class', 'voice-dot');
       g.appendChild(dot);
 
       // invisible wider hit target
@@ -2994,11 +2999,17 @@ function initVoicesMap() {
   const mapCtrls = {
     applyTransform: () => {
       mapGroup.setAttribute('transform', `translate(${mapState.px}, ${mapState.py}) scale(${mapState.zoom})`);
-      // Keep dots small: counter-scale them
-      const dotGroups = mapGroup.querySelectorAll('g');
-      const counterScale = 1 / mapState.zoom;
-      dotGroups.forEach(g => {
-        g.setAttribute('transform', `scale(${counterScale})`);
+      // Keep dots small: scale radius inversely with zoom
+      const dotScale = 1 / mapState.zoom;
+      mapGroup.querySelectorAll('.voice-dot').forEach(dot => {
+        const baseR = parseFloat(dot.getAttribute('data-base-r'));
+        dot.setAttribute('r', (baseR * dotScale).toFixed(2));
+      });
+      mapGroup.querySelectorAll('.voice-ring').forEach(ring => {
+        const baseR = parseFloat(ring.getAttribute('data-base-r'));
+        const baseSW = parseFloat(ring.getAttribute('data-base-sw'));
+        ring.setAttribute('r', (baseR * dotScale).toFixed(2));
+        ring.setAttribute('stroke-width', (baseSW * dotScale).toFixed(2));
       });
     },
     wheel: (e) => {
