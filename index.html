@@ -2738,6 +2738,7 @@ async function speakChunk(text) {
   }
   const voice = getVoiceKey();
   const endpoint = currentLang === 'pt' ? '/api/tts-pt' : '/api/tts';
+  console.log(`[TTS] ${endpoint} | voice=${voice} | lang=${currentLang}`);
   const r = await fetch(`${endpoint}?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
   if (!r.ok) throw new Error(`TTS ${r.status}`);
   const decoded = await audioCtx.decodeAudioData(await r.arrayBuffer());
