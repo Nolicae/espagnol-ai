@@ -1177,6 +1177,13 @@ const GROQ_CHAT  = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const HIST_MAX   = 10;
 
+// Timing constants
+const SILENCE_TIMEOUT_MS      = 12000;  // idle silence before AI reprompts
+const AUDIO_CTX_KEEPALIVE_MS  = 20000;  // interval to prevent AudioContext suspension
+const SR_WATCHDOG_MS          = 30000;  // interval to detect dead speech recognition
+const AUDIO_CHUNK_CAP         = 300;    // max buffered audio chunks (~30s at 100ms each)
+const ONBOARD_FADE_MS         = 600;    // onboarding screen fade-out duration
+
 // ──────────────────────────────────────────────────────────────
 // Language runtime
 // ──────────────────────────────────────────────────────────────
@@ -2308,7 +2315,7 @@ function unlockAudio() {
 // Keep audioCtx alive — browsers suspend it after ~1min of silence
 setInterval(() => {
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-}, 20000);
+}, AUDIO_CTX_KEEPALIVE_MS);
 
 // ──────────────────────────────────────────────────────────────
 // Session lifecycle
@@ -2322,7 +2329,7 @@ async function startSession() {
         if (!recorderInitChunk) recorderInitChunk = e.data; // save codec init segment
         audioChunks.push(e.data);
         // Cap rolling buffer to last ~30s (300 × 100ms chunks) to prevent huge blobs
-        if (audioChunks.length > 300) audioChunks.splice(1, audioChunks.length - 300);
+        if (audioChunks.length > AUDIO_CHUNK_CAP) audioChunks.splice(1, audioChunks.length - AUDIO_CHUNK_CAP);
       }
     };
     recorder.start(100);
@@ -2446,7 +2453,7 @@ setInterval(() => {
     console.warn('[SR watchdog] recognition was null — restarting');
     startRecognition();
   }
-}, 30000);
+}, SR_WATCHDOG_MS);
 
 function handleSpeechResult(e) {
   let hasFinal = false;
@@ -2509,7 +2516,7 @@ async function triggerProcessing() {
       if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
     }
     // Timer starts HERE — only after AI has actually finished speaking
-    if (sessionActive) startSilenceTimer(12000);
+    if (sessionActive) startSilenceTimer(SILENCE_TIMEOUT_MS);
   } catch (e) {
     console.error('[pipeline]', e.message);
   } finally {
@@ -2531,7 +2538,7 @@ async function aiGreeting() {
     const greeting = await streamAndSpeak(messages, myToken);
     if (greeting.trim()) history.push({ role: 'assistant', content: greeting });
     // Timer starts after greeting finishes, not before
-    if (sessionActive) startSilenceTimer(12000);
+    if (sessionActive) startSilenceTimer(SILENCE_TIMEOUT_MS);
   } catch (e) {
     console.error('[greeting]', e.message);
   } finally {
@@ -3272,7 +3279,7 @@ applyUIStrings();
         localStorage.setItem('app_lang', btn.dataset.lang);
         screen.style.transition = 'opacity 0.5s';
         screen.style.opacity = '0';
-        setTimeout(() => location.reload(), 600);
+        setTimeout(() => location.reload(), ONBOARD_FADE_MS);
       });
     });
   }
@@ -3296,7 +3303,6 @@ initVoicesMap();
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/service-worker.js')
-        .then(r => console.log('[SW] ok', r.scope))
         .catch(e => console.warn('[SW] failed', e));
     });
   }
