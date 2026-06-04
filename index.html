@@ -2889,7 +2889,10 @@ function initVoicesMap() {
   }
 
   function renderMap(selectedId) {
-    mapSvg.innerHTML = '';
+    // Clear previous map content (but keep mapGroup element)
+    while (mapGroup.firstChild) {
+      mapGroup.removeChild(mapGroup.firstChild);
+    }
 
     // Real coastlines from Natural Earth — injected once loaded (see bottom of initVoicesMap)
     if (window._coastPathD) {
@@ -2900,7 +2903,7 @@ function initVoicesMap() {
       cp.setAttribute('stroke-width', '0.75');
       cp.setAttribute('stroke-linecap', 'round');
       cp.setAttribute('stroke-linejoin', 'round');
-      mapSvg.appendChild(cp);
+      mapGroup.appendChild(cp);
     }
 
     // dots
@@ -2935,9 +2938,14 @@ function initVoicesMap() {
       g.appendChild(hit);
 
       g.addEventListener('click', () => selectVoice(v, true));
-      mapSvg.appendChild(g);
+      mapGroup.appendChild(g);
     }
   }
+
+  // ── Map zoom + pan (initialize BEFORE first renderMap) ────────
+  const mapState = { zoom: 1, px: 0, py: 0, isDragging: false, dragStart: { x: 0, y: 0 } };
+  const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  mapSvg.appendChild(mapGroup);
 
   // Init with saved or default voice
   const savedId = getVoiceKey();
@@ -2983,10 +2991,6 @@ function initVoicesMap() {
       console.warn('[coastlines]', e.message);
     }
   })();
-
-  // ── Map zoom + pan ────────────────────────────────────────────
-  const mapState = { zoom: 1, px: 0, py: 0, isDragging: false, dragStart: { x: 0, y: 0 } };
-  const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   const mapCtrls = {
     applyTransform: () => {
       mapGroup.setAttribute('transform', `translate(${mapState.px}, ${mapState.py}) scale(${mapState.zoom})`);
@@ -3040,13 +3044,7 @@ function initVoicesMap() {
     },
   };
 
-  // Move all map children into the group
-  while (mapSvg.firstChild) {
-    mapGroup.appendChild(mapSvg.firstChild);
-  }
-  mapSvg.appendChild(mapGroup);
-
-  // Attach listeners
+  // Attach zoom/pan listeners
   mapSvg.addEventListener('wheel', mapCtrls.wheel, { passive: false });
   mapSvg.addEventListener('touchstart', mapCtrls.touchStart, { passive: false });
   mapSvg.addEventListener('touchmove', mapCtrls.touchMove, { passive: false });
