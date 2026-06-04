@@ -1216,8 +1216,12 @@ const ONBOARD_FADE_MS         = 600;    // onboarding screen fade-out duration
 // ──────────────────────────────────────────────────────────────
 let currentLang = localStorage.getItem('app_lang') || 'es';
 
-// Auto-migrate: pt-BR-YaraNeural sounds robotic — reset to Francisca
-if (localStorage.getItem('voice_key_pt') === 'pt-BR-YaraNeural') {
+// Auto-migrate: these voices produce corrupt audio — reset to Francisca
+const _BAD_PT_VOICES = new Set(['pt-BR-YaraNeural','pt-BR-GiovannaNeural','pt-BR-DonatoNeural',
+  'pt-BR-BrendaNeural','pt-BR-LeticiaNeural','pt-BR-ElzaNeural','pt-BR-ValerioNeural',
+  'pt-BR-ManuelaNeural','pt-BR-FabioNeural','pt-BR-NicolauNeural','pt-BR-HumbertoNeural',
+  'pt-BR-JulioNeural','pt-PT-FernandaNeural']);
+if (_BAD_PT_VOICES.has(localStorage.getItem('voice_key_pt'))) {
   localStorage.setItem('voice_key_pt', 'pt-BR-FranciscaNeural');
 }
 
@@ -2840,24 +2844,12 @@ const VOICES = [
 LANGUAGES.es.voices = VOICES;
 
 LANGUAGES.pt.voices = [
-  // Brasil — Southeast
+  // Brasil — verified working voices only
   { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:89,  y:257 },
   { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:101, y:253 },
-  { id:'pt-BR-GiovannaNeural',  name:'Giovanna',  city:'Belo Horizonte', country:'Brasil',   trait:'clara',       color:'#B090E8', x:97,  y:244 },
-  { id:'pt-BR-DonatoNeural',    name:'Donato',    city:'Brasília',       country:'Brasil',   trait:'preciso',     color:'#D4A050', x:85,  y:231 },
-  // Brasil — Northeast
-  { id:'pt-BR-BrendaNeural',    name:'Brenda',    city:'Salvador',       country:'Brasil',   trait:'musical',     color:'#E8B86A', x:116, y:222 },
-  { id:'pt-BR-LeticiaNeural',   name:'Letícia',   city:'Fortaleza',      country:'Brasil',   trait:'viva',        color:'#70D4B8', x:117, y:191 },
-  { id:'pt-BR-ElzaNeural',      name:'Elza',      city:'Recife',         country:'Brasil',   trait:'expressiva',  color:'#F0C840', x:128, y:206 },
-  { id:'pt-BR-ValerioNeural',   name:'Valério',   city:'Natal',          country:'Brasil',   trait:'direto',      color:'#C8D870', x:129, y:198 },
-  // Brasil — North & South
-  { id:'pt-BR-ManuelaNeural',   name:'Manuela',   city:'Manaus',         country:'Brasil',   trait:'serena',      color:'#70C8A8', x:47,  y:189 },
-  { id:'pt-BR-FabioNeural',     name:'Fábio',     city:'Porto Alegre',   country:'Brasil',   trait:'cálido',      color:'#90C870', x:75,  y:276 },
-  { id:'pt-BR-NicolauNeural',   name:'Nicolau',   city:'Florianópolis',  country:'Brasil',   trait:'jovial',      color:'#E8904C', x:83,  y:269 },
   { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:80,  y:261 },
-  // Portugal
+  // Portugal — verified working voices only
   { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:206, y:54  },
-  { id:'pt-PT-FernandaNeural',  name:'Fernanda',  city:'Porto',          country:'Portugal', trait:'calorosa',    color:'#D07890', x:205, y:46  },
   { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:211, y:50  },
 ];
 
