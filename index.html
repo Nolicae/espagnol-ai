@@ -2111,7 +2111,7 @@ let recorderInitChunk = null;
 let userSpokeRecently = false;
 
 // TTS interruption
-let ttsSource  = null;
+let ttsSource  = null;  // current <audio> element
 let speakToken = 0;
 
 // Soft: finish current sentence, skip the rest (used when user speaks over AI)
@@ -2123,7 +2123,7 @@ function interruptTTS() {
 function stopTTSNow() {
   speakToken++;
   if (ttsSource) {
-    try { ttsSource.stop(); } catch (_) {}
+    try { ttsSource.pause(); ttsSource.src = ''; } catch (_) {}
     ttsSource = null;
   }
 }
@@ -2732,27 +2732,18 @@ function splitText(text, max = 180) {
 }
 
 async function speakChunk(text) {
-  // Resume AudioContext before every playback — Chrome suspends it after ~4min inactivity
-  if (audioCtx && audioCtx.state === 'suspended') {
-    try { await audioCtx.resume(); } catch (_) {}
-  }
   const voice = getVoiceKey();
   const endpoint = currentLang === 'pt' ? '/api/tts-pt' : '/api/tts';
-  console.log(`[TTS] ${endpoint} | voice=${voice} | lang=${currentLang}`);
   const r = await fetch(`${endpoint}?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
   if (!r.ok) throw new Error(`TTS ${r.status}`);
-  const buffer = await r.arrayBuffer();
-  const decoded = await new Promise((resolve, reject) => {
-    audioCtx.decodeAudioData(buffer, resolve, reject);
-  });
-  const src = audioCtx.createBufferSource();
-  src.buffer = decoded;
-  src.connect(audioCtx.destination);
-  ttsSource = src;
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  ttsSource = audio;
   return new Promise((resolve, reject) => {
-    src.onended = () => { if (ttsSource === src) ttsSource = null; resolve(); };
-    src.onerror = reject;
-    src.start(0);
+    audio.onended = () => { URL.revokeObjectURL(url); if (ttsSource === audio) ttsSource = null; resolve(); };
+    audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+    audio.play().catch(reject);
   });
 }
 
