@@ -312,8 +312,8 @@
       max-width: 240px;
       margin: 10px auto 0;
       font-family: var(--mono);
-      font-size: 9.5px;
-      color: var(--inkDim);
+      font-size: 11px;
+      color: var(--inkSoft);
       letter-spacing: 1.4px;
     }
 
@@ -390,9 +390,9 @@
       justify-content: space-between;
       align-items: baseline;
       font-family: var(--mono);
-      font-size: 10.5px;
+      font-size: 12px;
       letter-spacing: 2px;
-      color: var(--inkDim);
+      color: var(--inkSoft);
       text-transform: uppercase;
       z-index: 20;
     }
@@ -476,8 +476,8 @@
 
     .selected-voice-meta {
       font-family: var(--mono);
-      font-size: 10px;
-      color: var(--inkDim);
+      font-size: 12px;
+      color: var(--inkSoft);
       letter-spacing: 2.2px;
       text-transform: uppercase;
       margin-top: 8px;
@@ -490,7 +490,7 @@
       margin-top: 12px;
       opacity: 0.85;
     }
-    .voice-pts-zero { color: var(--inkDim); opacity: 0.5; }
+    .voice-pts-zero { color: var(--inkSoft); opacity: 0.75; }
     .voice-level {
       font-family: var(--mono); font-size: 9px; letter-spacing: 2.5px;
       text-transform: uppercase; color: var(--vc); opacity: 0.6;
@@ -623,8 +623,8 @@
       justify-content: space-between;
       margin-top: 8px;
       font-family: var(--mono);
-      font-size: 9.5px;
-      color: var(--inkDim);
+      font-size: 11px;
+      color: var(--inkSoft);
       letter-spacing: 1.5px;
     }
 
@@ -700,8 +700,8 @@
       flex-shrink: 0;
     }
     .chat-topbar-label {
-      font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
-      text-transform: uppercase; color: var(--inkDim);
+      font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--inkSoft);
     }
     .chat-settings-icon {
       background: none; border: none; cursor: pointer;
@@ -709,6 +709,13 @@
       transition: color .15s;
     }
     .chat-settings-icon:hover { color: var(--ink); }
+    .chat-close-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--inkSoft); padding: 6px 8px; border-radius: 8px;
+      transition: color .15s; min-width: 44px; min-height: 44px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .chat-close-btn:hover { color: var(--ink); }
     .chat-overlay.hidden { display: none; }
     .chat-messages {
       flex: 1; overflow-y: auto;
@@ -764,7 +771,7 @@
       font-family: var(--sans); font-size: .9rem; color: var(--ink); font-weight: 500;
     }
     .exam-toggle-desc {
-      font-family: var(--mono); font-size: 9.5px; letter-spacing: .8px; color: var(--inkDim);
+      font-family: var(--mono); font-size: 11px; letter-spacing: .8px; color: var(--inkSoft);
     }
     /* Toggle switch */
     .switch { position: relative; width: 60px; height: 40px; flex-shrink: 0; }
@@ -1064,13 +1071,16 @@
       <div class="chat-overlay hidden" id="chat-overlay">
         <div class="chat-topbar">
           <span class="chat-topbar-label">Modo Chat</span>
-          <button class="chat-settings-icon" id="chat-settings-btn" title="Ajustes">
-            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
-                 stroke-width="1.4" stroke-linecap="round">
-              <circle cx="8" cy="8" r="1.6"/>
-              <path d="M8 2v1.4M8 12.6V14M2 8h1.4M12.6 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1"/>
-            </svg>
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="chat-settings-icon" id="chat-settings-btn" title="Ajustes">
+              <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+                   stroke-width="1.4" stroke-linecap="round">
+                <circle cx="8" cy="8" r="1.6"/>
+                <path d="M8 2v1.4M8 12.6V14M2 8h1.4M12.6 8H14M3.5 3.5l1 1M11.5 11.5l1 1M3.5 12.5l1-1M11.5 4.5l1-1"/>
+              </svg>
+            </button>
+            <button class="chat-close-btn" id="chat-close-btn" title="Cerrar" style="font-size: 18px; padding: 6px 8px;">✕</button>
+          </div>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-row" style="padding: 10px 16px 0; border-top: 1px solid var(--rule);">
@@ -2414,6 +2424,10 @@ document.getElementById('chat-settings-btn').addEventListener('click', () => {
   document.getElementById('screen-settings').classList.remove('hidden');
 });
 
+document.getElementById('chat-close-btn').addEventListener('click', () => {
+  document.getElementById('chat-overlay').classList.add('hidden');
+});
+
 // ── Exam mode wiring ─────────────────────────────────────────
 const examToggle = document.getElementById('exam-toggle');
 // Restore persisted state
@@ -2898,7 +2912,7 @@ function initVoicesMap() {
       if (isSel) {
         const ring = document.createElementNS(NS, 'circle');
         ring.setAttribute('cx', v.x); ring.setAttribute('cy', v.y);
-        ring.setAttribute('r', '9');
+        ring.setAttribute('r', '12');
         ring.setAttribute('fill', 'none');
         ring.setAttribute('stroke', v.color);
         ring.setAttribute('stroke-opacity', '0.4');
@@ -2908,7 +2922,7 @@ function initVoicesMap() {
 
       const dot = document.createElementNS(NS, 'circle');
       dot.setAttribute('cx', v.x); dot.setAttribute('cy', v.y);
-      dot.setAttribute('r', isSel ? '4' : '2.5');
+      dot.setAttribute('r', isSel ? '6' : '4');
       dot.setAttribute('fill', isSel ? v.color : v.color.replace(/^#/, '') && `${v.color}66`);
       if (isSel) dot.setAttribute('filter', `drop-shadow(0 0 5px ${v.color})`);
       g.appendChild(dot);
