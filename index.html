@@ -93,7 +93,7 @@
       overflow: hidden;
     }
 
-    /* ── Screen: Conversation ── */
+    /* ── Screen: Conversation ──────────────────────────── */
     .screen-conversation {
       position: relative;
       width: 100%;
@@ -103,7 +103,7 @@
       align-items: center;
     }
 
-    /* ── HUD ── */
+    /* ── HUD ───────────────────────────────────────────── */
     .hud {
       position: absolute;
       top: 52px;
@@ -190,7 +190,7 @@
       stroke-linecap: round; stroke-linejoin: round; fill: none;
     }
 
-    /* ── Orb ── */
+    /* ── Orb ───────────────────────────────────────────── */
     .orb-container {
       position: absolute;
       top: 50%;
@@ -220,7 +220,7 @@
       border-radius: 50%;
     }
 
-    /* ── Prompt label (below orb) ── */
+    /* ── Orb Label ─────────────────────────────────────── */
     .orb-label {
       position: absolute;
       top: calc(50% + 118px);
@@ -237,7 +237,7 @@
       z-index: 10;
     }
 
-    /* ── Timer ── */
+    /* ── Timer ─────────────────────────────────────────── */
     .timer-container {
       position: absolute;
       bottom: 90px;
@@ -317,7 +317,7 @@
       letter-spacing: 1.4px;
     }
 
-    /* ── Screen: Settings ── */
+    /* ── Screen: Settings ──────────────────────────────── */
     .screen-settings {
       position: absolute;
       inset: 0;
@@ -334,6 +334,14 @@
       top: 62px;
       left: 24px; right: 24px;
       z-index: 20;
+    }
+
+    .settings-title {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 2px;
+      color: var(--inkSoft);
+      text-transform: uppercase;
     }
 
     .settings-title-row {
@@ -365,6 +373,10 @@
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
+    }
+
+    .settings-subtitle-italic {
+      font-style: italic;
     }
 
     .settings-section-label {
@@ -518,10 +530,6 @@
       border-bottom: 1px solid var(--rule); margin-bottom: 4px;
     }
 
-    /* keep the rest: */
-    .settings-selected-voice .selected-voice-meta { margin-top: 8px;
-    }
-
     .settings-duration {
       position: absolute;
       top: 654px;
@@ -640,15 +648,7 @@
     .voices-grid::-webkit-scrollbar { width: 6px; }
     .voices-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
 
-    /* ── Session summary overlay ── */
-    .session-summary {
-      position: absolute; inset: 0; z-index: 28;
-      background: rgba(10,12,22,0.88);
-      display: flex; align-items: flex-start; justify-content: center;
-      padding: 28px; backdrop-filter: blur(6px);
-      overflow-y: auto;
-    }
-    /* ── Exam bar — below HUD row, centered ── */
+    /* ── Exam Bar ───────────────────────────────────────── */
     .exam-bar {
       position: absolute;
       top: 100px; left: 0; right: 0;
@@ -680,7 +680,7 @@
       position: absolute; top: 848px; left: 24px; right: 24px;
     }
 
-    /* ── Chat overlay (conversation screen) — fullscreen ── */
+    /* ── Chat Overlay ───────────────────────────────────── */
     .chat-overlay {
       position: absolute;
       inset: 0;
@@ -706,7 +706,6 @@
       transition: color .15s;
     }
     .chat-settings-icon:hover { color: var(--ink); }
-    .chat-messages { padding: 12px 16px 4px; }
     .chat-overlay.hidden { display: none; }
     .chat-messages {
       flex: 1; overflow-y: auto;
@@ -1006,7 +1005,7 @@
           <span id="exam-pick-label">Subir un documento</span>
         </button>
         <span class="exam-file-badge" id="exam-file-badge"></span>
-        <input type="file" id="exam-file-input" accept=".pdf,image/*" style="display:none">
+        <input type="file" id="exam-file-input" accept=".pdf,image/*" style="display:none" aria-label="Cargar archivo">
       </div>
 
       <!-- Orb -->
@@ -1051,7 +1050,7 @@
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-row" style="padding: 10px 16px 0; border-top: 1px solid var(--rule);">
           <input class="chat-input" id="chat-input" type="text"
-                 placeholder="Escribe en español…" autocomplete="off" spellcheck="false"/>
+                 placeholder="Escribe en español…" autocomplete="off" spellcheck="false" aria-label="Mensaje de chat"/>
           <button class="chat-send" id="chat-send" aria-label="Enviar">
             <svg viewBox="0 0 16 16" width="14" height="14" fill="none"
                  stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
@@ -1078,10 +1077,10 @@
     <div class="screen-settings hidden" id="screen-settings">
       <div class="settings-header">
         <div class="settings-title-row">
-          <span style="font-family:var(--mono);font-size:10.5px;letter-spacing:2px;color:var(--inkSoft);text-transform:uppercase;">Ajustes</span>
+          <span class="settings-title">Ajustes</span>
           <button class="settings-close-btn" id="btn-settings-close">cerrar ✕</button>
         </div>
-        <h2 class="settings-subtitle">Elige una <span style="font-style:italic;">voz</span></h2>
+        <h2 class="settings-subtitle">Elige una <span class="settings-subtitle-italic">voz</span></h2>
       </div>
 
       <!-- Language selector -->
@@ -1117,7 +1116,7 @@
         <div class="duration-slider-container">
           <div class="duration-track"></div>
           <div class="duration-fill"  id="duration-fill"></div>
-          <input type="range" min="1" max="30" value="10" class="duration-slider" id="duration-slider">
+          <input type="range" min="1" max="30" value="10" class="duration-slider" id="duration-slider" aria-label="Duración de la sesión">
           <div class="duration-thumb" id="duration-thumb"></div>
         </div>
         <div class="duration-labels"><span>1 MIN</span><span>15</span><span>30 MIN</span></div>
@@ -1131,7 +1130,7 @@
             <span class="exam-toggle-desc">La IA lee un documento y te examina</span>
           </div>
           <label class="switch">
-            <input type="checkbox" id="exam-toggle">
+            <input type="checkbox" id="exam-toggle" aria-label="Activar Modo Examen">
             <span class="switch-track"></span>
           </label>
         </div>
@@ -1145,7 +1144,7 @@
             <span class="exam-toggle-desc">Practica en silencio — sin micrófono ni audio</span>
           </div>
           <label class="switch">
-            <input type="checkbox" id="chat-toggle">
+            <input type="checkbox" id="chat-toggle" aria-label="Activar Modo Chat">
             <span class="switch-track"></span>
           </label>
         </div>
@@ -1568,7 +1567,7 @@ function buildExamSystem(content) {
 // ──────────────────────────────────────────────────────────────
 const VOICE_META = {
   'es-ES-ElviraNeural': {
-    levels: ['Madrileña','Ciudadana del Imperio','Guardiana del Siglo de Oro'],
+    levels: ['Madrileña', 'Ciudadana del Imperio', 'Guardiana del Siglo de Oro'],
     facts: [
       'Madrid toma su nombre del árabe «Mayrit», que significa «lugar de canales de agua». Fundada como asentamiento islámico, fue reconquistada en 1083 y tardó siglos en convertirse en capital.',
       'El Retiro fue durante siglos jardín privado de la realeza; solo se abrió al público en 1868 tras la revolución que derrocó a Isabel II. Hoy acoge un bosque de esculturas y un estanque donde se alquilan botes.',
@@ -1576,7 +1575,7 @@ const VOICE_META = {
     ]
   },
   'es-ES-AlvaroNeural': {
-    levels: ['Barcelonès','Caballero del Mediterráneo','Heredero de la Corona de Aragón'],
+    levels: ['Barcelonès', 'Caballero del Mediterráneo', 'Heredero de la Corona de Aragón'],
     facts: [
       'La Sagrada Família lleva en construcción desde 1882 — más de 140 años. Cuando se termine, será la basílica más alta de Europa, superando a la Catedral de Colonia.',
       'El barrio del Born estuvo enterrado bajo el mercado de Born durante 150 años. Al demolerlo en 2002, aparecieron intactas las calles y casas destruidas durante el asedio de 1714.',
