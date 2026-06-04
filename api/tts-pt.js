@@ -1,5 +1,5 @@
-// Vercel serverless — portugais-tts (local Google TTS-compatible API)
-const TTS_BASE_URL = 'https://nolicae-portugais-tts.hf.space';
+// Vercel serverless — espagnol-tts space handles both Spanish + Portuguese voices
+const TTS_BASE_URL = 'https://nolicae-espagnol-tts.hf.space';
 const DEFAULT_VOICE = 'pt-BR-FranciscaNeural';
 
 async function portugaisTTS(text, voice = DEFAULT_VOICE) {
