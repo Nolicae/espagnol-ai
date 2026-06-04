@@ -2938,6 +2938,79 @@ function initVoicesMap() {
       console.warn('[coastlines]', e.message);
     }
   })();
+
+  // ── Map zoom + pan ────────────────────────────────────────────
+  const mapState = { zoom: 1, px: 0, py: 0, isDragging: false, dragStart: { x: 0, y: 0 } };
+  const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const mapCtrls = {
+    applyTransform: () => {
+      mapGroup.setAttribute('transform', `translate(${mapState.px}, ${mapState.py}) scale(${mapState.zoom})`);
+    },
+    wheel: (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.85 : 1.15;
+      mapState.zoom = Math.max(1, Math.min(4, mapState.zoom * delta));
+      mapCtrls.applyTransform();
+    },
+    touchStart: (e) => {
+      if (e.touches.length === 2) {
+        const p1 = e.touches[0], p2 = e.touches[1];
+        mapState.touchDist = Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY);
+      } else if (e.touches.length === 1) {
+        mapState.isDragging = true;
+        mapState.dragStart = { x: e.touches[0].clientX - mapState.px, y: e.touches[0].clientY - mapState.py };
+      }
+    },
+    touchMove: (e) => {
+      if (e.touches.length === 2 && mapState.touchDist) {
+        const p1 = e.touches[0], p2 = e.touches[1];
+        const newDist = Math.hypot(p2.clientX - p1.clientX, p2.clientY - p1.clientY);
+        const ratio = newDist / mapState.touchDist;
+        mapState.zoom = Math.max(1, Math.min(4, mapState.zoom * ratio));
+        mapState.touchDist = newDist;
+        mapCtrls.applyTransform();
+      } else if (mapState.isDragging && e.touches.length === 1) {
+        mapState.px = e.touches[0].clientX - mapState.dragStart.x;
+        mapState.py = e.touches[0].clientY - mapState.dragStart.y;
+        mapCtrls.applyTransform();
+      }
+    },
+    touchEnd: () => {
+      mapState.isDragging = false;
+      mapState.touchDist = null;
+    },
+    mouseDown: (e) => {
+      if (e.button !== 0) return;
+      mapState.isDragging = true;
+      mapState.dragStart = { x: e.clientX - mapState.px, y: e.clientY - mapState.py };
+    },
+    mouseMove: (e) => {
+      if (!mapState.isDragging) return;
+      mapState.px = e.clientX - mapState.dragStart.x;
+      mapState.py = e.clientY - mapState.dragStart.y;
+      mapCtrls.applyTransform();
+    },
+    mouseUp: () => {
+      mapState.isDragging = false;
+    },
+  };
+
+  // Move all map children into the group
+  while (mapSvg.firstChild) {
+    mapGroup.appendChild(mapSvg.firstChild);
+  }
+  mapSvg.appendChild(mapGroup);
+
+  // Attach listeners
+  mapSvg.addEventListener('wheel', mapCtrls.wheel, { passive: false });
+  mapSvg.addEventListener('touchstart', mapCtrls.touchStart, { passive: false });
+  mapSvg.addEventListener('touchmove', mapCtrls.touchMove, { passive: false });
+  mapSvg.addEventListener('touchend', mapCtrls.touchEnd);
+  mapSvg.addEventListener('mousedown', mapCtrls.mouseDown);
+  document.addEventListener('mousemove', mapCtrls.mouseMove);
+  document.addEventListener('mouseup', mapCtrls.mouseUp);
+  mapSvg.style.touchAction = 'none';
+  mapSvg.style.cursor = 'grab';
 }
 
 // ──────────────────────────────────────────────────────────────
