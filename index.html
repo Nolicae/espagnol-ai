@@ -2733,10 +2733,25 @@ function splitText(text, max = 180) {
 
 async function speakChunk(text) {
   const voice = getVoiceKey();
-  const endpoint = currentLang === 'pt' ? '/api/tts-pt' : '/api/tts';
-  const r = await fetch(`${endpoint}?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
-  if (!r.ok) throw new Error(`TTS ${r.status}`);
-  const blob = await r.blob();
+  let blob;
+  if (currentLang === 'pt') {
+    // Call HF space directly (CORS enabled) — bypasses Vercel proxy
+    const r = await fetch('https://nolicae-portugais-tts.hf.space/v1/text:synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: { text }, voice: { name: voice }, audioConfig: { audioEncoding: 'MP3' } }),
+    });
+    if (!r.ok) throw new Error(`TTS ${r.status}`);
+    const data = await r.json();
+    const binary = atob(data.audioContent);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    blob = new Blob([bytes], { type: 'audio/mpeg' });
+  } else {
+    const r = await fetch(`/api/tts?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
+    if (!r.ok) throw new Error(`TTS ${r.status}`);
+    blob = await r.blob();
+  }
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   ttsSource = audio;
