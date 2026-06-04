@@ -1,4 +1,4 @@
-const CACHE_NAME = 'espagnolai-v48';
+const CACHE_NAME = 'espagnolai-v49';
 
 // Assets statiques à mettre en cache
 const STATIC_ASSETS = [

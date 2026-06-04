@@ -1216,6 +1216,11 @@ const ONBOARD_FADE_MS         = 600;    // onboarding screen fade-out duration
 // ──────────────────────────────────────────────────────────────
 let currentLang = localStorage.getItem('app_lang') || 'es';
 
+// Auto-migrate: pt-BR-YaraNeural sounds robotic — reset to Francisca
+if (localStorage.getItem('voice_key_pt') === 'pt-BR-YaraNeural') {
+  localStorage.setItem('voice_key_pt', 'pt-BR-FranciscaNeural');
+}
+
 // localStorage key helpers — all keys are language-prefixed
 const lk = {
   voiceKey:      () => `voice_key_${currentLang}`,
@@ -2847,7 +2852,6 @@ LANGUAGES.pt.voices = [
   { id:'pt-BR-ValerioNeural',   name:'Valério',   city:'Natal',          country:'Brasil',   trait:'direto',      color:'#C8D870', x:129, y:198 },
   // Brasil — North & South
   { id:'pt-BR-ManuelaNeural',   name:'Manuela',   city:'Manaus',         country:'Brasil',   trait:'serena',      color:'#70C8A8', x:47,  y:189 },
-  { id:'pt-BR-YaraNeural',      name:'Yara',      city:'Belém',          country:'Brasil',   trait:'suave',       color:'#D890C8', x:83,  y:184 },
   { id:'pt-BR-FabioNeural',     name:'Fábio',     city:'Porto Alegre',   country:'Brasil',   trait:'cálido',      color:'#90C870', x:75,  y:276 },
   { id:'pt-BR-NicolauNeural',   name:'Nicolau',   city:'Florianópolis',  country:'Brasil',   trait:'jovial',      color:'#E8904C', x:83,  y:269 },
   { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:80,  y:261 },
