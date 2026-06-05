@@ -2331,6 +2331,17 @@ function toArabicNumerals(str) {
   return String(str).split('').map(d => arabicDigits[parseInt(d)] || d).join('');
 }
 
+// Initialize timer display based on current language
+function initializeTimerDisplay() {
+  if (currentLang === 'ar') {
+    timerMm.textContent = '٠٠';
+    timerSs.textContent = '٠٠';
+  } else {
+    timerMm.textContent = '00';
+    timerSs.textContent = '00';
+  }
+}
+
 // ──────────────────────────────────────────────────────────────
 // App state
 // ──────────────────────────────────────────────────────────────
@@ -3636,11 +3647,8 @@ document.querySelectorAll('.lang-chip').forEach(chip => {
 // Init voice map
 initVoicesMap();
 
-// Init timer display in current language (Arabic numerals if ar)
-if (currentLang === 'ar') {
-  timerMm.textContent = '٠٠';
-  timerSs.textContent = '٠٠';
-}
+// Init timer display in current language
+initializeTimerDisplay();
 </script>
 
 <script>
