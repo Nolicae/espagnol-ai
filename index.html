@@ -988,9 +988,9 @@
     [dir="rtl"] .exam-toggle-row { flex-direction: row-reverse; }
     [dir="rtl"] .settings-lang-row { flex-direction: row-reverse; }
     [dir="rtl"] #chat-input { text-align: right; direction: rtl; }
-    /* Exclude timer and time-selector from RTL */
+    /* Exclude timer and duration-slider from RTL */
     [dir="rtl"] #timer { direction: ltr; }
-    [dir="rtl"] .time-selector { direction: ltr; }
+    [dir="rtl"] .duration-slider { direction: ltr; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
@@ -2324,6 +2324,13 @@ const timerSs     = document.getElementById('timer-ss');
 const timerFill   = document.getElementById('timer-fill');
 const timerDot    = document.getElementById('timer-dot');
 
+// Helper: convert digits to Arabic numerals for RTL languages
+function toArabicNumerals(str) {
+  if (currentLang !== 'ar') return str;
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return String(str).split('').map(d => arabicDigits[parseInt(d)] || d).join('');
+}
+
 // ──────────────────────────────────────────────────────────────
 // App state
 // ──────────────────────────────────────────────────────────────
@@ -2539,8 +2546,8 @@ function chronoTick() {
   chronoSeconds--;
   const mm  = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
   const ss  = String(chronoSeconds % 60).padStart(2, '0');
-  timerMm.textContent = mm;
-  timerSs.textContent = ss;
+  timerMm.textContent = toArabicNumerals(mm);
+  timerSs.textContent = toArabicNumerals(ss);
   const pct = chronoSeconds / (sessionDuration * 60);
   timerFill.style.width = `${pct * 100}%`;
   timerDot.style.left   = `calc(${pct * 100}% - 5px)`;
@@ -2552,8 +2559,8 @@ function chronoStart(durationMinutes) {
   chronoSeconds   = durationMinutes * 60;
   const mm = String(Math.floor(chronoSeconds / 60)).padStart(2, '0');
   const ss = String(chronoSeconds % 60).padStart(2, '0');
-  timerMm.textContent       = mm;
-  timerSs.textContent       = ss;
+  timerMm.textContent       = toArabicNumerals(mm);
+  timerSs.textContent       = toArabicNumerals(ss);
   timerFill.style.width     = '100%';
   timerDot.style.left       = 'calc(100% - 5px)';
   chronoInterval = setInterval(chronoTick, 1000);
@@ -2562,8 +2569,8 @@ function chronoStart(durationMinutes) {
 function chronoStop() {
   clearInterval(chronoInterval);
   chronoInterval = null;
-  timerMm.textContent   = '00';
-  timerSs.textContent   = '00';
+  timerMm.textContent   = toArabicNumerals('00');
+  timerSs.textContent   = toArabicNumerals('00');
   timerFill.style.width = '0%';
   timerDot.style.left   = '-5px';
 }
