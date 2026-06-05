@@ -1051,6 +1051,13 @@
             <div class="onboard-lang-sub">١٦ دولة · ٣٢ صوتاً</div>
           </div>
         </button>
+        <button class="onboard-lang-btn" data-lang="ru">
+          <div class="onboard-lang-glyph ru">Р</div>
+          <div class="onboard-lang-info">
+            <div class="onboard-lang-name">Русский</div>
+            <div class="onboard-lang-sub">Россия · XX голосов</div>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -1175,6 +1182,7 @@
           <button class="lang-chip" data-lang="es">Español</button>
           <button class="lang-chip" data-lang="pt">Português</button>
           <button class="lang-chip" data-lang="ar">العربية</button>
+          <button class="lang-chip" data-lang="ru">Русский</button>
         </div>
       </div>
 
@@ -3844,7 +3852,7 @@ applyUIStrings();
 const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
 const langDropdownMenu = document.getElementById('lang-dropdown-menu');
 const langDropdownLabel = document.getElementById('lang-dropdown-label');
-const langNames = { es: 'Español', pt: 'Português', ar: 'العربية' };
+const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский' };
 
 langDropdownToggle.addEventListener('click', () => {
   langDropdownMenu.classList.toggle('hidden');
