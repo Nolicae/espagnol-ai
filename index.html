@@ -2312,68 +2312,11 @@ LANGUAGES.ru.meta = {
     level: 'A1',
     fact: 'Москва — столица России и самый большой город Европы по населению (12+ млн жителей)'
   },
-  'ru-RU-SvetlanaPetersburgNeural': {
-    level: 'A2',
-    fact: 'Санкт-Петербург построен на 42 островах и имеет более 300 мостов'
-  },
-  'ru-RU-SvetlanaNovNeural': {
-    level: 'B1',
-    fact: 'Новосибирск — центр науки Сибири с более чем 40 исследовательскими учреждениями'
-  },
-  'ru-RU-SvetlanaEkNeural': {
-    level: 'B2',
-    fact: 'Екатеринбург расположен на границе между Европой и Азией'
-  },
-  'ru-RU-SvetlanaVladNeural': {
-    level: 'B1',
-    fact: 'Владивосток — главный порт России на Тихом океане'
-  },
-  'ru-RU-SvetlanaSochiNeural': {
-    level: 'A2',
-    fact: 'Сочи известен как русская Ривьера на Чёрном море'
-  },
-  'ru-RU-SvetlanaKazanNeural': {
-    level: 'B1',
-    fact: 'Казань — столица Республики Татарстан с уникальной культурой'
-  },
-  'ru-RU-SvetlanaSamaraNeural': {
-    level: 'B2',
-    fact: 'Самара — центр космической промышленности России'
-  },
   'ru-RU-DmitryNeural': {
     level: 'A1',
     fact: 'Кремль в Москве — один из крупнейших средневековых крепостных комплексов в мире'
   },
-  'ru-RU-DmitryPetersburgNeural': {
-    level: 'A2',
-    fact: 'Зимний дворец в Санкт-Петербурге был резиденцией русских императоров'
-  },
-  'ru-RU-DmitryNovNeural': {
-    level: 'B1',
-    fact: 'Новосибирск основан в 1893 году как железнодорожная станция'
-  },
-  'ru-RU-DmitryEkNeural': {
-    level: 'B2',
-    fact: 'Уральские горы около Екатеринбурга богаты драгоценными камнями'
-  },
-  'ru-RU-DmitryVladNeural': {
-    level: 'B1',
-    fact: 'Владивосток находится на 8000 км от Москвы по Транс-Сибирской магистрали'
-  },
-  'ru-RU-DmitryLoSochiNeural': {
-    level: 'A2',
-    fact: 'Олимпийские игры 2014 года проходили в Сочи'
-  },
-  'ru-RU-DmitryKazanNeural': {
-    level: 'B1',
-    fact: 'Казанский Кремль — уникальный памятник архитектуры Востока и Запада'
-  },
-  'ru-RU-DmitrySamaraNeural': {
-    level: 'B2',
-    fact: 'Первый искусственный спутник Земли был запущен с космодрома близ Самары'
-  },
 };
-
 const LEVEL_THRESHOLDS = [0, 150, 400];
 
 function getVoiceLevel(voiceId) {
@@ -3333,24 +3276,9 @@ LANGUAGES.ar.voices = [
 ];
 
 LANGUAGES.ru.voices = [
-  // Female voices (8)
-  { id:'ru-RU-SvetlanaNeural',         name:'Светлана', city:'Москва',           country:'Россия', trait:'Киберсетевой',     color:'#6BA3D8', x:42,  y:163 },
-  { id:'ru-RU-SvetlanaPetersburgNeural', name:'Инна',      city:'Санкт-Петербург', country:'Россия', trait:'Культурная',       color:'#7CB8E8', x:25,  y:127 },
-  { id:'ru-RU-SvetlanaNovNeural',      name:'Полина',   city:'Новосибирск',     country:'Россия', trait:'Научная',          color:'#A890D8', x:151, y:169 },
-  { id:'ru-RU-SvetlanaEkNeural',       name:'Мария',    city:'Екатеринбург',    country:'Россия', trait:'Промышленная',     color:'#D89070', x:98,  y:154 },
-  { id:'ru-RU-SvetlanaVladNeural',     name:'Елена',    city:'Владивосток',     country:'Россия', trait:'Дальневосточная', color:'#70D8A8', x:268, y:271 },
-  { id:'ru-RU-SvetlanaSochiNeural',    name:'Софья',    city:'Сочи',            country:'Россия', trait:'Курортная',        color:'#E8A870', x:47,  y:268 },
-  { id:'ru-RU-SvetlanaKazanNeural',    name:'Алена',    city:'Казань',          country:'Россия', trait:'Татарская',        color:'#D070D8', x:70,  y:161 },
-  { id:'ru-RU-SvetlanaSamaraNeural',   name:'Виктория', city:'Самара',          country:'Россия', trait:'Космическая',      color:'#B8D870', x:72,  y:185 },
-  // Male voices (8)
-  { id:'ru-RU-DmitryNeural',           name:'Дмитрий',  city:'Москва',           country:'Россия', trait:'Политический',     color:'#4A8CC8', x:42,  y:163 },
-  { id:'ru-RU-DmitryPetersburgNeural', name:'Сергей',   city:'Санкт-Петербург', country:'Россия', trait:'Императорский',     color:'#5A9FD8', x:25,  y:127 },
-  { id:'ru-RU-DmitryNovNeural',        name:'Иван',     city:'Новосибирск',     country:'Россия', trait:'Исследовательский', color:'#7A70C8', x:151, y:169 },
-  { id:'ru-RU-DmitryEkNeural',         name:'Александр', city:'Екатеринбург',    country:'Россия', trait:'Металлургический',  color:'#C87050', x:98,  y:154 },
-  { id:'ru-RU-DmitryVladNeural',       name:'Николай',  city:'Владивосток',     country:'Россия', trait:'Тихоокеанский',     color:'#50C880', x:268, y:271 },
-  { id:'ru-RU-DmitryLoSochiNeural',    name:'Лев',      city:'Сочи',            country:'Россия', trait:'Горный',           color:'#D88050', x:47,  y:268 },
-  { id:'ru-RU-DmitryKazanNeural',      name:'Раиль',    city:'Казань',          country:'Россия', trait:'Исламский',        color:'#B850D8', x:70,  y:161 },
-  { id:'ru-RU-DmitrySamaraNeural',     name:'Юрий',     city:'Самара',          country:'Россия', trait:'Авиакосмический',   color:'#90C850', x:72,  y:185 },
+  // Only 2 real edge-tts Russian voices exist
+  { id:'ru-RU-SvetlanaNeural', name:'Светлана', city:'Москва', country:'Россия', trait:'Дружелюбная', color:'#6BA3D8', x:42, y:163 },
+  { id:'ru-RU-DmitryNeural',   name:'Дмитрий',  city:'Москва', country:'Россия', trait:'Спокойный',   color:'#E87040', x:42, y:163 },
 ];
 
 function hexToRgb(hex) {
