@@ -3218,6 +3218,7 @@ function initVoicesMap() {
     const idx = getLangVoices().findIndex(x => x.id === v.id) + 1;
     ctrEl.textContent  = `${String(idx).padStart(2,'0')} / ${getLangVoices().length}`;
     renderMap(v.id);
+    mapCtrls.applyTransform();
   }
 
   function renderMap(selectedId) {
@@ -3283,11 +3284,6 @@ function initVoicesMap() {
   const mapState = { zoom: 1, px: 0, py: 0, isDragging: false, dragStart: { x: 0, y: 0 } };
   const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   mapSvg.appendChild(mapGroup);
-
-  // Init with saved or default voice
-  const savedId = getVoiceKey();
-  const current = getLangVoices().find(v => v.id === savedId) || getLangVoices()[0];
-  selectVoice(current, false);
 
   // Load real coastlines from Natural Earth 110m (async, re-renders once ready)
   (async () => {
@@ -3403,6 +3399,12 @@ function initVoicesMap() {
   document.addEventListener('mouseup', mapCtrls.mouseUp);
   mapSvg.style.touchAction = 'none';
   mapSvg.style.cursor = 'grab';
+
+  // Init with saved or default voice (after mapCtrls is defined)
+  const savedId = getVoiceKey();
+  const current = getLangVoices().find(v => v.id === savedId) || getLangVoices()[0];
+  selectVoice(current, false);
+  mapCtrls.applyTransform();
 }
 
 // ──────────────────────────────────────────────────────────────
