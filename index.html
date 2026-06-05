@@ -976,6 +976,14 @@
         bottom: 120px;
       }
     }
+
+    /* ── RTL support for Arabic ── */
+    [dir="rtl"] .settings-panel { direction: rtl; }
+    [dir="rtl"] .chat-messages { direction: rtl; text-align: right; }
+    [dir="rtl"] .chat-input-row { flex-direction: row-reverse; }
+    [dir="rtl"] .exam-toggle-row { flex-direction: row-reverse; }
+    [dir="rtl"] .settings-lang-row { flex-direction: row-reverse; }
+    [dir="rtl"] #chat-input { text-align: right; direction: rtl; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
@@ -1370,6 +1378,55 @@ A tua missão durante esta sessão:
 NUNCA digas adeus nem encerres a sessão — o utilizador controla quando termina.
 Se recebes "[silêncio]", reformula a última pergunta de outra forma.
 Se recebes "[início de sessão]", apresenta-te como examinador numa frase e lança imediatamente a primeira pergunta sobre o material.`,
+  },
+  ar: {
+    inactive:           'غير نشط',
+    live:               'مباشر',
+    speaking:           'يتكلم',
+    pressToTalk:        'اضغط للتحدث',
+    chatMode:           'محادثة',
+    settingsTitle:      'الإعدادات',
+    settingsClose:      'إغلاق ✕',
+    settingsSubtitle:   'اختر',
+    settingsSubItalic:  'صوتاً',
+    worldLabel:         'العالم العربي',
+    durationLabel:      'المدة',
+    durationMin:        'دقيقة',
+    dur1:               '١ دقيقة',
+    dur15:              '١٥',
+    dur30:              '٣٠ دقيقة',
+    examLabel:          'وضع الاختبار',
+    examDesc:           'يقرأ الذكاء الاصطناعي مستنداً ويختبرك',
+    chatLabel:          'وضع المحادثة',
+    chatDesc:           'تمرّن بالكتابة — بدون ميكروفون',
+    saveBtn:            'حفظ',
+    chatPlaceholder:    'اكتب بالعربية…',
+    chatTopbar:         'وضع المحادثة',
+    uploadDoc:          'رفع مستند',
+    sessionSummary:     'ملخص الجلسة',
+    analyzing:          'جارٍ التحليل…',
+    newTitle:           'عنوان جديد',
+    summaryPrompt:      'لخّص هذه الجلسة في ٣ نقاط:\n❌ الأخطاء المصحَّحة (مع الشكل الصحيح)\n✅ ما سار بشكل جيد\n📚 المفردات الأساسية المستخدمة',
+    summarySystem:      'أنت مساعد تعليمي. حلّل جلسة تدريب اللغة العربية هذه وأجب بالعربية. كن موجزاً، مشجِّعاً وعملياً.',
+    summaryError:       'الملخص غير متاح.',
+    silencePrompt:      '[صمت]',
+    sessionStart:       '[بداية الجلسة]',
+    fallbackGreeting:   'مرحباً! عمّ تريد أن تتحدث اليوم؟',
+    examSystemFn: (content) =>
+      `أنت أستاذ لغة عربية ومحقق صارم لكن عادل.
+رفع المستخدم المادة الدراسية التالية:
+----
+${content}
+----
+مهمتك خلال هذه الجلسة:
+- اسأل المستخدم عن هذه المادة بالعربية، بأسئلة محددة ومتدرجة
+- قيّم إجاباته: صحح ما هو صحيح، وصحح ما هو خاطئ بشكل طبيعي
+- إذا ارتكب خطأً في العربية، صحّحه واطلب منه إعادة الشكل الصحيح
+- تقدم في المادة بشكل منظم، مفهوماً تلو الآخر
+- جملتان كحد أقصى في كل دور
+لا تقل وداعاً ولا تنهِ الجلسة — المستخدم هو من يتحكم في إنهائها.
+إذا تلقيتَ "[صمت]"، أعد صياغة السؤال الأخير بطريقة أخرى.
+إذا تلقيتَ "[بداية الجلسة]"، قدّم نفسك كمحقق في جملة واحدة وابدأ فوراً بالسؤال الأول عن المادة.`,
   },
 };
 
