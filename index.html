@@ -3093,13 +3093,13 @@ const VOICES = [
 LANGUAGES.es.voices = VOICES;
 
 LANGUAGES.pt.voices = [
-  // Brasil — verified working voices only
-  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:89,  y:257 },
-  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:101, y:253 },
-  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:80,  y:261 },
-  // Portugal — verified working voices only
-  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:206, y:54  },
-  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:211, y:50  },
+  // Brasil — verified working voices only (spaced for better UX)
+  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:85,  y:264 },
+  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:110, y:250 },
+  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:75,  y:270 },
+  // Portugal — verified working voices only (better spacing)
+  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:200, y:60  },
+  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:218, y:45  },
 ];
 
 LANGUAGES.ar.voices = [
@@ -3635,6 +3635,12 @@ document.querySelectorAll('.lang-chip').forEach(chip => {
 
 // Init voice map
 initVoicesMap();
+
+// Init timer display in current language (Arabic numerals if ar)
+if (currentLang === 'ar') {
+  timerMm.textContent = '٠٠';
+  timerSs.textContent = '٠٠';
+}
 </script>
 
 <script>
