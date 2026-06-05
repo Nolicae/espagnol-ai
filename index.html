@@ -1275,7 +1275,7 @@ const LANGUAGES = {
   pt: {
     defaultVoice: 'pt-BR-FranciscaNeural',
     srLang: 'pt-BR',
-    map: { lonMin: -75, lonMax: 40, latMax: 55, latMin: -35, w: 360, h: 296 },
+    map: { lonMin: -60, lonMax: 30, latMax: 50, latMin: -30, w: 360, h: 296 },
     voices: null,
     meta:   null,
     system: null,
@@ -3093,13 +3093,13 @@ const VOICES = [
 LANGUAGES.es.voices = VOICES;
 
 LANGUAGES.pt.voices = [
-  // Brasil — verified working voices only (spaced for better UX)
-  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:85,  y:264 },
-  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:110, y:250 },
-  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:75,  y:270 },
-  // Portugal — verified working voices only (better spacing)
-  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:200, y:60  },
-  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:218, y:45  },
+  // Brasil — verified working voices only (centered projection, better spacing)
+  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:56,  y:274 },
+  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:68,  y:270 },
+  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:44,  y:281 },
+  // Portugal — verified working voices only (centered projection)
+  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:204, y:41  },
+  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:208, y:37  },
 ];
 
 LANGUAGES.ar.voices = [
