@@ -1258,6 +1258,15 @@ const LANGUAGES = {
     system: null,
     diff:   null,
   },
+  ar: {
+    defaultVoice: 'ar-SA-ZariyahNeural',
+    srLang: 'ar-SA',
+    map: { lonMin: -10, lonMax: 60, latMax: 40, latMin: 10, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -2743,7 +2752,19 @@ function splitText(text, max = 180) {
 async function speakChunk(text) {
   const voice = getVoiceKey();
   let blob;
-  if (currentLang === 'pt') {
+  if (currentLang === 'ar') {
+    const r = await fetch('https://nolicae-arabe-tts.hf.space/v1/text:synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: { text }, voice: { name: voice }, audioConfig: { audioEncoding: 'MP3' } }),
+    });
+    if (!r.ok) throw new Error(`TTS ${r.status}`);
+    const data = await r.json();
+    const binary = atob(data.audioContent);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    blob = new Blob([bytes], { type: 'audio/mpeg' });
+  } else if (currentLang === 'pt') {
     // Call HF space directly (CORS enabled) — bypasses Vercel proxy
     const r = await fetch('https://nolicae-portugais-tts.hf.space/v1/text:synthesize', {
       method: 'POST',
@@ -3283,6 +3304,8 @@ requestAnimationFrame(drawOrbFrame);
 // ── Apply UI strings for current language ────────────────────
 function applyUIStrings() {
   const U = UI_STRINGS[currentLang] || UI_STRINGS.es;
+  // RTL direction for Arabic
+  document.documentElement.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
   const settingsTitle = document.querySelector('#screen-settings .settings-title-row span');
   if (settingsTitle) settingsTitle.textContent = U.settingsTitle;
   const settingsCloseBtn = document.getElementById('btn-settings-close');
