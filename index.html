@@ -3272,7 +3272,9 @@ function initVoicesMap() {
       const hit = document.createElementNS(NS, 'circle');
       hit.setAttribute('cx', v.x); hit.setAttribute('cy', v.y);
       hit.setAttribute('r', '14');
+      hit.setAttribute('data-base-r', '14');
       hit.setAttribute('fill', 'transparent');
+      hit.setAttribute('class', 'voice-hit');
       g.appendChild(hit);
 
       g.addEventListener('click', () => selectVoice(v, true));
@@ -3338,6 +3340,10 @@ function initVoicesMap() {
         const baseSW = parseFloat(ring.getAttribute('data-base-sw'));
         ring.setAttribute('r', (baseR * dotScale).toFixed(2));
         ring.setAttribute('stroke-width', (baseSW * dotScale).toFixed(2));
+      });
+      mapGroup.querySelectorAll('.voice-hit').forEach(hit => {
+        const baseR = parseFloat(hit.getAttribute('data-base-r'));
+        hit.setAttribute('r', (baseR * dotScale).toFixed(2));
       });
     },
     wheel: (e) => {
