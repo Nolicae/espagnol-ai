@@ -1332,7 +1332,7 @@ const LANGUAGES = {
   ru: {
     defaultVoice: 'ru-RU-SvetlanaNeural',
     srLang: 'ru-RU',
-    map: { lonMin: 20, lonMax: 170, latMax: 75, latMin: 40, w: 360, h: 296 },
+    map: { lonMin: 20, lonMax: 50, latMax: 64, latMin: 52, w: 360, h: 296 },
     voices: null,
     meta:   null,
     system: null,
@@ -2313,8 +2313,8 @@ LANGUAGES.ru.meta = {
     fact: 'Москва — столица России и самый большой город Европы по населению (12+ млн жителей)'
   },
   'ru-RU-DmitryNeural': {
-    level: 'A1',
-    fact: 'Кремль в Москве — один из крупнейших средневековых крепостных комплексов в мире'
+    level: 'A2',
+    fact: 'Санкт-Петербург построен на 42 островах и имеет более 300 мостов — больше, чем Венеция'
   },
 };
 const LEVEL_THRESHOLDS = [0, 150, 400];
@@ -3276,9 +3276,8 @@ LANGUAGES.ar.voices = [
 ];
 
 LANGUAGES.ru.voices = [
-  // Only 2 real edge-tts Russian voices exist
-  { id:'ru-RU-SvetlanaNeural', name:'Светлана', city:'Москва', country:'Россия', trait:'Дружелюбная', color:'#6BA3D8', x:42, y:163 },
-  { id:'ru-RU-DmitryNeural',   name:'Дмитрий',  city:'Москва', country:'Россия', trait:'Спокойный',   color:'#E87040', x:42, y:163 },
+  { id:'ru-RU-SvetlanaNeural', name:'Светлана', city:'Москва',           country:'Россия', trait:'Дружелюбная', color:'#6BA3D8', x:211, y:204 },
+  { id:'ru-RU-DmitryNeural',   name:'Дмитрий',  city:'Санкт-Петербург', country:'Россия', trait:'Спокойный',   color:'#E87040', x:124, y:100 },
 ];
 
 function hexToRgb(hex) {
