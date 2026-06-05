@@ -326,13 +326,14 @@
       background: var(--bg3);
       z-index: 30;
       overflow-y: auto;
+      padding: 24px;
     }
     .screen-settings.hidden { display: none; }
 
     .settings-header {
       position: relative;
       padding: 0;
-      margin-bottom: 0;
+      margin-bottom: 16px;
       z-index: 20;
     }
 
@@ -813,7 +814,7 @@
     }
 
     /* Settings spacer — forces scroll height (absolute children don't) */
-    .settings-spacer { height: 1040px; pointer-events: none; }
+    .settings-spacer { height: 300px; pointer-events: none; }
 
     /* ── Session summary overlay ──────────────────────────────── */
     .session-summary {
@@ -955,7 +956,7 @@
 
     /* ── Language dropdown (settings) ── */
     .settings-lang-dropdown {
-      padding: 0 24px; margin-bottom: 24px; position: relative;
+      padding: 0; margin-bottom: 24px; position: relative;
     }
     .lang-dropdown-btn {
       width: 100%; padding: 14px 16px; border-radius: 20px;
