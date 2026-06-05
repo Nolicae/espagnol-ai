@@ -3100,7 +3100,7 @@ async function stt(blob, type) {
   fd.append('file', blob, `rec.${ext}`);
   fd.append('model', 'whisper-large-v3');
   // Map language codes: es → es, pt-BR/pt-PT → pt, ar-SA/ar-DZ/... → ar
-  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : 'es';
+  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : 'es';
   fd.append('language', whisperLang);
   fd.append('response_format', 'json');
   const r = await fetch(GROQ_STT, {
