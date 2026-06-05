@@ -952,21 +952,45 @@
       color: var(--inkSoft); margin-top: 4px;
     }
 
-    /* ── Language chip row (settings) ── */
-    .settings-lang-row {
-      position: absolute; top: 170px; left: 24px; right: 24px;
-      display: flex; gap: 10px;
+    /* ── Language dropdown (settings) ── */
+    .settings-lang-dropdown {
+      padding: 0 24px; margin-bottom: 24px; position: relative;
     }
-    .lang-chip {
-      flex: 1; padding: 14px 16px; border-radius: 20px;
+    .lang-dropdown-btn {
+      width: 100%; padding: 14px 16px; border-radius: 20px;
       font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px;
       text-transform: uppercase; cursor: pointer;
       border: 1px solid var(--rule); background: rgba(255,255,255,0.04);
-      color: var(--inkSoft); transition: background .15s, border-color .15s;
+      color: var(--ink); transition: background .15s, border-color .15s;
+      text-align: left;
+    }
+    .lang-dropdown-btn:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .lang-dropdown-menu {
+      position: absolute; top: 100%; left: 24px; right: 24px; z-index: 100;
+      background: var(--bg2); border: 1px solid var(--rule); border-radius: 12px;
+      overflow: hidden; margin-top: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .lang-dropdown-menu.hidden {
+      display: none;
+    }
+    .lang-chip {
+      display: block; width: 100%; padding: 14px 16px; border: none;
+      font-family: var(--mono); font-size: 12px; letter-spacing: 1.5px;
+      text-transform: uppercase; cursor: pointer;
+      background: transparent; color: var(--inkSoft); transition: background .15s;
+      text-align: left;
+    }
+    .lang-chip:hover {
+      background: rgba(255,255,255,0.06);
     }
     .lang-chip.active {
       background: rgba(255,255,255,0.10);
-      border-color: var(--vc); color: var(--ink);
+      border-color: transparent; color: var(--ink);
+    }
+    .lang-chip + .lang-chip {
+      border-top: 1px solid var(--rule);
     }
 
     /* ── Responsive: short screens (iPhone SE ~667px height) ── */
@@ -1140,11 +1164,16 @@
         <h2 class="settings-subtitle">Elige una <span class="settings-subtitle-italic">voz</span></h2>
       </div>
 
-      <!-- Language selector -->
-      <div class="settings-lang-row">
-        <button class="lang-chip" data-lang="es">Español</button>
-        <button class="lang-chip" data-lang="pt">Português</button>
-        <button class="lang-chip" data-lang="ar">العربية</button>
+      <!-- Language dropdown selector -->
+      <div class="settings-lang-dropdown">
+        <button class="lang-dropdown-btn" id="lang-dropdown-toggle">
+          <span id="lang-dropdown-label">Español</span>
+        </button>
+        <div class="lang-dropdown-menu hidden" id="lang-dropdown-menu">
+          <button class="lang-chip" data-lang="es">Español</button>
+          <button class="lang-chip" data-lang="pt">Português</button>
+          <button class="lang-chip" data-lang="ar">العربية</button>
+        </div>
       </div>
 
       <div class="settings-section-label">
@@ -3635,10 +3664,33 @@ applyUIStrings();
 })();
 
 // ── Language chips (settings) ────────────────────────────────
+// Language dropdown
+const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
+const langDropdownMenu = document.getElementById('lang-dropdown-menu');
+const langDropdownLabel = document.getElementById('lang-dropdown-label');
+const langNames = { es: 'Español', pt: 'Português', ar: 'العربية' };
+
+langDropdownToggle.addEventListener('click', () => {
+  langDropdownMenu.classList.toggle('hidden');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (!langDropdownToggle.contains(e.target) && !langDropdownMenu.contains(e.target)) {
+    langDropdownMenu.classList.add('hidden');
+  }
+});
+
 document.querySelectorAll('.lang-chip').forEach(chip => {
-  if (chip.dataset.lang === currentLang) chip.classList.add('active');
+  if (chip.dataset.lang === currentLang) {
+    chip.classList.add('active');
+    langDropdownLabel.textContent = langNames[chip.dataset.lang];
+  }
   chip.addEventListener('click', () => {
-    if (chip.dataset.lang === currentLang) return;
+    if (chip.dataset.lang === currentLang) {
+      langDropdownMenu.classList.add('hidden');
+      return;
+    }
     localStorage.setItem('app_lang', chip.dataset.lang);
     location.reload();
   });
