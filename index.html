@@ -2932,7 +2932,9 @@ async function stt(blob, type) {
   const fd  = new FormData();
   fd.append('file', blob, `rec.${ext}`);
   fd.append('model', 'whisper-large-v3');
-  fd.append('language', 'es');
+  // Map language codes: es → es, pt-BR/pt-PT → pt, ar-SA/ar-DZ/... → ar
+  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : 'es';
+  fd.append('language', whisperLang);
   fd.append('response_format', 'json');
   const r = await fetch(GROQ_STT, {
     method: 'POST',
