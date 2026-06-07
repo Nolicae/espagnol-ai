@@ -1103,7 +1103,7 @@
           <div class="onboard-lang-glyph ja">日</div>
           <div class="onboard-lang-info">
             <div class="onboard-lang-name">日本語</div>
-            <div class="onboard-lang-sub">日本 · 6 声</div>
+            <div class="onboard-lang-sub">日本 · 2 声</div>
           </div>
         </button>
       </div>
@@ -2800,7 +2800,7 @@ LANGUAGES.zh.meta = {
       '上海话属于吴语，声调和词汇与普通话差异极大——"吃饭了吗"在上海话中说成"吃了伐"，外地人几乎听不懂。',
     ],
   },
-  'zh-CN-XiaohanNeural': {
+  'zh-CN-XiaoyiNeural': {
     levels: ['成都来客', '火锅老饕', '天府之国居民'],
     facts: [
       '成都的大熊猫繁育研究基地是全球规模最大的大熊猫繁育机构，距市中心仅10公里，年接待游客超过200万。',
@@ -2808,7 +2808,7 @@ LANGUAGES.zh.meta = {
       '成都茶馆文化超过2000年，至今老成都人仍习惯一杯盖碗茶、一把竹椅，在茶馆消磨整个下午。',
     ],
   },
-  'zh-CN-YunyeNeural': {
+  'zh-CN-YunjianNeural': {
     levels: ['广州新客', '珠江岸边人', '粤语美食家'],
     facts: [
       '广州早茶文化（饮茶）是粤式生活的精髓，每天清晨数十万市民聚集茶楼，品茶、吃点心、叙家常。',
@@ -2816,7 +2816,7 @@ LANGUAGES.zh.meta = {
       '粤语保留了大量古汉语音韵，许多唐诗用粤语朗读比普通话更接近原始发音，是语言学家的珍贵研究对象。',
     ],
   },
-  'zh-CN-YunfengNeural': {
+  'zh-CN-YunxiaNeural': {
     levels: ['春城访客', '彩云追逐者', '云南文化使者'],
     facts: [
       '昆明被称为"春城"，因全年气温宜人，年均气温约15°C，冬无严寒、夏无酷暑，四季鲜花盛开。',
@@ -2849,38 +2849,6 @@ LANGUAGES.ja.meta = {
       '大阪は「天下の台所」と呼ばれ、江戸時代には日本全国の食料と物資の集積地として栄えた商業の中心地だった。',
       '大阪のたこ焼きは1930年代に生まれ、今も屋台や専門店で市民の日常食として愛されている。',
       '大阪城は1583年に豊臣秀吉によって築かれた。現在の天守閣は1931年の再建だが、一部の石垣は当時のままだ。',
-    ],
-  },
-  'ja-JP-AoiNeural': {
-    levels: ['雪国の旅人', '北海道の探検家', '開拓精神の継承者'],
-    facts: [
-      '札幌の雪まつりは毎年2月に開催され、200万人以上が訪れる世界最大規模の雪と氷の祭典だ。',
-      '北海道の面積は日本の約22%を占めるが、人口は全国の約4%に過ぎず、広大な自然が広がる。',
-      'サッポロビールは1876年創業の日本最古のビール醸造所のひとつで、明治の開拓とともに発展した。',
-    ],
-  },
-  'ja-JP-DaichiNeural': {
-    levels: ['仙台の旅人', '東北の探索者', '伊達者'],
-    facts: [
-      '仙台は「杜の都」と呼ばれ、伊達政宗が整備した並木道と豊かな緑が特徴の城下町だ。',
-      '仙台七夕まつりは400年以上の歴史を持つ東北三大祭りのひとつ。8月に豪華な飾りが街を彩る。',
-      '仙台の牛タン料理は戦後にアメリカ軍が牛を持ち込んだことをきっかけに発展した独自の食文化だ。',
-    ],
-  },
-  'ja-JP-ShioriNeural': {
-    levels: ['広島の旅人', '平和の門番', '平和の大使'],
-    facts: [
-      '広島平和記念公園の原爆ドームは1945年の原爆投下を生き延びた建物で、世界遺産に登録されている。',
-      '広島風お好み焼きはキャベツ・そば・卵を重ねて焼くスタイルで、大阪とは明確に異なる地域食文化だ。',
-      '宮島の厳島神社の鳥居は満潮時に海に浮かんで見え、平安時代から日本三景のひとつとして讃えられている。',
-    ],
-  },
-  'ja-JP-NaokiNeural': {
-    levels: ['博多の旅人', '屋台の常連', '九州の守り人'],
-    facts: [
-      '福岡の屋台文化は博多を代表する風物詩で、毎晩200軒以上の屋台が並びラーメンやもつ鍋を提供する。',
-      '博多ラーメンは豚骨スープと細麺で知られ、九州を代表するスタイルとして全国に広まった。',
-      '福岡は日本と大陸の玄関口として発展した歴史を持ち、現在も東京・大阪に次ぐスタートアップ都市として注目される。',
     ],
   },
 };
@@ -3867,19 +3835,15 @@ LANGUAGES.fr.voices = [
 LANGUAGES.zh.voices = [
   { id:'zh-CN-XiaoxiaoNeural',  name:'小晓', city:'北京', country:'中国', trait:'精准', color:'#C03050', x:223, y:121 },
   { id:'zh-CN-YunxiNeural',     name:'云希', city:'上海', country:'中国', trait:'温暖', color:'#3070B0', x:247, y:190 },
-  { id:'zh-CN-XiaohanNeural',   name:'小涵', city:'成都', country:'中国', trait:'自然', color:'#D08020', x:164, y:195 },
-  { id:'zh-CN-YunyeNeural',     name:'云野', city:'广州', country:'中国', trait:'轻松', color:'#3A8060', x:208, y:255 },
-  { id:'zh-CN-YunfengNeural',   name:'云枫', city:'昆明', country:'中国', trait:'清晰', color:'#7050A0', x:157, y:240 },
+  { id:'zh-CN-XiaoyiNeural',    name:'小艺', city:'成都', country:'中国', trait:'活泼', color:'#D08020', x:164, y:195 },
+  { id:'zh-CN-YunjianNeural',   name:'云健', city:'广州', country:'中国', trait:'热情', color:'#3A8060', x:208, y:255 },
+  { id:'zh-CN-YunxiaNeural',    name:'云夏', city:'昆明', country:'中国', trait:'可爱', color:'#7050A0', x:157, y:240 },
   { id:'zh-TW-HsiaoChenNeural', name:'晓臻', city:'台北', country:'台湾', trait:'优雅', color:'#2090A0', x:247, y:240 },
 ];
 
 LANGUAGES.ja.voices = [
-  { id:'ja-JP-NanamiNeural',  name:'七海', city:'東京', country:'日本', trait:'丁寧',   color:'#C03060', x:211, y:191 },
-  { id:'ja-JP-KeitaNeural',   name:'圭太', city:'大阪', country:'日本', trait:'元気',   color:'#D06020', x:135, y:209 },
-  { id:'ja-JP-AoiNeural',     name:'葵',   city:'札幌', country:'日本', trait:'爽やか', color:'#2050A0', x:241, y:54  },
-  { id:'ja-JP-DaichiNeural',  name:'大智', city:'仙台', country:'日本', trait:'温かい', color:'#305040', x:232, y:143 },
-  { id:'ja-JP-ShioriNeural',  name:'詩織', city:'広島', country:'日本', trait:'穏やか', color:'#702080', x:81,  y:215 },
-  { id:'ja-JP-NaokiNeural',   name:'直紀', city:'福岡', country:'日本', trait:'明るい', color:'#208080', x:43,  y:230 },
+  { id:'ja-JP-NanamiNeural', name:'七海', city:'東京', country:'日本', trait:'丁寧', color:'#C03060', x:211, y:191 },
+  { id:'ja-JP-KeitaNeural',  name:'圭太', city:'大阪', country:'日本', trait:'元気', color:'#D06020', x:135, y:209 },
 ];
 
 function hexToRgb(hex) {
