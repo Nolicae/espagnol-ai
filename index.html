@@ -1393,7 +1393,16 @@ const LANGUAGES = {
   en: {
     defaultVoice: 'en-US-JennyNeural',
     srLang: 'en-US',
-    map: { lonMin: -130, lonMax: 180, latMax: 60, latMin: -45, w: 360, h: 296 },
+    // Projection interrompue : 3 régions côte-à-côte (AN / EU+AF / Océanie)
+    map: {
+      w: 360, h: 296,
+      lonMin: -130, lonMax: 178, latMax: 75, latMin: -50, // global bounds pour clipping
+      regions: [
+        { lonMin:-130, lonMax: -50, latMin:  0, latMax: 75, svgX0:   0,   yOff: +20 },
+        { lonMin: -20, lonMax: 120, latMin:-40, latMax: 75, svgX0: 124,   yOff:   0 },
+        { lonMin: 110, lonMax: 178, latMin:-50, latMax:-10, svgX0: 254.6, yOff: -20 },
+      ],
+    },
     voices: null,
     meta:   null,
     system: null,
@@ -2853,6 +2862,57 @@ LANGUAGES.ja.meta = {
   },
 };
 
+LANGUAGES.en.meta = {
+  'en-US-GuyNeural': {
+    levels: ['West Coast Explorer', 'City of Angels Regular', 'LA Native'],
+    facts: [
+      'Los Angeles has the largest urban park in the US — Griffith Park, at 4,310 acres, nearly five times the size of Central Park in New York.',
+      'LA\'s freeway network spans over 500 miles, making it the most extensive urban highway system in the world — yet the city also has a growing metro rail network.',
+      'The Getty Center sits 900 feet above sea level and on clear days you can see from the San Gabriel Mountains all the way to the Pacific Ocean.',
+    ],
+  },
+  'en-US-JennyNeural': {
+    levels: ['NYC Newcomer', 'Outer Borough Regular', 'True New Yorker'],
+    facts: [
+      'New York City\'s subway runs 24 hours a day, 7 days a week — one of the very few metro systems in the world that never closes.',
+      'Central Park took 20 years to build (1858–1878) and required moving 10 million cartloads of soil; today it hosts 42 million visits per year.',
+      'The Empire State Building has its own zip code — 10118 — and receives about 4 million visitors per year at its observation decks.',
+    ],
+  },
+  'en-IE-EmilyNeural': {
+    levels: ['Dublin Day-Tripper', 'Fair City Regular', 'True Dub'],
+    facts: [
+      'Dublin\'s Trinity College library holds the Book of Kells, an illuminated gospel manuscript created by monks around 800 AD — one of the finest medieval artifacts in the world.',
+      'Ireland is home to more Nobel Prize winners per capita in literature than almost any other country, including Samuel Beckett, Seamus Heaney, and W.B. Yeats.',
+      'The Liffey river that runs through Dublin gets its name from the Irish "An Life," and the city\'s name, Dubh Linn, means "black pool" in Irish.',
+    ],
+  },
+  'en-GB-SoniaNeural': {
+    levels: ['London Tourist', 'Londoner at Heart', 'True Cockney'],
+    facts: [
+      'The London Underground — nicknamed "the Tube" — opened in 1863, making it the oldest metro system in the world. Some of its original Victorian-era stations are still in use.',
+      'London has more languages spoken within its boundaries than any other city on Earth — over 300 languages are spoken by its diverse population of 9 million.',
+      'The Tower of London has been used as a royal palace, a prison, a treasury, a menagerie, and the home of the Crown Jewels — all within its 1,000-year history.',
+    ],
+  },
+  'en-IN-NeerjaNeural': {
+    levels: ['Mumbai Wanderer', 'City of Dreams Regular', 'True Mumbaikar'],
+    facts: [
+      'Mumbai\'s Dharavi is one of Asia\'s largest urban slums — yet it generates an estimated $1 billion in annual economic output through thousands of small industries.',
+      'The city\'s local train network carries over 7.5 million passengers per day, making it the busiest commuter rail system in the world by passenger density.',
+      'Mumbai hosts Bollywood, which produces more feature films per year than Hollywood — India\'s film industry releases over 1,800 movies annually across all its studios.',
+    ],
+  },
+  'en-AU-NatashaNeural': {
+    levels: ['Sydney Visitor', 'Bondi Regular', 'True Blue Aussie'],
+    facts: [
+      'The Sydney Opera House has over one million roof tiles and its sails are self-cleaning — they were engineered so rainwater washes the ceramic surface naturally.',
+      'Australia is the only continent that is also a single country, and it is home to more unique species of plants and animals than almost anywhere else on Earth.',
+      'The Great Barrier Reef, visible from space, is the world\'s largest living structure — stretching over 2,300 km along the Queensland coast and hosting 1,500 species of fish.',
+    ],
+  },
+};
+
 LANGUAGES.en.system = `You are an enthusiastic and friendly English conversation teacher.
 Your student is practising their English. Respond naturally in English with:
 - Clear sentences matched to their level
@@ -3846,6 +3906,20 @@ LANGUAGES.ja.voices = [
   { id:'ja-JP-KeitaNeural',  name:'圭太', city:'大阪', country:'日本', trait:'元気', color:'#D06020', x:135, y:209 },
 ];
 
+// ── English voices — x/y computed for the 3-region interrupted projection ──
+// scaleX=1.55 px/° · scaleY=2.467 px/° · LAT_MAX=75
+// NA  svgX0=0,   lonMin=-130, yOff=+20
+// EU  svgX0=124, lonMin=-20,  yOff=0
+// AU  svgX0=254.6, lonMin=110, yOff=-20
+LANGUAGES.en.voices = [
+  { id:'en-US-GuyNeural',    name:'Guy',    city:'Los Angeles', country:'USA',       trait:'Confident',  color:'#40A060', x: 18, y:121 },
+  { id:'en-US-JennyNeural',  name:'Jenny',  city:'New York',    country:'USA',       trait:'Warm',       color:'#C04040', x: 87, y:105 },
+  { id:'en-IE-EmilyNeural',  name:'Emily',  city:'Dublin',      country:'Ireland',   trait:'Lyrical',    color:'#9040B0', x:145, y: 53 },
+  { id:'en-GB-SoniaNeural',  name:'Sonia',  city:'London',      country:'UK',        trait:'Precise',    color:'#4060C0', x:155, y: 58 },
+  { id:'en-IN-NeerjaNeural', name:'Neerja', city:'Mumbai',      country:'India',     trait:'Expressive', color:'#B0A030', x:268, y:138 },
+  { id:'en-AU-NatashaNeural',name:'Natasha',city:'Sydney',      country:'Australia', trait:'Bright',     color:'#D07030', x:319, y:249 },
+];
+
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
@@ -3963,28 +4037,48 @@ function initVoicesMap() {
 
       // Projection: matches dot coordinate space exactly
       const mapCfg = LANGUAGES[currentLang].map;
-      const lonMin = mapCfg.lonMin;
-      const latMax = mapCfg.latMax;
-      const sx = mapCfg.w / (mapCfg.lonMax - mapCfg.lonMin);
-      const sy = mapCfg.h / (mapCfg.latMax - mapCfg.latMin);
-
-      function proj(lon, lat) {
-        return [+((lon - lonMin) * sx).toFixed(1),
-                +((latMax - lat) * sy).toFixed(1)];
-      }
 
       let d = '';
-      coast.coordinates.forEach(line => {
-        let move = true;
-        line.forEach(([lon, lat]) => {
-          // Clip to our zoom window (with small margin)
-          if (lon < mapCfg.lonMin - 5 || lon > mapCfg.lonMax + 5 ||
-              lat < mapCfg.latMin - 5 || lat > mapCfg.latMax + 5) { move = true; return; }
-          const [x, y] = proj(lon, lat);
-          d += move ? `M${x},${y} ` : `L${x},${y} `;
-          move = false;
+      if (mapCfg.regions) {
+        // ── Projection interrompue (English) : 3 régions indépendantes ──────
+        const LAT_MAX = 75;
+        const SCALE_X = 1.55;           // px/° (identique pour toutes les régions)
+        const SCALE_Y = mapCfg.h / 120; // 296/120 = 2.467 px/°  (LAT_MAX-LAT_MIN)
+        for (const r of mapCfg.regions) {
+          const svgX1r = r.svgX0 + (r.lonMax - r.lonMin) * SCALE_X;
+          coast.coordinates.forEach(line => {
+            let move = true;
+            line.forEach(([lon, lat]) => {
+              if (lon < r.lonMin - 0.5 || lon > r.lonMax + 0.5 ||
+                  lat < r.latMin - 0.5 || lat > r.latMax + 0.5) { move = true; return; }
+              const x = Math.max(r.svgX0, Math.min(svgX1r,
+                          r.svgX0 + (lon - r.lonMin) * SCALE_X));
+              const y = Math.max(0, Math.min(mapCfg.h,
+                          (LAT_MAX - lat) * SCALE_Y + r.yOff));
+              d += move ? `M${x.toFixed(1)},${y.toFixed(1)} ` : `L${x.toFixed(1)},${y.toFixed(1)} `;
+              move = false;
+            });
+          });
+        }
+      } else {
+        // ── Projection équirectangulaire simple (toutes les autres langues) ──
+        const lonMin = mapCfg.lonMin;
+        const latMax = mapCfg.latMax;
+        const sx = mapCfg.w / (mapCfg.lonMax - mapCfg.lonMin);
+        const sy = mapCfg.h / (mapCfg.latMax - mapCfg.latMin);
+        const proj = (lon, lat) => [+((lon - lonMin) * sx).toFixed(1),
+                                    +((latMax - lat) * sy).toFixed(1)];
+        coast.coordinates.forEach(line => {
+          let move = true;
+          line.forEach(([lon, lat]) => {
+            if (lon < mapCfg.lonMin - 5 || lon > mapCfg.lonMax + 5 ||
+                lat < mapCfg.latMin - 5 || lat > mapCfg.latMax + 5) { move = true; return; }
+            const [x, y] = proj(lon, lat);
+            d += move ? `M${x},${y} ` : `L${x},${y} `;
+            move = false;
+          });
         });
-      });
+      }
 
       window._coastPathD = d;
       // Re-render map with coastlines now available
