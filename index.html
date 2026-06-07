@@ -950,6 +950,10 @@
       background: radial-gradient(circle at 35% 35%, #B0C8E8, #4878B0, #1A3A60);
       box-shadow: 0 0 18px rgba(72,120,176,0.25);
     }
+    .onboard-lang-glyph.fr {
+      background: radial-gradient(circle at 35% 35%, #F0C0D0, #C05070, #702040);
+      box-shadow: 0 0 18px rgba(192,80,112,0.25);
+    }
 
     .onboard-lang-info { flex: 1; }
     .onboard-lang-name {
@@ -1071,6 +1075,13 @@
           <div class="onboard-lang-info">
             <div class="onboard-lang-name">English</div>
             <div class="onboard-lang-sub">10 countries · 10 voices</div>
+          </div>
+        </button>
+        <button class="onboard-lang-btn" data-lang="fr">
+          <div class="onboard-lang-glyph fr">F</div>
+          <div class="onboard-lang-info">
+            <div class="onboard-lang-name">Français</div>
+            <div class="onboard-lang-sub">4 pays · 6 voix</div>
           </div>
         </button>
       </div>
@@ -1199,6 +1210,7 @@
           <button class="lang-chip" data-lang="ar">العربية</button>
           <button class="lang-chip" data-lang="ru">Русский</button>
           <button class="lang-chip" data-lang="en">English</button>
+          <button class="lang-chip" data-lang="fr">Français</button>
         </div>
       </div>
 
@@ -1358,6 +1370,15 @@ const LANGUAGES = {
     defaultVoice: 'en-US-JennyNeural',
     srLang: 'en-US',
     map: { lonMin: -130, lonMax: 180, latMax: 60, latMin: -45, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
+  fr: {
+    defaultVoice: 'fr-FR-DeniseNeural',
+    srLang: 'fr-FR',
+    map: { lonMin: -80, lonMax: 20, latMax: 56, latMin: 42, w: 360, h: 296 },
     voices: null,
     meta:   null,
     system: null,
@@ -1613,6 +1634,55 @@ Your role during this session:
 NEVER say goodbye or end the session — the student controls when to finish.
 If you receive "[silence]", rephrase your last question differently.
 If you receive "[session start]", introduce yourself as the examiner in one sentence and immediately ask your first question about the material.`,
+  },
+  fr: {
+    inactive:           'INACTIF',
+    live:               'EN DIRECT',
+    speaking:           'PARLE',
+    pressToTalk:        'Appuyer pour parler',
+    chatMode:           'CHAT',
+    settingsTitle:      'Réglages',
+    settingsClose:      'fermer ✕',
+    settingsSubtitle:   'Choisissez une',
+    settingsSubItalic:  'voix',
+    worldLabel:         'Monde francophone',
+    durationLabel:      'Durée',
+    durationMin:        'min',
+    dur1:               '1 MIN',
+    dur15:              '15',
+    dur30:              '30 MIN',
+    examLabel:          'Mode Examen',
+    examDesc:           "L'IA lit un document et vous examine",
+    chatLabel:          'Mode Chat',
+    chatDesc:           'Pratiquez en silence — sans microphone',
+    saveBtn:            'Enregistrer',
+    chatPlaceholder:    'Écrivez en français…',
+    chatTopbar:         'Mode Chat',
+    uploadDoc:          'Charger un document',
+    sessionSummary:     'Bilan de session',
+    analyzing:          'Analyse en cours…',
+    newTitle:           'Nouveau titre',
+    summaryPrompt:      "Résume cette session en 3 points :\n❌ Erreurs corrigées (avec la bonne forme)\n✅ Ce qui s'est bien passé\n📚 Vocabulaire clé utilisé",
+    summarySystem:      "Tu es un assistant pédagogique. Analyse cette session de pratique du français et réponds en français. Sois bref, encourageant et concret.",
+    summaryError:       'Résumé non disponible.',
+    silencePrompt:      '[silence]',
+    sessionStart:       '[début de session]',
+    fallbackGreeting:   "Bonjour ! De quoi voulez-vous parler aujourd'hui ?",
+    examSystemFn: (content) =>
+      `Tu es un professeur de français et un examinateur exigeant mais bienveillant.
+L'étudiant a chargé le matériel d'étude suivant :
+----
+${content}
+----
+Ton rôle lors de cette session :
+- Interroger l'étudiant sur ce matériel en français, avec des questions concrètes et progressives
+- Évaluer ses réponses : valide ce qui est correct, corrige ce qui est faux de façon naturelle
+- S'il commet une erreur de français, corrige-la et demande-lui de répéter la bonne forme
+- Avance dans le matériel de façon structurée, un concept à la fois
+- Maximum 1-2 phrases par tour
+NE DIS JAMAIS au revoir ni ne clôtures la session — l'étudiant contrôle la fin.
+Si tu reçois "[silence]", reformule ta dernière question différemment.
+Si tu reçois "[début de session]", présente-toi comme examinateur en une phrase et pose immédiatement ta première question sur le matériel.`,
   },
 };
 
@@ -2522,6 +2592,57 @@ LANGUAGES.ru.diff = [
   '\nУровень ученика: B1+. Говори как носитель языка, используй сленг и культурные referencias из твоего региона. Не упрощай — ученик может следить.',
 ];
 
+LANGUAGES.fr.meta = {
+  'fr-FR-DeniseNeural': {
+    levels: ['Parisien·ne de cœur', 'Habitant·e des Lumières', 'Gardien·ne du Français'],
+    facts: [
+      'Paris possède plus de 400 km de pistes cyclables et a doublé son réseau depuis 2020, devenant l\'une des capitales les plus cyclables d\'Europe.',
+      'Le métro parisien compte 302 stations sur 220 km — l\'un des réseaux les plus denses du monde, dont certaines stations n\'ont pas changé depuis 1900.',
+      'La Tour Eiffel mesure 15 cm de plus en été qu\'en hiver : le métal se dilate sous la chaleur, faisant « grandir » la tour.',
+    ],
+  },
+  'fr-FR-HenriNeural': {
+    levels: ['Marseillais d\'adoption', 'Fils du Vieux-Port', 'Gardien de la Méditerranée'],
+    facts: [
+      'Marseille est la plus ancienne ville de France, fondée par les Grecs sous le nom de Massalia vers 600 av. J.-C.',
+      'La basilique Notre-Dame-de-la-Garde — la « Bonne Mère » — domine la ville à 149 m et sert de repère aux marins depuis des siècles.',
+      'Le pastis, emblème de Marseille, se trouble dans l\'eau à cause de l\'anéthol : c\'est l\'effet « louche », signe qu\'il est authentique.',
+    ],
+  },
+  'fr-BE-CharlineNeural': {
+    levels: ['Bruxelloise de quartier', 'Citoyenne de l\'Europe', 'Ambassadrice du Plat Pays'],
+    facts: [
+      'Bruxelles abrite plus de 1 000 institutions européennes et internationales — c\'est l\'une des villes diplomatiques les plus actives au monde.',
+      'La Grand-Place de Bruxelles, classée UNESCO, est entourée de 35 maisons de corporations médiévales reconstruites après le bombardement de 1695.',
+      'Les Belges consomment en moyenne 6 kg de chocolat par an, et Bruxelles compte plus de 400 chocolatiers artisanaux dans ses ruelles.',
+    ],
+  },
+  'fr-CH-ArianeNeural': {
+    levels: ['Genevoise d\'esprit', 'Citoyenne du lac', 'Gardienne de la neutralité'],
+    facts: [
+      'Genève accueille le siège européen de l\'ONU, la Croix-Rouge internationale et plus de 200 organisations intergouvernementales.',
+      'Le Jet d\'Eau du lac Léman s\'élève à 140 mètres de hauteur et pulse 500 litres d\'eau par seconde — visible à des kilomètres à la ronde.',
+      'Jean-Jacques Rousseau, né à Genève en 1712, a posé les bases du contrat social et des droits naturels qui ont inspiré les révolutions modernes.',
+    ],
+  },
+  'fr-CA-SylvieNeural': {
+    levels: ['Montréalaise pure laine', 'Fille du Saint-Laurent', 'Gardienne du joual'],
+    facts: [
+      'Montréal est la deuxième plus grande ville francophone du monde après Paris, avec plus de 60 % de ses habitants parlant le français à la maison.',
+      'Le RÉSO — la ville souterraine de Montréal — s\'étend sur 33 km et relie 80 bâtiments, permettant de survivre à l\'hiver sans mettre le manteau.',
+      'Le Festival International de Jazz de Montréal est le plus grand au monde, avec près de 3 000 concerts par édition chaque été.',
+    ],
+  },
+  'fr-CA-AntoineNeural': {
+    levels: ['Québécois bon vivant', 'Fils de la Nouvelle-France', 'Gardien du fleurdelisé'],
+    facts: [
+      'Québec est la seule ville d\'Amérique du Nord à avoir conservé ses remparts médiévaux, inscrits au patrimoine mondial de l\'UNESCO depuis 1985.',
+      'Le Carnaval de Québec est le plus grand carnaval d\'hiver du monde, célèbre pour ses sculptures de glace géantes et son bonhomme Carnaval.',
+      'La ville a été fondée en 1608 par Samuel de Champlain — 12 ans avant que les Pèlerins ne débarquent à Plymouth Rock.',
+    ],
+  },
+};
+
 LANGUAGES.en.system = `You are an enthusiastic and friendly English conversation teacher.
 Your student is practising their English. Respond naturally in English with:
 - Clear sentences matched to their level
@@ -2536,6 +2657,22 @@ LANGUAGES.en.diff = [
   '\nStudent level: A1–A2. Use simple, short sentences. Speak slowly and clearly. Correct gently and praise effort.',
   '\nStudent level: B1. Use natural pace and common idioms. Correct errors smoothly mid-conversation.',
   '\nStudent level: B2+. Speak as a native would — use colloquialisms, humour, cultural references from your region. Do not simplify.',
+];
+
+LANGUAGES.fr.system = `Tu es un professeur de français enthousiaste et bienveillant.
+Ton étudiant pratique son français. Réponds naturellement en français avec :
+- Des phrases claires adaptées à son niveau
+- Un ton chaleureux et encourageant
+- Des tournures naturelles, des expressions idiomatiques appropriées
+- Du contexte culturel quand c'est pertinent
+- Si l'étudiant bloque, reformule — ne le mets jamais mal à l'aise
+
+Adapte la difficulté en fonction de ses réponses. Garde tes réponses sous 80 mots.`;
+
+LANGUAGES.fr.diff = [
+  '\nNiveau de l\'étudiant : A1–A2. Utilise des phrases simples et courtes. Parle clairement. Corrige avec douceur et encourage les efforts.',
+  '\nNiveau de l\'étudiant : B1. Utilise un rythme naturel et des expressions courantes. Corrige les erreurs avec fluidité dans la conversation.',
+  '\nNiveau de l\'étudiant : B2+. Parle comme un locuteur natif — utilise le familier, l\'humour, les références culturelles de ta région. Ne simplifie pas.',
 ];
 
 function getLangVoices() { return LANGUAGES[currentLang].voices || LANGUAGES.es.voices; }
@@ -3200,7 +3337,7 @@ async function stt(blob, type) {
   fd.append('file', blob, `rec.${ext}`);
   fd.append('model', 'whisper-large-v3');
   // Map language codes: es → es, pt-BR/pt-PT → pt, ar-SA/ar-DZ/... → ar
-  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : currentLang === 'en' ? 'en' : 'es';
+  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : currentLang === 'en' ? 'en' : currentLang === 'fr' ? 'fr' : 'es';
   fd.append('language', whisperLang);
   fd.append('response_format', 'json');
   const r = await fetch(GROQ_STT, {
@@ -3278,6 +3415,10 @@ async function speakChunk(text) {
     blob = new Blob([bytes], { type: 'audio/mpeg' });
   } else if (currentLang === 'ru') {
     const r = await fetch(`/api/tts-ru?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
+    if (!r.ok) throw new Error(`TTS ${r.status}`);
+    blob = await r.blob();
+  } else if (currentLang === 'fr') {
+    const r = await fetch(`/api/tts-fr?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
     if (!r.ok) throw new Error(`TTS ${r.status}`);
     blob = await r.blob();
   } else {
@@ -3430,6 +3571,15 @@ LANGUAGES.en.voices = [
   { id:'en-IN-NeerjaNeural',  name:'Neerja',  city:'Mumbai',       country:'India',        trait:'Expressive', color:'#C88040', x:236, y:116 },
   { id:'en-CA-ClaraNeural',   name:'Clara',   city:'Toronto',      country:'Canada',       trait:'Warm',       color:'#8060A8', x:59,  y:46  },
   { id:'en-NZ-MollyNeural',   name:'Molly',   city:'Auckland',     country:'New Zealand',  trait:'Cheerful',   color:'#40A0B0', x:354, y:273 },
+];
+
+LANGUAGES.fr.voices = [
+  { id:'fr-FR-DeniseNeural',   name:'Denise',   city:'Paris',     country:'France',   trait:'Distinguée', color:'#C05070', x:297, y:151 },
+  { id:'fr-FR-HenriNeural',    name:'Henri',    city:'Marseille', country:'France',   trait:'Chaleureux', color:'#E07030', x:307, y:269 },
+  { id:'fr-BE-CharlineNeural', name:'Charline', city:'Bruxelles', country:'Belgique', trait:'Naturelle',  color:'#B09020', x:304, y:109 },
+  { id:'fr-CH-ArianeNeural',   name:'Ariane',   city:'Genève',    country:'Suisse',   trait:'Précise',    color:'#50A050', x:310, y:207 },
+  { id:'fr-CA-SylvieNeural',   name:'Sylvie',   city:'Montréal',  country:'Canada',   trait:'Énergique',  color:'#4870C0', x:23,  y:222 },
+  { id:'fr-CA-AntoineNeural',  name:'Antoine',  city:'Québec',    country:'Canada',   trait:'Détendu',    color:'#8050A0', x:32,  y:195 },
 ];
 
 function hexToRgb(hex) {
@@ -3931,7 +4081,7 @@ applyUIStrings();
 const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
 const langDropdownMenu = document.getElementById('lang-dropdown-menu');
 const langDropdownLabel = document.getElementById('lang-dropdown-label');
-const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский', en: 'English' };
+const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский', en: 'English', fr: 'Français' };
 
 langDropdownToggle.addEventListener('click', () => {
   langDropdownMenu.classList.toggle('hidden');
