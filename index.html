@@ -1677,7 +1677,7 @@ function checkNewRewards(voiceId, prevPts, newPts) {
   FIXED_THRESHOLDS.forEach((threshold, idx) => {
     if (prevPts < threshold && newPts >= threshold) {
       const meta = getVoiceMeta(voiceId);
-      unlocked.push({ type: 'level', level: idx + 1, title: meta?.levels[idx + 1] });
+      unlocked.push({ type: 'level', level: idx + 1, title: meta?.levels?.[idx + 1] });
     }
   });
 
@@ -2447,7 +2447,7 @@ function getVoiceLevel(voiceId) {
 
 function getVoiceLevelTitle(voiceId) {
   const meta = getVoiceMeta(voiceId);
-  if (!meta) return null;
+  if (!meta || !meta.levels) return null;
   return meta.levels[getVoiceLevel(voiceId)];
 }
 
