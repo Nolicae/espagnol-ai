@@ -942,6 +942,14 @@
       background: linear-gradient(135deg, #E8D0B0, #E87090);
       box-shadow: 0 0 18px rgba(232,112,144,0.25);
     }
+    .onboard-lang-glyph.ru {
+      background: radial-gradient(circle at 35% 35%, #6BA3D8, #2A5FA0, #0D3060);
+      box-shadow: 0 0 18px rgba(107,163,216,0.25);
+    }
+    .onboard-lang-glyph.en {
+      background: radial-gradient(circle at 35% 35%, #B0C8E8, #4878B0, #1A3A60);
+      box-shadow: 0 0 18px rgba(72,120,176,0.25);
+    }
 
     .onboard-lang-info { flex: 1; }
     .onboard-lang-name {
@@ -1055,7 +1063,14 @@
           <div class="onboard-lang-glyph ru">Р</div>
           <div class="onboard-lang-info">
             <div class="onboard-lang-name">Русский</div>
-            <div class="onboard-lang-sub">Россия · XX голосов</div>
+            <div class="onboard-lang-sub">Россия · 2 голоса</div>
+          </div>
+        </button>
+        <button class="onboard-lang-btn" data-lang="en">
+          <div class="onboard-lang-glyph en">E</div>
+          <div class="onboard-lang-info">
+            <div class="onboard-lang-name">English</div>
+            <div class="onboard-lang-sub">10 countries · 10 voices</div>
           </div>
         </button>
       </div>
@@ -1183,6 +1198,7 @@
           <button class="lang-chip" data-lang="pt">Português</button>
           <button class="lang-chip" data-lang="ar">العربية</button>
           <button class="lang-chip" data-lang="ru">Русский</button>
+          <button class="lang-chip" data-lang="en">English</button>
         </div>
       </div>
 
@@ -1333,6 +1349,15 @@ const LANGUAGES = {
     defaultVoice: 'ru-RU-SvetlanaNeural',
     srLang: 'ru-RU',
     map: { lonMin: 20, lonMax: 50, latMax: 64, latMin: 52, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
+  en: {
+    defaultVoice: 'en-US-female',
+    srLang: 'en-US',
+    map: { lonMin: -130, lonMax: 180, latMax: 60, latMin: -45, w: 360, h: 296 },
     voices: null,
     meta:   null,
     system: null,
@@ -1539,6 +1564,55 @@ ${content}
 НИКОГДА не говори до свидания и не заканчивай сеанс — пользователь контролирует, когда закончить.
 Если получишь "[тишина]", переформулируй последний вопрос по-другому.
 Если получишь "[начало сеанса]", представься экзаменатором в одном предложении и сразу задай первый вопрос о материале.`,
+  },
+  en: {
+    inactive:           'INACTIVE',
+    live:               'LIVE',
+    speaking:           'SPEAKING',
+    pressToTalk:        'Press to speak',
+    chatMode:           'CHAT',
+    settingsTitle:      'Settings',
+    settingsClose:      'close ✕',
+    settingsSubtitle:   'Choose a',
+    settingsSubItalic:  'voice',
+    worldLabel:         'English-speaking world',
+    durationLabel:      'Duration',
+    durationMin:        'min',
+    dur1:               '1 MIN',
+    dur15:              '15',
+    dur30:              '30 MIN',
+    examLabel:          'Exam mode',
+    examDesc:           'AI reads a document and quizzes you',
+    chatLabel:          'Chat mode',
+    chatDesc:           'Practice silently — no microphone',
+    saveBtn:            'Save',
+    chatPlaceholder:    'Write in English…',
+    chatTopbar:         'Chat mode',
+    uploadDoc:          'Upload document',
+    sessionSummary:     'Session summary',
+    analyzing:          'Analysing…',
+    newTitle:           'New title',
+    summaryPrompt:      'Summarise this session in 3 bullet points:\n❌ Errors corrected (with the right form)\n✅ What went well\n📚 Key vocabulary used',
+    summarySystem:      'You are a pedagogical assistant. Analyse this English practice session and reply in English. Be brief, encouraging, and specific.',
+    summaryError:       'Summary unavailable.',
+    silencePrompt:      '[silence]',
+    sessionStart:       '[session start]',
+    fallbackGreeting:   'Hello! What would you like to talk about today?',
+    examSystemFn: (content) =>
+      `You are an English teacher and a fair but demanding examiner.
+The student has uploaded the following study material:
+----
+${content}
+----
+Your role during this session:
+- Ask the student questions about this material in English, progressively increasing difficulty
+- Evaluate their answers: confirm what is correct, naturally correct what is wrong
+- If they make a grammar or vocabulary mistake, correct it and ask them to repeat the right form
+- Progress through the material in a structured way, one concept at a time
+- Maximum 1-2 sentences per turn
+NEVER say goodbye or end the session — the student controls when to finish.
+If you receive "[silence]", rephrase your last question differently.
+If you receive "[session start]", introduce yourself as the examiner in one sentence and immediately ask your first question about the material.`,
   },
 };
 
@@ -2317,6 +2391,49 @@ LANGUAGES.ru.meta = {
     fact: 'Санкт-Петербург построен на 42 островах и имеет более 300 мостов — больше, чем Венеция'
   },
 };
+
+LANGUAGES.en.meta = {
+  'en-US-female': {
+    level: 'A1',
+    fact: 'New York City is home to over 800 languages — the most linguistically diverse city on Earth.'
+  },
+  'en-US-male': {
+    level: 'A1',
+    fact: 'Los Angeles has no official city bird, but the humble house sparrow has claimed the title by sheer numbers.'
+  },
+  'en-GB-female': {
+    level: 'A2',
+    fact: 'London\'s Heathrow Airport uses more English accents per square mile than anywhere else in the world.'
+  },
+  'en-GB-male': {
+    level: 'A2',
+    fact: 'Edinburgh hosts the world\'s largest arts festival — the Fringe — attracting over 3 million visits every August.'
+  },
+  'en-AU-female': {
+    level: 'B1',
+    fact: 'Australia is the only continent that is also a single country, and it\'s wider than the Moon.'
+  },
+  'en-IE-female': {
+    level: 'B1',
+    fact: 'Ireland has more Nobel Prize winners in Literature per capita than any other country.'
+  },
+  'en-ZA-female': {
+    level: 'B1',
+    fact: 'South Africa has 11 official languages — the most of any country in the world.'
+  },
+  'en-IN-female': {
+    level: 'B2',
+    fact: 'India has the world\'s largest English-speaking population, with over 125 million speakers.'
+  },
+  'en-CA-female': {
+    level: 'A2',
+    fact: 'Canada has the world\'s longest coastline at 202,080 km — longer than any other nation.'
+  },
+  'en-NZ-female': {
+    level: 'B1',
+    fact: 'New Zealand was the first country to grant women the right to vote, in 1893.'
+  },
+};
 const LEVEL_THRESHOLDS = [0, 150, 400];
 
 function getVoiceLevel(voiceId) {
@@ -2403,6 +2520,22 @@ LANGUAGES.ru.diff = [
   '\nУровень ученика: A1. Используй простой словарь, короткие предложения и много терпения. Исправляй спокойно.',
   '\nУровень ученика: A2. Можешь использовать более сложную грамматику, локальные идиоматические выражения и естественный темп. Исправляй плавно.',
   '\nУровень ученика: B1+. Говори как носитель языка, используй сленг и культурные referencias из твоего региона. Не упрощай — ученик может следить.',
+];
+
+LANGUAGES.en.system = `You are an enthusiastic and friendly English conversation teacher.
+Your student is practising their English. Respond naturally in English with:
+- Clear sentences matched to their level
+- Warm, encouraging tone
+- Natural speech patterns, contractions, idioms where appropriate
+- Cultural context when relevant
+- If they struggle, rephrase — never make them feel judged
+
+Adapt difficulty based on their responses. Keep replies under 80 words.`;
+
+LANGUAGES.en.diff = [
+  '\nStudent level: A1–A2. Use simple, short sentences. Speak slowly and clearly. Correct gently and praise effort.',
+  '\nStudent level: B1. Use natural pace and common idioms. Correct errors smoothly mid-conversation.',
+  '\nStudent level: B2+. Speak as a native would — use colloquialisms, humour, cultural references from your region. Do not simplify.',
 ];
 
 function getLangVoices() { return LANGUAGES[currentLang].voices || LANGUAGES.es.voices; }
@@ -2500,6 +2633,9 @@ function interruptTTS() {
 // Hard: cut audio immediately (used when session ends)
 function stopTTSNow() {
   speakToken++;
+  if (currentLang === 'en') {
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+  }
   if (ttsSource) {
     try { ttsSource.pause(); ttsSource.src = ''; } catch (_) {}
     ttsSource = null;
@@ -3067,7 +3203,7 @@ async function stt(blob, type) {
   fd.append('file', blob, `rec.${ext}`);
   fd.append('model', 'whisper-large-v3');
   // Map language codes: es → es, pt-BR/pt-PT → pt, ar-SA/ar-DZ/... → ar
-  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : 'es';
+  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : currentLang === 'en' ? 'en' : 'es';
   fd.append('language', whisperLang);
   fd.append('response_format', 'json');
   const r = await fetch(GROQ_STT, {
@@ -3111,10 +3247,111 @@ function splitText(text, max = 180) {
   return out;
 }
 
+// ── Web Speech API voice resolution for English ──────────────────────────────
+const EN_VOICE_PRIORITY = {
+  'en-US-female': [
+    'Google US English',
+    'Microsoft EmmaMultilingual Online (Natural) - English (United States)',
+    'Microsoft Jenny Online (Natural) - English (United States)',
+    'Microsoft Aria Online (Natural) - English (United States)',
+    'Samantha', 'Ava', 'Zoe', 'Allison',
+    'Microsoft Zira - English (United States)',
+  ],
+  'en-US-male': [
+    'Microsoft BrianMultilingual Online (Natural) - English (United States)',
+    'Microsoft Guy Online (Natural) - English (United States)',
+    'Microsoft Eric Online (Natural) - English (United States)',
+    'Alex', 'Tom', 'Nathan', 'Aaron',
+    'Microsoft David - English (United States)',
+  ],
+  'en-GB-female': [
+    'Google UK English Female',
+    'Microsoft Sonia Online (Natural) - English (United Kingdom)',
+    'Microsoft Libby Online (Natural) - English (United Kingdom)',
+    'Serena', 'Kate', 'Stephanie',
+    'Microsoft Hazel - English (Great Britain)',
+  ],
+  'en-GB-male': [
+    'Google UK English Male',
+    'Microsoft Ryan Online (Natural) - English (United Kingdom)',
+    'Microsoft Thomas Online (Natural) - English (United Kingdom)',
+    'Daniel', 'Jamie', 'Oliver',
+    'Microsoft George - English (Great Britain)',
+  ],
+  'en-AU-female': [
+    'Google Australian English 1 (Natural)',
+    'Microsoft Natasha Online (Natural) - English (Australia)',
+    'Karen', 'Matilda', 'Catherine',
+    'Microsoft Catherine - English (Austalia)',
+  ],
+  'en-IE-female': [
+    'Microsoft Emily Online (Natural) - English (Ireland)',
+    'Moira',
+    'Microsoft Sean - English (Ireland)',
+  ],
+  'en-ZA-female': [
+    'Microsoft Leah Online (Natural) - English (South Africa)',
+    'Tessa',
+  ],
+  'en-IN-female': [
+    'Microsoft Neerja Online (Natural) - English (India)',
+    'Isha', 'Tara', 'Sangeeta',
+    'Microsoft Heera - English (India)',
+  ],
+  'en-CA-female': [
+    'Microsoft Clara Online (Natural) - English (Canada)',
+    'Microsoft Heather Online - English (Canada)',
+    'Microsoft Linda - English (Canada)',
+    'Samantha',
+  ],
+  'en-NZ-female': [
+    'Microsoft Molly Online (Natural) - English (New Zealand)',
+    'Karen', 'Matilda',
+    'Google Australian English 1 (Natural)',
+  ],
+};
+
+let _enVoicesLoaded = false;
+function resolveEnVoice(voiceId) {
+  const priorities = EN_VOICE_PRIORITY[voiceId] || EN_VOICE_PRIORITY['en-US-female'];
+  const available  = window.speechSynthesis.getVoices();
+  for (const name of priorities) {
+    const found = available.find(v => v.name === name);
+    if (found) return found;
+  }
+  // Fallback: first English-speaking voice, then first available
+  return available.find(v => v.lang && v.lang.startsWith('en')) || available[0] || null;
+}
+
 async function speakChunk(text) {
   const voice = getVoiceKey();
   let blob;
-  if (currentLang === 'ar') {
+  if (currentLang === 'en') {
+    // Ensure voices are loaded (Chrome loads them async)
+    if (!_enVoicesLoaded || window.speechSynthesis.getVoices().length === 0) {
+      await new Promise(resolve => {
+        const v = window.speechSynthesis.getVoices();
+        if (v.length > 0) { _enVoicesLoaded = true; resolve(); return; }
+        window.speechSynthesis.onvoiceschanged = () => { _enVoicesLoaded = true; resolve(); };
+        setTimeout(resolve, 2000); // safety timeout
+      });
+    }
+    return new Promise((resolve, reject) => {
+      const utter  = new SpeechSynthesisUtterance(text);
+      utter.voice  = resolveEnVoice(voice);
+      utter.rate   = 1.0;
+      utter.pitch  = 1.0;
+      ttsSource    = utter;
+      utter.onend  = () => { if (ttsSource === utter) ttsSource = null; resolve(); };
+      utter.onerror = (e) => {
+        if (ttsSource === utter) ttsSource = null;
+        // 'interrupted' is normal when user stops — resolve instead of reject
+        if (e.error === 'interrupted' || e.error === 'canceled') resolve();
+        else reject(e);
+      };
+      window.speechSynthesis.speak(utter);
+    });
+  } else if (currentLang === 'ar') {
     const r = await fetch('https://nolicae-arabe-tts.hf.space/v1/text:synthesize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3278,6 +3515,21 @@ LANGUAGES.ar.voices = [
 LANGUAGES.ru.voices = [
   { id:'ru-RU-SvetlanaNeural', name:'Светлана', city:'Москва',           country:'Россия', trait:'Дружелюбная', color:'#6BA3D8', x:211, y:204 },
   { id:'ru-RU-DmitryNeural',   name:'Дмитрий',  city:'Санкт-Петербург', country:'Россия', trait:'Спокойный',   color:'#E87040', x:124, y:100 },
+];
+
+// Map: lonMin:-130, lonMax:180, latMax:60, latMin:-45, w:360, h:296
+// x = (lon+130)/310*360  |  y = (60-lat)/105*296
+LANGUAGES.en.voices = [
+  { id:'en-US-female', name:'Emma',    city:'New York',      country:'USA',          trait:'Friendly',    color:'#4878B0', x:65,  y:54  },
+  { id:'en-US-male',   name:'James',   city:'Los Angeles',   country:'USA',          trait:'Relaxed',     color:'#E87040', x:14,  y:73  },
+  { id:'en-GB-female', name:'Sophie',  city:'London',        country:'UK',           trait:'Clear',       color:'#6BA3D8', x:151, y:24  },
+  { id:'en-GB-male',   name:'Oliver',  city:'Edinburgh',     country:'UK',           trait:'Warm',        color:'#5A8A5A', x:147, y:12  },
+  { id:'en-AU-female', name:'Natasha', city:'Sydney',        country:'Australia',    trait:'Bright',      color:'#D0842A', x:327, y:265 },
+  { id:'en-IE-female', name:'Aoife',   city:'Dublin',        country:'Ireland',      trait:'Lyrical',     color:'#78C080', x:144, y:19  },
+  { id:'en-ZA-female', name:'Leah',    city:'Johannesburg',  country:'South Africa', trait:'Vibrant',     color:'#C0784A', x:184, y:242 },
+  { id:'en-IN-female', name:'Priya',   city:'Mumbai',        country:'India',        trait:'Expressive',  color:'#C88040', x:236, y:116 },
+  { id:'en-CA-female', name:'Clara',   city:'Toronto',       country:'Canada',       trait:'Warm',        color:'#8060A8', x:59,  y:46  },
+  { id:'en-NZ-female', name:'Molly',   city:'Auckland',      country:'New Zealand',  trait:'Cheerful',    color:'#40A0B0', x:354, y:273 },
 ];
 
 function hexToRgb(hex) {
@@ -3779,7 +4031,7 @@ applyUIStrings();
 const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
 const langDropdownMenu = document.getElementById('lang-dropdown-menu');
 const langDropdownLabel = document.getElementById('lang-dropdown-label');
-const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский' };
+const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский', en: 'English' };
 
 langDropdownToggle.addEventListener('click', () => {
   langDropdownMenu.classList.toggle('hidden');
