@@ -1405,6 +1405,15 @@ const LANGUAGES = {
     system: null,
     diff:   null,
   },
+  ja: {
+    defaultVoice: 'ja-JP-NanamiNeural',
+    srLang: 'ja-JP',
+    map: { lonMin: 128, lonMax: 148, latMax: 46, latMin: 30, w: 360, h: 296 },
+    voices: null,
+    meta:   null,
+    system: null,
+    diff:   null,
+  },
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -1753,6 +1762,55 @@ ${content}
 永远不要说再见或结束课程——学生控制结束时间。
 如果收到"[沉默]"，请换一种方式重新提问。
 如果收到"[课程开始]"，请用一句话介绍自己是考官，然后立即就材料提出第一个问题。`,
+  },
+  ja: {
+    inactive:           '休止中',
+    live:               'ライブ',
+    speaking:           '話中',
+    pressToTalk:        '押して話す',
+    chatMode:           'チャット',
+    settingsTitle:      '設定',
+    settingsClose:      '閉じる ✕',
+    settingsSubtitle:   '選択',
+    settingsSubItalic:  '声',
+    worldLabel:         '日本語の世界',
+    durationLabel:      '時間',
+    durationMin:        '分',
+    dur1:               '1分',
+    dur15:              '15',
+    dur30:              '30分',
+    examLabel:          '試験モード',
+    examDesc:           'AIが文書を読んで試験します',
+    chatLabel:          'チャットモード',
+    chatDesc:           '静かに練習 — マイク不要',
+    saveBtn:            '保存',
+    chatPlaceholder:    '日本語で書いてください…',
+    chatTopbar:         'チャットモード',
+    uploadDoc:          '文書をアップロード',
+    sessionSummary:     'セッションまとめ',
+    analyzing:          '分析中…',
+    newTitle:           '新しいタイトル',
+    summaryPrompt:      'このセッションを3点でまとめてください：\n❌ 修正した間違い（正しい形付き）\n✅ うまくいったこと\n📚 使用した重要な語彙',
+    summarySystem:      'あなたは教育アシスタントです。この日本語練習セッションを分析し、日本語で回答してください。簡潔、励まし、具体的に。',
+    summaryError:       'まとめを利用できません。',
+    silencePrompt:      '[沈黙]',
+    sessionStart:       '[セッション開始]',
+    fallbackGreeting:   'こんにちは！今日は何について話しましょうか？',
+    examSystemFn: (content) =>
+      `あなたは厳しいが温かい日本語の先生であり、試験官です。
+学生は以下の学習資料をアップロードしました：
+----
+${content}
+----
+このセッションでのあなたの役割：
+- この資料について日本語で質問する（具体的で段階的な質問）
+- 回答を評価する：正しければ確認、間違いは自然に修正する
+- 日本語の文法や語彙の間違いがあれば、修正して正しい形を繰り返させる
+- 資料を体系的に進める（一度に一つの概念）
+- 各ターン最大1〜2文
+絶対に「さようなら」と言ったりセッションを終了しないこと——学生がいつ終わるかを決める。
+「[沈黙]」を受け取ったら、最後の質問を別の言い方で言い直してください。
+「[セッション開始]」を受け取ったら、一文で試験官として自己紹介し、すぐに資料についての最初の質問をしてください。`,
   },
 };
 
