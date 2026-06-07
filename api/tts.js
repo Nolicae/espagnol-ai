@@ -1,5 +1,5 @@
 // Vercel serverless — nolicae-tts (consolidated multi-language TTS)
-const TTS_BASE_URL = 'https://nolicae-tts.hf.space';
+const TTS_BASE_URL = 'https://nolicae-nolicae-tts.hf.space';
 const DEFAULT_VOICE = 'es-ES-ElviraNeural';
 
 async function espagnolTTS(text, voice = DEFAULT_VOICE) {
