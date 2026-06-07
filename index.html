@@ -3599,7 +3599,7 @@ async function stt(blob, type) {
   fd.append('file', blob, `rec.${ext}`);
   fd.append('model', 'whisper-large-v3');
   // Map language codes: es → es, pt-BR/pt-PT → pt, ar-SA/ar-DZ/... → ar
-  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : currentLang === 'en' ? 'en' : currentLang === 'fr' ? 'fr' : currentLang === 'zh' ? 'zh' : 'es';
+  const whisperLang = currentLang === 'pt' ? 'pt' : currentLang === 'ar' ? 'ar' : currentLang === 'ru' ? 'ru' : currentLang === 'en' ? 'en' : currentLang === 'fr' ? 'fr' : currentLang === 'zh' ? 'zh' : currentLang === 'ja' ? 'ja' : 'es';
   fd.append('language', whisperLang);
   fd.append('response_format', 'json');
   const r = await fetch(GROQ_STT, {
@@ -3685,6 +3685,10 @@ async function speakChunk(text) {
     blob = await r.blob();
   } else if (currentLang === 'zh') {
     const r = await fetch(`/api/tts-zh?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
+    if (!r.ok) throw new Error(`TTS ${r.status}`);
+    blob = await r.blob();
+  } else if (currentLang === 'ja') {
+    const r = await fetch(`/api/tts-ja?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}`);
     if (!r.ok) throw new Error(`TTS ${r.status}`);
     blob = await r.blob();
   } else {
