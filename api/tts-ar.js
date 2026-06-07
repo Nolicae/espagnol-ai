@@ -1,5 +1,5 @@
-// Vercel serverless — arabe-tts HF Space proxy
-const TTS_BASE_URL = 'https://nolicae-arabe-tts.hf.space';
+// Vercel serverless — nolicae-tts consolidated HF Space proxy
+const TTS_BASE_URL = 'https://nolicae-tts.hf.space';
 const DEFAULT_VOICE = 'ar-SA-ZariyahNeural';
 
 async function arabeTTS(text, voice = DEFAULT_VOICE) {

@@ -1,5 +1,5 @@
-// Vercel serverless function — portugais-tts space (pt-BR + pt-PT voices)
-const TTS_BASE_URL = 'https://nolicae-portugais-tts.hf.space';
+// Vercel serverless function — nolicae-tts consolidated space (pt-BR + pt-PT voices)
+const TTS_BASE_URL = 'https://nolicae-tts.hf.space';
 const DEFAULT_VOICE = 'pt-BR-FranciscaNeural';
 const RETRY_DELAYS = [2000, 4000, 6000]; // retry up to 3x if space is waking
 

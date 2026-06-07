@@ -1,5 +1,5 @@
-// Vercel serverless function — russkij-tts space (Russian voices)
-const TTS_BASE_URL = 'https://nolicae-russkij-tts.hf.space';
+// Vercel serverless function — nolicae-tts consolidated space (Russian voices)
+const TTS_BASE_URL = 'https://nolicae-tts.hf.space';
 const DEFAULT_VOICE = 'ru-RU-SvetlanaNeural';
 const RETRY_DELAYS = [2000, 4000, 6000]; // retry up to 3x if space is waking
 
