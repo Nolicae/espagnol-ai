@@ -958,6 +958,10 @@
       background: radial-gradient(circle at 35% 35%, #FFD060, #D83030, #8B0000);
       box-shadow: 0 0 18px rgba(216,48,48,0.25);
     }
+    .onboard-lang-glyph.ja {
+      background: radial-gradient(circle at 35% 35%, #FFEEEE, #E02020, #880000);
+      box-shadow: 0 0 18px rgba(224,32,32,0.25);
+    }
 
     .onboard-lang-info { flex: 1; }
     .onboard-lang-name {
@@ -1095,6 +1099,13 @@
             <div class="onboard-lang-sub">2 国 · 6 声音</div>
           </div>
         </button>
+        <button class="onboard-lang-btn" data-lang="ja">
+          <div class="onboard-lang-glyph ja">日</div>
+          <div class="onboard-lang-info">
+            <div class="onboard-lang-name">日本語</div>
+            <div class="onboard-lang-sub">日本 · 6 声</div>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -1223,6 +1234,7 @@
           <button class="lang-chip" data-lang="en">English</button>
           <button class="lang-chip" data-lang="fr">Français</button>
           <button class="lang-chip" data-lang="zh">中文</button>
+          <button class="lang-chip" data-lang="ja">日本語</button>
         </div>
       </div>
 
@@ -4369,7 +4381,7 @@ applyUIStrings();
 const langDropdownToggle = document.getElementById('lang-dropdown-toggle');
 const langDropdownMenu = document.getElementById('lang-dropdown-menu');
 const langDropdownLabel = document.getElementById('lang-dropdown-label');
-const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский', en: 'English', fr: 'Français', zh: '中文' };
+const langNames = { es: 'Español', pt: 'Português', ar: 'العربية', ru: 'Русский', en: 'English', fr: 'Français', zh: '中文', ja: '日本語' };
 
 langDropdownToggle.addEventListener('click', () => {
   langDropdownMenu.classList.toggle('hidden');
