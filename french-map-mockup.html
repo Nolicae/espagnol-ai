@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>French Map Mockup</title>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0d0d0f;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh;
+  }
+  svg { background:#141416; border:1px solid #2a2a2e; border-radius:4px; display:block; }
+  .label { font-size:8px; fill:#e8e0d5; pointer-events:none; font-family:system-ui; }
+</style>
+</head>
+<body>
+<svg id="map-fr" width="360" height="296" viewBox="0 0 360 296"></svg>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+
+// SCALE = 6.0 px/°  |  globalLatMax = 63°N  |  SVG 360×296
+// CA : lon -82→-55 (27°), svgX0=0,   width=162px, yOff=0
+// EU : lon -10→+23 (33°), svgX0=162, width=198px, yOff=+20
+//      lonMin=-10 couvre Portugal/Péninsule ibérique
+//      yOff=+20 descend EU dans le creux de la région CA
+
+const SCALE          = 6.0;
+const GLOBAL_LAT_MAX = 63;
+
+const REGIONS = [
+  { id:'ca', lonMin:-82, lonMax:-55, latMin:12, latMax:63, svgX0:  0, yOff:  0 },
+  { id:'eu', lonMin:-10, lonMax: 23, latMin:17, latMax:63, svgX0:162, yOff:+20 },
+];
+
+// CA : fade haut (Hudson Bay) + bas (Antilles context)
+const CA_FADE = [[0,0],[0.081,1],[0.831,1],[0.973,0],[1,0]];
+// EU : fade haut (vide yOff) + bas (Sahara)
+const EU_FADE = [[0,0],[0.068,1],[0.818,1],[1,0]];
+
+function svgX1(r) { return r.svgX0 + (r.lonMax - r.lonMin) * SCALE; }
+function proj(lon, lat, r) {
+  return [
+    Math.max(r.svgX0, Math.min(svgX1(r), r.svgX0 + (lon - r.lonMin) * SCALE)),
+    Math.max(0, Math.min(296, (GLOBAL_LAT_MAX - lat) * SCALE + r.yOff)),
+  ];
+}
+
+// ── Voix ──────────────────────────────────────────────────────────────────────
+const VOICES = [
+  { name:'Sylvie',   ri:0, lon:-73.6, lat:45.5, color:'#4870C0', anchor:'start', lx:7,  ly:3  },
+  { name:'Antoine',  ri:0, lon:-71.2, lat:46.8, color:'#8050A0', anchor:'end',   lx:-7, ly:-4 },
+  { name:'Charline', ri:1, lon:4.35,  lat:50.85,color:'#B09020', anchor:'start', lx:7,  ly:-4 },
+  { name:'Denise',   ri:1, lon:2.35,  lat:48.85,color:'#C05070', anchor:'end',   lx:-7, ly:3  },
+  { name:'Ariane',   ri:1, lon:6.15,  lat:46.2, color:'#50A050', anchor:'start', lx:7,  ly:3  },
+  { name:'Henri',    ri:1, lon:5.37,  lat:43.3, color:'#E07030', anchor:'start', lx:7,  ly:3  },
+];
+
+async function render() {
+  const world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(r=>r.json());
+  const svg   = document.getElementById('map-fr');
+  const coast = topojson.mesh(world, world.objects.land);
+
+  const defs = document.createElementNS(NS, 'defs');
+  function makeGradMask(id, stops, x, w) {
+    const gId = `grad-${id}`, mId = `mask-${id}`;
+    const grad = document.createElementNS(NS, 'linearGradient');
+    grad.setAttribute('id', gId);
+    grad.setAttribute('x1','0'); grad.setAttribute('y1','0');
+    grad.setAttribute('x2','0'); grad.setAttribute('y2','1');
+    stops.forEach(([off, op]) => {
+      const s = document.createElementNS(NS, 'stop');
+      s.setAttribute('offset', off.toFixed(4));
+      s.setAttribute('stop-color','white');
+      s.setAttribute('stop-opacity', op);
+      grad.appendChild(s);
+    });
+    defs.appendChild(grad);
+    const mask = document.createElementNS(NS, 'mask');
+    mask.setAttribute('id', mId);
+    const rect = document.createElementNS(NS, 'rect');
+    rect.setAttribute('x', x); rect.setAttribute('y', 0);
+    rect.setAttribute('width', w); rect.setAttribute('height', 296);
+    rect.setAttribute('fill', `url(#${gId})`);
+    mask.appendChild(rect);
+    defs.appendChild(mask);
+    return mId;
+  }
+  const CA_MASK = makeGradMask('ca', CA_FADE,   0, 162);
+  const EU_MASK = makeGradMask('eu', EU_FADE, 162, 198);
+  svg.appendChild(defs);
+
+  const MASKS = [CA_MASK, EU_MASK];
+  for (let i = 0; i < REGIONS.length; i++) {
+    const r = REGIONS[i];
+    let d = '';
+    coast.coordinates.forEach(line => {
+      let move = true;
+      line.forEach(([lon, lat]) => {
+        if (lon<r.lonMin-0.5||lon>r.lonMax+0.5||lat<r.latMin-0.5||lat>r.latMax+0.5) { move=true; return; }
+        const [x, y] = proj(lon, lat, r);
+        d += move ? `M${x.toFixed(1)},${y.toFixed(1)} ` : `L${x.toFixed(1)},${y.toFixed(1)} `;
+        move = false;
+      });
+    });
+    if (!d) continue;
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('mask', `url(#${MASKS[i]})`);
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+    path.setAttribute('stroke-width', '0.75');
+    g.appendChild(path);
+    svg.appendChild(g);
+  }
+
+  for (const v of VOICES) {
+    const r = REGIONS[v.ri];
+    const [x, y] = proj(v.lon, v.lat, r);
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1));
+    dot.setAttribute('r', '5'); dot.setAttribute('fill', v.color);
+    dot.setAttribute('opacity', '0.9');
+    svg.appendChild(dot);
+    const lbl = document.createElementNS(NS, 'text');
+    lbl.setAttribute('x', (x+v.lx).toFixed(1)); lbl.setAttribute('y', (y+v.ly).toFixed(1));
+    lbl.setAttribute('text-anchor', v.anchor); lbl.setAttribute('class','label');
+    lbl.textContent = v.name;
+    svg.appendChild(lbl);
+  }
+}
+render().catch(console.error);
+</script>
+</body>
+</html>

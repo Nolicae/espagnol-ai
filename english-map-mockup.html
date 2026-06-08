@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>English Map Mockup</title>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0d0d0f; color:#e8e0d5;
+    font-family:system-ui,sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:20px;
+  }
+  svg { background:#141416; border:1px solid #2a2a2e; border-radius:4px; display:block; }
+  .label { font-size:8px; fill:#e8e0d5; pointer-events:none; font-family:system-ui; }
+</style>
+</head>
+<body>
+<svg id="map-en" width="360" height="296" viewBox="0 0 360 296"></svg>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+// scaleX=1.55 : légèrement augmenté pour remplir toute la largeur (AU atteint x=360)
+const scaleX = 1.55;
+const LAT_MAX = 75, LAT_MIN = -45;
+const scaleY  = 296 / (LAT_MAX - LAT_MIN); // 2.467 px/°
+
+const REGIONS = [
+  // NA : yOff=+20 (réduit depuis +35) → moins d'espace vide en haut
+  { id:'na', lonMin:-130, lonMax: -50, latMin: -5, latMax: 75, svgX0:   0,               yOff: +20 },
+  // EU : lonMin=-20 (récupère côte ouest africaine : Dakar à -17°W)
+  //       lonMax=120 (remplit droite : Bay of Bengal visible)
+  //       latMax=75  (remplit haut : Scandinavie/Arctique)
+  { id:'eu', lonMin: -20, lonMax: 120, latMin:-40, latMax: 75, svgX0:  80 * 1.55,        yOff:   0  },
+  // AU : svgX0 = 360 - 68°*1.55 = 254.6 → AU atteint exactement x=360
+  //      Madagascar (EU) finit à x≈233, AU commence à x≈255 → gap=22px, pas d'overlap
+  { id:'au', lonMin: 110, lonMax: 178, latMin:-50, latMax:-10, svgX0: 360 - 68 * 1.55,  yOff: -20 },
+];
+
+function svgX1(r) { return r.svgX0 + (r.lonMax - r.lonMin) * scaleX; }
+
+function proj(lon, lat, r) {
+  const x = r.svgX0 + (lon - r.lonMin) * scaleX;
+  const y = (LAT_MAX - lat) * scaleY + r.yOff;
+  return [
+    Math.max(r.svgX0, Math.min(svgX1(r), x)),
+    Math.max(0, Math.min(296, y)),
+  ];
+}
+
+// NA fade : lat 15°N → y=148+20=168px (56.8%), lat 0°N → y=185+20=205px (69.3%)
+const NA_FADE_START = 168 / 296;
+const NA_FADE_END   = 205 / 296;
+
+const VOICES = [
+  { name:'Guy',     lon:-118.24, lat: 34.05, color:'#40A060', ri:0, anchor:'start', lx: 7, ly: 3 },
+  { name:'Jenny',   lon:  -74,   lat: 40.71, color:'#C04040', ri:0, anchor:'start', lx: 7, ly: 3 },
+  { name:'Emily',   lon:   -6.26,lat: 53.35, color:'#9040B0', ri:1, anchor:'end',   lx:-7, ly:-4 },
+  { name:'Sonia',   lon:   -0.12,lat: 51.51, color:'#4060C0', ri:1, anchor:'start', lx: 7, ly: 3 },
+  { name:'Neerja',  lon:   72.87,lat: 19.08, color:'#B0A030', ri:1, anchor:'start', lx: 7, ly: 3 },
+  { name:'Natasha', lon:  151.21,lat:-33.87, color:'#D07030', ri:2, anchor:'start', lx: 7, ly: 3 },
+];
+
+async function render() {
+  const world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(r=>r.json());
+  const svg   = document.getElementById('map-en');
+  const coast = topojson.mesh(world, world.objects.land);
+
+  // ── Defs : gradient + mask pour le fade NA ─────────────────────────────
+  const defs = document.createElementNS(NS, 'defs');
+
+  const grad = document.createElementNS(NS, 'linearGradient');
+  grad.setAttribute('id', 'grad-na-fade');
+  grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
+  grad.setAttribute('x2', '0'); grad.setAttribute('y2', '1');
+  [
+    [0,                        1],
+    [NA_FADE_START.toFixed(4), 1],
+    [NA_FADE_END.toFixed(4),   0],
+    [1,                        0],
+  ].forEach(([off, op]) => {
+    const s = document.createElementNS(NS, 'stop');
+    s.setAttribute('offset', off);
+    s.setAttribute('stop-color', 'white');
+    s.setAttribute('stop-opacity', op);
+    grad.appendChild(s);
+  });
+  defs.appendChild(grad);
+
+  const mask = document.createElementNS(NS, 'mask');
+  mask.setAttribute('id', 'mask-na');
+  const mRect = document.createElementNS(NS, 'rect');
+  mRect.setAttribute('x', 0); mRect.setAttribute('y', 0);
+  mRect.setAttribute('width', svgX1(REGIONS[0])); mRect.setAttribute('height', 296);
+  mRect.setAttribute('fill', 'url(#grad-na-fade)');
+  mask.appendChild(mRect);
+  defs.appendChild(mask);
+
+  svg.appendChild(defs);
+
+  // ── Tracé des côtes ────────────────────────────────────────────────────
+  for (const r of REGIONS) {
+    let d = '';
+    coast.coordinates.forEach(line => {
+      let move = true;
+      line.forEach(([lon, lat]) => {
+        if (lon < r.lonMin - 0.5 || lon > r.lonMax + 0.5 ||
+            lat < r.latMin - 0.5 || lat > r.latMax + 0.5) {
+          move = true; return;
+        }
+        const [x, y] = proj(lon, lat, r);
+        d += move ? `M${x.toFixed(1)},${y.toFixed(1)} ` : `L${x.toFixed(1)},${y.toFixed(1)} `;
+        move = false;
+      });
+    });
+    if (!d) continue;
+
+    const g = document.createElementNS(NS, 'g');
+    if (r.id === 'na') g.setAttribute('mask', 'url(#mask-na)');
+
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+    path.setAttribute('stroke-width', '0.75');
+    g.appendChild(path);
+    svg.appendChild(g);
+  }
+
+  // ── Dots voix ──────────────────────────────────────────────────────────
+  for (const v of VOICES) {
+    const r = REGIONS[v.ri];
+    const [x, y] = proj(v.lon, v.lat, r);
+
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1));
+    dot.setAttribute('r', '5'); dot.setAttribute('fill', v.color);
+    dot.setAttribute('opacity', '0.85');
+    svg.appendChild(dot);
+
+    const lbl = document.createElementNS(NS, 'text');
+    lbl.setAttribute('x', (x + v.lx).toFixed(1));
+    lbl.setAttribute('y', (y + v.ly).toFixed(1));
+    lbl.setAttribute('text-anchor', v.anchor);
+    lbl.setAttribute('class', 'label');
+    lbl.textContent = v.name;
+    svg.appendChild(lbl);
+  }
+}
+
+render().catch(console.error);
+</script>
+</body>
+</html>

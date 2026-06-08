@@ -3903,13 +3903,29 @@ LANGUAGES.en.voices = [
   { id:'en-NZ-MollyNeural',   name:'Molly',   city:'Auckland',     country:'New Zealand',  trait:'Cheerful',   color:'#40A0B0', x:354, y:273 },
 ];
 
+// Map: 360×296, scale=6px/°, globalLatMax=63°N
+// CA: lon -82→-55 (27°), width=162px, yOff=0
+// EU: lon -10→+23 (33°), width=198px, yOff=+20
+LANGUAGES.fr.map = {
+  w: 360, h: 296,
+  scale: 360 / 60, // 6.0 px/°
+  globalLatMax: 63,
+  lonMin: -82, lonMax: 23, latMin: 12, latMax: 63,
+  regions: [
+    { lonMin:-82, lonMax:-55, latMin:12, latMax:63, svgX0:  0, yOff: 0,
+      fade: { dir:'y', w:162, h:296, stops:[[0,0],[0.081,1],[0.831,1],[0.973,0],[1,0]] } },
+    { lonMin:-10, lonMax: 23, latMin:17, latMax:63, svgX0:162, yOff:+20,
+      fade: { dir:'y', x:162, w:198, h:296, stops:[[0,0],[0.068,1],[0.818,1],[1,0]] } },
+  ],
+};
+
 LANGUAGES.fr.voices = [
-  { id:'fr-FR-DeniseNeural',   name:'Denise',   city:'Paris',     country:'France',   trait:'Distinguée', color:'#C05070', x:297, y:151 },
-  { id:'fr-FR-HenriNeural',    name:'Henri',    city:'Marseille', country:'France',   trait:'Chaleureux', color:'#E07030', x:307, y:269 },
-  { id:'fr-BE-CharlineNeural', name:'Charline', city:'Bruxelles', country:'Belgique', trait:'Naturelle',  color:'#B09020', x:304, y:109 },
-  { id:'fr-CH-ArianeNeural',   name:'Ariane',   city:'Genève',    country:'Suisse',   trait:'Précise',    color:'#50A050', x:310, y:207 },
-  { id:'fr-CA-SylvieNeural',   name:'Sylvie',   city:'Montréal',  country:'Canada',   trait:'Énergique',  color:'#4870C0', x:23,  y:222 },
-  { id:'fr-CA-AntoineNeural',  name:'Antoine',  city:'Québec',    country:'Canada',   trait:'Détendu',    color:'#8050A0', x:32,  y:195 },
+  { id:'fr-FR-DeniseNeural',   name:'Denise',   city:'Paris',     country:'France',   trait:'Distinguée', color:'#C05070', x:224, y:105 },
+  { id:'fr-FR-HenriNeural',    name:'Henri',    city:'Marseille', country:'France',   trait:'Chaleureux', color:'#E07030', x:242, y:138 },
+  { id:'fr-BE-CharlineNeural', name:'Charline', city:'Bruxelles', country:'Belgique', trait:'Naturelle',  color:'#B09020', x:236, y:93  },
+  { id:'fr-CH-ArianeNeural',   name:'Ariane',   city:'Genève',    country:'Suisse',   trait:'Précise',    color:'#50A050', x:247, y:121 },
+  { id:'fr-CA-SylvieNeural',   name:'Sylvie',   city:'Montréal',  country:'Canada',   trait:'Énergique',  color:'#4870C0', x:50,  y:105 },
+  { id:'fr-CA-AntoineNeural',  name:'Antoine',  city:'Québec',    country:'Canada',   trait:'Détendu',    color:'#8050A0', x:65,  y:97  },
 ];
 
 LANGUAGES.zh.voices = [

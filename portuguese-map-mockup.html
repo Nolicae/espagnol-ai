@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Portuguese Map Mockup</title>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0d0d0f; color:#e8e0d5;
+    font-family:system-ui,sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:20px;
+  }
+  svg { background:#141416; border:1px solid #2a2a2e; border-radius:4px; display:block; }
+  .label { font-size:8px; fill:#e8e0d5; pointer-events:none; font-family:system-ui; }
+</style>
+</head>
+<body>
+<svg id="map-pt" width="360" height="296" viewBox="0 0 360 296"></svg>
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+
+// ── Projection interrompue portugais : 2 régions ─────────────────────────────
+// Région SA : Amérique du Sud (tout le Brésil + contexte)
+// Région EU : Europe + Afrique (Portugal + Angola + Mozambique)
+// scaleX = scaleY = 360/114° = 3.158 px/° (même échelle, pas de distorsion)
+const SCALE = 360 / 114; // 3.158 px/°
+
+const REGIONS = [
+  // SA : lat -58→+14°N (72°), yOff=0 (Brésil en haut)
+  // Fade haut : lat 14→6°N (Venezuela/Guyane disparaissent)
+  // Fade bas : lat -35→-58°S (Patagonie disparaît)
+  { id:'sa', lonMin:-75, lonMax:-28, latMin:-58, latMax:14, svgX0:  0,     yOff: 0 },
+  // EU : lat -30→+62°N (92°), yOff=0 (Europe en haut, Mozambique en bas)
+  { id:'eu', lonMin:-20, lonMax: 47, latMin:-30, latMax:62, svgX0: 47*SCALE, yOff: 0 },
+  // ← svgX0 EU = 47° × 3.158 = 148.4px
+];
+
+// ── Zones de fade SA (gradient vertical) ─────────────────────────────────────
+// Top  : y=0 (lat 14°N) → y=25px (lat 6°N)  — fade in
+// Bottom : y=155px (lat -35°S) → y=202px (lat -50°S) — fade out
+const SA_FADE_TOP_START  =   0 / 296; //  0%
+const SA_FADE_TOP_END    =  25 / 296; //  8.4%  lat 6°N  : (14-6)*3.158=25.3px
+const SA_FADE_BOT_START  = 155 / 296; // 52.4%  lat -35°S : (14+35)*3.158=154.7px
+const SA_FADE_BOT_END    = 202 / 296; // 68.2%  lat -50°S : (14+50)*3.158=202.1px
+
+function svgX1(r) { return r.svgX0 + (r.lonMax - r.lonMin) * SCALE; }
+
+function proj(lon, lat, r) {
+  const x = r.svgX0 + (lon - r.lonMin) * SCALE;
+  const y = (r.latMax - lat) * SCALE + r.yOff;
+  return [
+    Math.max(r.svgX0, Math.min(svgX1(r), x)),
+    Math.max(0, Math.min(296, y)),
+  ];
+}
+
+// ── Voix ──────────────────────────────────────────────────────────────────────
+const VOICES = [
+  // Brésil (région SA)
+  { name:'Francisca', lon:-46.6, lat:-23.5, color:'#E8907A', ri:0, anchor:'end',   lx:-7, ly: 3 },
+  { name:'António',   lon:-43.2, lat:-22.9, color:'#78B8E8', ri:0, anchor:'start', lx: 7, ly: 3 },
+  { name:'Thalita',   lon:-49.3, lat:-25.4, color:'#88C4E0', ri:0, anchor:'end',   lx:-7, ly:-4 },
+  // Portugal (région EU)
+  { name:'Duarte',    lon: -9.1, lat: 38.7, color:'#E890A8', ri:1, anchor:'end',   lx:-7, ly: 3 },
+  { name:'Raquel',    lon: -8.4, lat: 40.2, color:'#A8C8E8', ri:1, anchor:'start', lx: 7, ly:-4 },
+];
+
+async function render() {
+  const world = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/land-110m.json').then(r=>r.json());
+  const svg   = document.getElementById('map-pt');
+  const coast = topojson.mesh(world, world.objects.land);
+
+  // ── Defs : gradient + mask pour fade SA ──────────────────────────────────
+  const defs = document.createElementNS(NS, 'defs');
+
+  // Gradient vertical pour SA (fade haut Venezuela, fade bas Patagonie)
+  const grad = document.createElementNS(NS, 'linearGradient');
+  grad.setAttribute('id', 'grad-sa-fade');
+  grad.setAttribute('x1','0'); grad.setAttribute('y1','0');
+  grad.setAttribute('x2','0'); grad.setAttribute('y2','1');
+  [
+    [0,                          0],
+    [SA_FADE_TOP_START.toFixed(4), 0],
+    [SA_FADE_TOP_END.toFixed(4),   1],
+    [SA_FADE_BOT_START.toFixed(4), 1],
+    [SA_FADE_BOT_END.toFixed(4),   0],
+    [1,                          0],
+  ].forEach(([off, op]) => {
+    const s = document.createElementNS(NS, 'stop');
+    s.setAttribute('offset', off);
+    s.setAttribute('stop-color', 'white');
+    s.setAttribute('stop-opacity', op);
+    grad.appendChild(s);
+  });
+  defs.appendChild(grad);
+
+  const mask = document.createElementNS(NS, 'mask');
+  mask.setAttribute('id', 'mask-sa');
+  const mRect = document.createElementNS(NS, 'rect');
+  mRect.setAttribute('x', 0); mRect.setAttribute('y', 0);
+  mRect.setAttribute('width', svgX1(REGIONS[0])); mRect.setAttribute('height', 296);
+  mRect.setAttribute('fill', 'url(#grad-sa-fade)');
+  mask.appendChild(mRect);
+  defs.appendChild(mask);
+
+  svg.appendChild(defs);
+
+  // ── Tracé des côtes par région ────────────────────────────────────────────
+  for (const r of REGIONS) {
+    let d = '';
+    coast.coordinates.forEach(line => {
+      let move = true;
+      line.forEach(([lon, lat]) => {
+        if (lon < r.lonMin - 0.5 || lon > r.lonMax + 0.5 ||
+            lat < r.latMin - 0.5 || lat > r.latMax + 0.5) {
+          move = true; return;
+        }
+        const [x, y] = proj(lon, lat, r);
+        d += move ? `M${x.toFixed(1)},${y.toFixed(1)} ` : `L${x.toFixed(1)},${y.toFixed(1)} `;
+        move = false;
+      });
+    });
+    if (!d) continue;
+
+    const g = document.createElementNS(NS, 'g');
+    if (r.id === 'sa') g.setAttribute('mask', 'url(#mask-sa)');
+
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', 'rgba(255,255,255,0.18)');
+    path.setAttribute('stroke-width', '0.75');
+    g.appendChild(path);
+    svg.appendChild(g);
+  }
+
+  // ── Dots voix ─────────────────────────────────────────────────────────────
+  for (const v of VOICES) {
+    const r = REGIONS[v.ri];
+    const [x, y] = proj(v.lon, v.lat, r);
+
+    const dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('cx', x.toFixed(1)); dot.setAttribute('cy', y.toFixed(1));
+    dot.setAttribute('r', '5'); dot.setAttribute('fill', v.color);
+    dot.setAttribute('opacity', '0.85');
+    svg.appendChild(dot);
+
+    const lbl = document.createElementNS(NS, 'text');
+    lbl.setAttribute('x', (x + v.lx).toFixed(1));
+    lbl.setAttribute('y', (y + v.ly).toFixed(1));
+    lbl.setAttribute('text-anchor', v.anchor);
+    lbl.setAttribute('class', 'label');
+    lbl.textContent = v.name;
+    svg.appendChild(lbl);
+  }
+}
+
+render().catch(console.error);
+</script>
+</body>
+</html>
