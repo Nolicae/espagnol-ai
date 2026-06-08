@@ -1376,8 +1376,9 @@ const LANGUAGES = {
         // SA : Brésil + contexte — fade haut (Venezuela) et bas (Patagonie)
         { lonMin:-75, lonMax:-28, latMin:-58, latMax: 14, svgX0:   0,   yOff: 0,
           fade: { dir:'y', w:148.4, h:296, stops:[[0,0],[0.085,1],[0.523,1],[0.683,0],[1,0]] } },
-        // EU : Portugal + Angola + Mozambique (Europe + Afrique lusophone)
-        { lonMin:-20, lonMax: 47, latMin:-30, latMax: 62, svgX0: 148.4, yOff: 0 },
+        // EU : Portugal + Afrique lusophone — fade bas depuis équateur (Angola/Mozambique s'estompent)
+        { lonMin:-20, lonMax: 47, latMin:-30, latMax: 62, svgX0: 148.4, yOff: 0,
+          fade: { dir:'y', x:148.4, w:211.6, h:296, stops:[[0,1],[0.608,1],[0.875,0],[1,0]] } },
       ],
     },
     voices: null,
@@ -3840,11 +3841,11 @@ LANGUAGES.es.voices = VOICES;
 LANGUAGES.pt.voices = [
   // Brasil (région SA)
   { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x: 90, y:118 },
-  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:101, y:117 },
-  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x: 81, y:124 },
-  // Portugal (région EU)
+  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:106, y:112 },
+  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x: 76, y:127 },
+  // Portugal (région EU) — offset cartographique léger pour cliquabilité (Lisbonne/Coimbra trop proches)
   { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:183, y: 74 },
-  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:185, y: 69 },
+  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:176, y: 61 },
 ];
 
 LANGUAGES.ar.voices = [
@@ -4129,7 +4130,7 @@ function initVoicesMap() {
             const mask = document.createElementNS(NS, 'mask');
             mask.setAttribute('id', mId);
             const rect = document.createElementNS(NS, 'rect');
-            rect.setAttribute('x', 0); rect.setAttribute('y', 0);
+            rect.setAttribute('x', fade.x != null ? fade.x : 0); rect.setAttribute('y', 0);
             rect.setAttribute('width', fade.w); rect.setAttribute('height', fade.h);
             rect.setAttribute('fill', `url(#${gId})`);
             mask.appendChild(rect);
