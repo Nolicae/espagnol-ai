@@ -1366,7 +1366,20 @@ const LANGUAGES = {
   pt: {
     defaultVoice: 'pt-BR-FranciscaNeural',
     srLang: 'pt-BR',
-    map: { lonMin: -60, lonMax: 30, latMax: 50, latMin: -30, w: 360, h: 296 },
+    // Projection interrompue : 2 régions (Amériques / Europe+Afrique)
+    // scale = 360 / (47°SA + 67°EU) = 3.158 px/° — même valeur X et Y (pas de distorsion)
+    map: {
+      w: 360, h: 296,
+      lonMin: -75, lonMax: 47, latMax: 62, latMin: -58,
+      scale: 360 / 114, // 3.158 px/°
+      regions: [
+        // SA : Brésil + contexte — fade haut (Venezuela) et bas (Patagonie)
+        { lonMin:-75, lonMax:-28, latMin:-58, latMax: 14, svgX0:   0,   yOff: 0,
+          fade: { dir:'y', w:148.4, h:296, stops:[[0,0],[0.085,1],[0.523,1],[0.683,0],[1,0]] } },
+        // EU : Portugal + Angola + Mozambique (Europe + Afrique lusophone)
+        { lonMin:-20, lonMax: 47, latMin:-30, latMax: 62, svgX0: 148.4, yOff: 0 },
+      ],
+    },
     voices: null,
     meta:   null,
     system: null,
@@ -1394,9 +1407,11 @@ const LANGUAGES = {
     defaultVoice: 'en-US-JennyNeural',
     srLang: 'en-US',
     // Projection interrompue : 3 régions côte-à-côte (AN / EU+AF / Océanie)
+    // scaleX=1.55 px/° · scaleY=296/120=2.467 px/° · globalLatMax=75 pour toutes les régions
     map: {
       w: 360, h: 296,
-      lonMin: -130, lonMax: 178, latMax: 75, latMin: -50, // global bounds pour clipping
+      lonMin: -130, lonMax: 178, latMax: 75, latMin: -50,
+      scaleX: 1.55, scaleY: 296 / 120, globalLatMax: 75,
       regions: [
         { lonMin:-130, lonMax: -50, latMin:  0, latMax: 75, svgX0:   0,   yOff: +20 },
         { lonMin: -20, lonMax: 120, latMin:-40, latMax: 75, svgX0: 124,   yOff:   0 },
@@ -3818,14 +3833,18 @@ const VOICES = [
 ];
 LANGUAGES.es.voices = VOICES;
 
+// ── Portuguese voices — x/y computed for the 2-region interrupted projection ──
+// scale=3.158 px/° · SA: svgX0=0, latMax=14, yOff=0 · EU: svgX0=148.4, latMax=62, yOff=0
+// SA: x=0+(lon+75)*3.158  y=(14-lat)*3.158
+// EU: x=148.4+(lon+20)*3.158  y=(62-lat)*3.158
 LANGUAGES.pt.voices = [
-  // Brasil — verified working voices only (centered projection, better spacing)
-  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x:56,  y:274 },
-  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:68,  y:270 },
-  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x:44,  y:281 },
-  // Portugal — verified working voices only (centered projection)
-  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:204, y:41  },
-  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:208, y:37  },
+  // Brasil (région SA)
+  { id:'pt-BR-FranciscaNeural', name:'Francisca', city:'São Paulo',      country:'Brasil',   trait:'calorosa',    color:'#E8907A', x: 90, y:118 },
+  { id:'pt-BR-AntonioNeural',   name:'António',   city:'Rio de Janeiro', country:'Brasil',   trait:'animado',     color:'#78B8E8', x:101, y:117 },
+  { id:'pt-BR-ThalitaNeural',   name:'Thalita',   city:'Curitiba',       country:'Brasil',   trait:'precisa',     color:'#88C4E0', x: 81, y:124 },
+  // Portugal (région EU)
+  { id:'pt-PT-DuarteNeural',    name:'Duarte',    city:'Lisboa',         country:'Portugal', trait:'eloquente',   color:'#E890A8', x:183, y: 74 },
+  { id:'pt-PT-RaquelNeural',    name:'Raquel',    city:'Coimbra',        country:'Portugal', trait:'intelectual', color:'#A8C8E8', x:185, y: 69 },
 ];
 
 LANGUAGES.ar.voices = [
@@ -3969,7 +3988,23 @@ function initVoicesMap() {
     }
 
     // Real coastlines from Natural Earth — injected once loaded (see bottom of initVoicesMap)
-    if (window._coastPathD) {
+    if (window._coastRegionPaths && mapCfgOuter.regions) {
+      // Projection interrompue : un <g> par région, masque optionnel pour le fade
+      for (const { d, maskId } of window._coastRegionPaths) {
+        if (!d) continue;
+        const g = document.createElementNS(NS, 'g');
+        if (maskId) g.setAttribute('mask', `url(#${maskId})`);
+        const cp = document.createElementNS(NS, 'path');
+        cp.setAttribute('d', d);
+        cp.setAttribute('fill', 'none');
+        cp.setAttribute('stroke', 'rgba(255,255,255,0.10)');
+        cp.setAttribute('stroke-width', '0.75');
+        cp.setAttribute('stroke-linecap', 'round');
+        cp.setAttribute('stroke-linejoin', 'round');
+        g.appendChild(cp);
+        mapGroup.appendChild(g);
+      }
+    } else if (window._coastPathD) {
       const cp = document.createElementNS(NS, 'path');
       cp.setAttribute('d', window._coastPathD);
       cp.setAttribute('fill', 'none');
@@ -4038,27 +4073,69 @@ function initVoicesMap() {
       // Projection: matches dot coordinate space exactly
       const mapCfg = LANGUAGES[currentLang].map;
 
-      let d = '';
       if (mapCfg.regions) {
-        // ── Projection interrompue (English) : 3 régions indépendantes ──────
-        const LAT_MAX = 75;
-        const SCALE_X = 1.55;           // px/° (identique pour toutes les régions)
-        const SCALE_Y = mapCfg.h / 120; // 296/120 = 2.467 px/°  (LAT_MAX-LAT_MIN)
+        // ── Projection interrompue (générique) : N régions indépendantes ────
+        const SCALE_X = mapCfg.scaleX || mapCfg.scale || 1.55;   // px/° horizontal
+        const SCALE_Y = mapCfg.scaleY || mapCfg.scale || 1.55;   // px/° vertical
+        const GLOBAL_LAT = mapCfg.globalLatMax;  // défini → référence globale, sinon r.latMax
+
+        const regionPaths = [];
+        const fadeDefs    = [];
         for (const r of mapCfg.regions) {
           const svgX1r = r.svgX0 + (r.lonMax - r.lonMin) * SCALE_X;
+          const latRef  = (GLOBAL_LAT !== undefined) ? GLOBAL_LAT : r.latMax;
+          let d = '';
           coast.coordinates.forEach(line => {
             let move = true;
             line.forEach(([lon, lat]) => {
               if (lon < r.lonMin - 0.5 || lon > r.lonMax + 0.5 ||
                   lat < r.latMin - 0.5 || lat > r.latMax + 0.5) { move = true; return; }
-              const x = Math.max(r.svgX0, Math.min(svgX1r,
-                          r.svgX0 + (lon - r.lonMin) * SCALE_X));
-              const y = Math.max(0, Math.min(mapCfg.h,
-                          (LAT_MAX - lat) * SCALE_Y + r.yOff));
+              const x = Math.max(r.svgX0, Math.min(svgX1r, r.svgX0 + (lon - r.lonMin) * SCALE_X));
+              const y = Math.max(0, Math.min(mapCfg.h, (latRef - lat) * SCALE_Y + r.yOff));
               d += move ? `M${x.toFixed(1)},${y.toFixed(1)} ` : `L${x.toFixed(1)},${y.toFixed(1)} `;
               move = false;
             });
           });
+          const rp = { d };
+          if (r.fade) {
+            const idx = fadeDefs.length;
+            rp.maskId = `_cm${idx}`;
+            fadeDefs.push({ gId: `_cg${idx}`, mId: `_cm${idx}`, fade: r.fade });
+          }
+          regionPaths.push(rp);
+        }
+        window._coastRegionPaths = regionPaths;
+        window._coastPathD = null;
+
+        // Gradient + mask pour chaque région avec fade
+        if (fadeDefs.length) {
+          mapSvg.querySelectorAll('defs.cfd').forEach(el => el.remove());
+          const defs = document.createElementNS(NS, 'defs');
+          defs.setAttribute('class', 'cfd');
+          fadeDefs.forEach(({ gId, mId, fade }) => {
+            const grad = document.createElementNS(NS, 'linearGradient');
+            grad.setAttribute('id', gId);
+            grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
+            grad.setAttribute('x2', fade.dir === 'x' ? '1' : '0');
+            grad.setAttribute('y2', fade.dir === 'y' ? '1' : '0');
+            fade.stops.forEach(([off, op]) => {
+              const s = document.createElementNS(NS, 'stop');
+              s.setAttribute('offset', off.toFixed(4));
+              s.setAttribute('stop-color', 'white');
+              s.setAttribute('stop-opacity', op);
+              grad.appendChild(s);
+            });
+            defs.appendChild(grad);
+            const mask = document.createElementNS(NS, 'mask');
+            mask.setAttribute('id', mId);
+            const rect = document.createElementNS(NS, 'rect');
+            rect.setAttribute('x', 0); rect.setAttribute('y', 0);
+            rect.setAttribute('width', fade.w); rect.setAttribute('height', fade.h);
+            rect.setAttribute('fill', `url(#${gId})`);
+            mask.appendChild(rect);
+            defs.appendChild(mask);
+          });
+          mapSvg.insertBefore(defs, mapSvg.firstChild);
         }
       } else {
         // ── Projection équirectangulaire simple (toutes les autres langues) ──
@@ -4068,6 +4145,7 @@ function initVoicesMap() {
         const sy = mapCfg.h / (mapCfg.latMax - mapCfg.latMin);
         const proj = (lon, lat) => [+((lon - lonMin) * sx).toFixed(1),
                                     +((latMax - lat) * sy).toFixed(1)];
+        let d = '';
         coast.coordinates.forEach(line => {
           let move = true;
           line.forEach(([lon, lat]) => {
@@ -4078,9 +4156,9 @@ function initVoicesMap() {
             move = false;
           });
         });
+        window._coastPathD = d;
+        window._coastRegionPaths = null;
       }
-
-      window._coastPathD = d;
       // Re-render map with coastlines now available
       renderMap(getVoiceKey() || getLangVoices()[0].id);
     } catch (e) {
