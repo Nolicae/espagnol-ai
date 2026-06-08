@@ -632,7 +632,7 @@
 
     .settings-save {
       position: absolute;
-      top: 940px;
+      top: 1000px;
       left: 24px; right: 24px;
       width: calc(100% - 48px);
       padding: 16px;
@@ -677,12 +677,15 @@
     }
     .exam-file-badge.loaded { color: #7ecfa0; }
 
-    /* ── Exam + Chat toggles (settings screen) ── */
+    /* ── Exam + Chat + Familier toggles (settings screen) ── */
     .settings-exam {
       position: absolute; top: 812px; left: 24px; right: 24px;
     }
     .settings-chat {
       position: absolute; top: 872px; left: 24px; right: 24px;
+    }
+    .settings-familier {
+      position: absolute; top: 932px; left: 24px; right: 24px;
     }
 
     /* ── Chat Overlay ───────────────────────────────────── */
@@ -1299,6 +1302,20 @@
         </div>
       </div>
 
+      <!-- Familiar mode toggle -->
+      <div class="settings-familier">
+        <div class="exam-toggle-row">
+          <div class="exam-toggle-info">
+            <span class="exam-toggle-label">Modo Familiar</span>
+            <span class="exam-toggle-desc">La IA tutea, usa argot y palabrotas</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="familier-toggle" aria-label="Activar Modo Familiar">
+            <span class="switch-track"></span>
+          </label>
+        </div>
+      </div>
+
       <button class="settings-save" id="btn-save">Guardar</button>
       <!-- Spacer forces the scroll container height (absolute children don't) -->
       <div class="settings-spacer"></div>
@@ -1347,6 +1364,7 @@ const lk = {
   factThreshold: (id) => `fact_thr_${currentLang}_${id}`,
   factsSeen:     (id) => `facts_seen_${currentLang}_${id}`,
   chatMode:      () => `chat_mode_${currentLang}`,
+  familierMode:  () => `familier_mode_${currentLang}`,
   duration:      () => `session_duration_${currentLang}`,
 };
 
@@ -1477,6 +1495,8 @@ const UI_STRINGS = {
     examDesc:           'La IA lee un documento y te examina',
     chatLabel:          'Modo Chat',
     chatDesc:           'Practica en silencio — sin micrófono ni audio',
+    familierLabel:      'Modo Familiar',
+    familierDesc:       'La IA tutea, usa argot y palabrotas',
     saveBtn:            'Guardar',
     chatPlaceholder:    'Escribe en español…',
     chatTopbar:         'Modo Chat',
@@ -1526,6 +1546,8 @@ Si recibes "[inicio de sesión]", preséntate como examinador en una frase y lan
     examDesc:           'A IA lê um documento e examina-te',
     chatLabel:          'Modo Chat',
     chatDesc:           'Pratica em silêncio — sem microfone nem áudio',
+    familierLabel:      'Modo Familiar',
+    familierDesc:       'A IA tuteia, usa calão e palavrões',
     saveBtn:            'Guardar',
     chatPlaceholder:    'Escreve em português…',
     chatTopbar:         'Modo Chat',
@@ -1575,6 +1597,8 @@ Se recebes "[início de sessão]", apresenta-te como examinador numa frase e lan
     examDesc:           'يقرأ الذكاء الاصطناعي مستنداً ويختبرك',
     chatLabel:          'وضع المحادثة',
     chatDesc:           'تمرّن بالكتابة — بدون ميكروفون',
+    familierLabel:      'الوضع العامّي',
+    familierDesc:       'الذكاء الاصطناعي يتحدث بأسلوب عامّي وصريح',
     saveBtn:            'حفظ',
     chatPlaceholder:    'اكتب بالعربية…',
     chatTopbar:         'وضع المحادثة',
@@ -1624,6 +1648,8 @@ ${content}
     examDesc:           'ИИ читает документ и проверяет вас',
     chatLabel:          'Режим чата',
     chatDesc:           'Практикуйтесь молча — без микрофона',
+    familierLabel:      'Разговорный режим',
+    familierDesc:       'ИИ общается на «ты», использует сленг и мат',
     saveBtn:            'Сохранить',
     chatPlaceholder:    'Пишите по-русски…',
     chatTopbar:         'Режим чата',
@@ -1673,6 +1699,8 @@ ${content}
     examDesc:           'AI reads a document and quizzes you',
     chatLabel:          'Chat mode',
     chatDesc:           'Practice silently — no microphone',
+    familierLabel:      'Casual mode',
+    familierDesc:       'AI swears, uses slang — no formalities',
     saveBtn:            'Save',
     chatPlaceholder:    'Write in English…',
     chatTopbar:         'Chat mode',
@@ -1722,6 +1750,8 @@ If you receive "[session start]", introduce yourself as the examiner in one sent
     examDesc:           "L'IA lit un document et vous examine",
     chatLabel:          'Mode Chat',
     chatDesc:           'Pratiquez en silence — sans microphone',
+    familierLabel:      'Mode Familier',
+    familierDesc:       "L'IA tutoie, utilise l'argot et les gros mots",
     saveBtn:            'Enregistrer',
     chatPlaceholder:    'Écrivez en français…',
     chatTopbar:         'Mode Chat',
@@ -1771,6 +1801,8 @@ Si tu reçois "[début de session]", présente-toi comme examinateur en une phra
     examDesc:           'AI读取文件并考察您',
     chatLabel:          '文字模式',
     chatDesc:           '无声练习 — 无需麦克风',
+    familierLabel:      '口语模式',
+    familierDesc:       'AI使用俚语和粗口，口语化表达',
     saveBtn:            '保存',
     chatPlaceholder:    '用中文写作…',
     chatTopbar:         '文字模式',
@@ -1820,6 +1852,8 @@ ${content}
     examDesc:           'AIが文書を読んで試験します',
     chatLabel:          'チャットモード',
     chatDesc:           '静かに練習 — マイク不要',
+    familierLabel:      'フレンドリーモード',
+    familierDesc:       'タメ口・スラング・汚い言葉もOK',
     saveBtn:            '保存',
     chatPlaceholder:    '日本語で書いてください…',
     chatTopbar:         'チャットモード',
@@ -1981,6 +2015,25 @@ function updateVoicePtsDisplay(voiceId) {
       lvlEl.classList.add('hidden');
     }
   }
+}
+
+// ── Familiar mode state ──────────────────────────────────────
+let familierMode = false;
+
+const FAMILIER_ADDENDUM = {
+  es: '\nModo familiar activado: tutéame, usa lenguaje coloquial y no dudes en soltar tacos o palabrotas si pegan en el contexto. Nada de formalidades.',
+  pt: '\nModo familiar ativado: tuteia-me, usa linguagem coloquial e não hesites em usar palavrões se calhar bem no contexto. Nada de formalidades.',
+  ar: '\nوضع العامّي مفعّل: تحدّث بأسلوب غير رسمي وعامّي، ولا تتردّد في استخدام تعابير صريحة أو بذيئة إن ناسب السياق.',
+  ru: '\nРазговорный режим активирован: общайся на «ты», используй разговорный стиль и не стесняйся ненормативной лексики, если она уместна. Никакого официоза.',
+  en: '\nCasual mode on: be laid-back, use slang, and don\'t hold back on swearing if it fits the context. No formalities.',
+  fr: '\nMode familier activé : tutoie-moi, utilise un langage familier et n\'hésite pas à balancer des gros mots si ça colle. Pas de chichis.',
+  zh: '\n已启用口语模式：请使用非正式的日常口语，可以说俚语和粗口（如果符合语境）。不要客套。',
+  ja: '\nフレンドリーモード有効：タメ口で話してください。くだけた表現を使い、文脈に合えば汚い言葉も遠慮なく。かしこまり不要。',
+};
+
+function applyFamilierMode(on) {
+  familierMode = on;
+  localStorage.setItem(lk.familierMode(), on ? '1' : '0');
 }
 
 // ── Chat mode state ──────────────────────────────────────────
@@ -3001,7 +3054,8 @@ function activeSystem() {
   const base  = LANGUAGES[currentLang].system || LANGUAGES.es.system;
   const level = getVoiceLevel(getVoiceKey());
   const diff  = LANGUAGES[currentLang].diff || LANGUAGES.es.diff;
-  return base + diff[level];
+  const fam   = familierMode ? (FAMILIER_ADDENDUM[currentLang] || '') : '';
+  return base + diff[level] + fam;
 }
 
 const SYSTEM = `Eres un profesor de español nativo, amigable y natural.
@@ -3393,6 +3447,14 @@ document.getElementById('chat-settings-btn').addEventListener('click', () => {
 document.getElementById('chat-close-btn').addEventListener('click', () => {
   document.getElementById('chat-overlay').classList.add('hidden');
 });
+
+// ── Familiar mode wiring ─────────────────────────────────────
+const familierToggle = document.getElementById('familier-toggle');
+if (localStorage.getItem(lk.familierMode()) === '1') {
+  familierToggle.checked = true;
+  applyFamilierMode(true);
+}
+familierToggle.addEventListener('change', () => applyFamilierMode(familierToggle.checked));
 
 // ── Exam mode wiring ─────────────────────────────────────────
 const examToggle = document.getElementById('exam-toggle');
@@ -4499,6 +4561,10 @@ function applyUIStrings() {
   if (chatLabelEl) chatLabelEl.textContent = U.chatLabel;
   const chatDescEl = document.querySelector('.settings-chat .exam-toggle-desc');
   if (chatDescEl) chatDescEl.textContent = U.chatDesc;
+  const familierLabelEl = document.querySelector('.settings-familier .exam-toggle-label');
+  if (familierLabelEl) familierLabelEl.textContent = U.familierLabel;
+  const familierDescEl = document.querySelector('.settings-familier .exam-toggle-desc');
+  if (familierDescEl) familierDescEl.textContent = U.familierDesc;
   const saveBtnEl = document.getElementById('btn-save');
   if (saveBtnEl) saveBtnEl.textContent = U.saveBtn;
   const chatInputEl = document.getElementById('chat-input');
