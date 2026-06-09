@@ -885,14 +885,22 @@
       font-weight: 600; font-size: 1rem; cursor: pointer;
     }
 
-    /* ── Onboarding: language selection ── */
+    /* ── Onboarding: language glass carousel ── */
     #screen-onboarding {
       position: absolute; inset: 0; z-index: 50;
-      background: var(--bg3);
+      background:
+        repeating-linear-gradient(
+          -45deg,
+          rgba(255,255,255,0.010) 0px, rgba(255,255,255,0.010) 1px,
+          transparent 1px, transparent 9px
+        ),
+        var(--bg3);
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      padding: 40px 32px;
+      gap: 20px;
       animation: onboardFade 1.2s ease both;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
     }
     #screen-onboarding.hidden { display: none; }
 
@@ -901,81 +909,52 @@
       to   { opacity: 1; }
     }
 
-    .onboard-tagline {
-      font-family: var(--serif); font-style: italic;
-      font-size: 1.3rem; color: var(--inkSoft);
-      text-align: center; margin-bottom: 56px;
-      letter-spacing: 0.02em; line-height: 1.5;
+    .onboard-carousel-wrap {
+      width: 100%; height: 192px;
+      position: relative; flex-shrink: 0;
+      cursor: grab;
     }
+    .onboard-carousel-wrap:active { cursor: grabbing; }
+    .onboard-carousel-track { position: absolute; inset: 0; }
 
-    .onboard-langs {
-      display: flex; flex-direction: column;
-      gap: 18px; width: 100%; max-width: 280px;
+    .onboard-slide {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(calc(-50% + var(--tx,0px)), -50%) scale(var(--sc,1));
+      opacity: var(--op,1);
+      transition: transform 0.4s cubic-bezier(0.35,1.1,0.65,1), opacity 0.32s ease;
+      will-change: transform, opacity;
     }
-
-    .onboard-lang-btn {
-      display: flex; align-items: center; gap: 20px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.09);
-      border-radius: 20px; padding: 20px 24px;
-      cursor: pointer; transition: background .2s, border-color .2s;
-      text-align: left; width: 100%;
+    .onboard-sphere {
+      width: 180px; height: 180px;
+      border-radius: 50%; position: relative;
     }
-    .onboard-lang-btn:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.18);
+    .onboard-glass-face {
+      position: absolute; inset: 0; border-radius: 50%;
+      backdrop-filter: blur(22px) saturate(250%) brightness(1.10);
+      -webkit-backdrop-filter: blur(22px) saturate(250%) brightness(1.10);
+      background: rgba(255,255,255,0.055);
     }
-
-    .onboard-lang-glyph {
-      width: 44px; height: 44px; flex-shrink: 0;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--serif); font-size: 1.3rem;
-      color: var(--ink);
+    .onboard-sphere-svg {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      border-radius: 50%; overflow: hidden;
     }
-    .onboard-lang-glyph.es {
-      background: radial-gradient(circle at 35% 35%, #E8C870, #C89040, #8B5A20);
-      box-shadow: 0 0 18px rgba(232,200,112,0.25);
+    .onboard-sphere-border {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -2px 6px rgba(0,0,0,0.35);
+      pointer-events: none;
     }
-    .onboard-lang-glyph.pt {
-      background: radial-gradient(circle at 35% 35%, #78D4A8, #3A9E6C, #1A6040);
-      box-shadow: 0 0 18px rgba(120,212,168,0.25);
+    .onboard-lang-label {
+      font-family: var(--serif); font-size: 1.65rem;
+      color: var(--ink); text-align: center; flex-shrink: 0;
     }
-    .onboard-lang-glyph.ar {
-      background: linear-gradient(135deg, #E8D0B0, #E87090);
-      box-shadow: 0 0 18px rgba(232,112,144,0.25);
+    .onboard-dots { display: flex; gap: 7px; flex-shrink: 0; }
+    .onboard-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(240,236,224,0.25);
+      transition: background 0.3s, transform 0.3s;
     }
-    .onboard-lang-glyph.ru {
-      background: radial-gradient(circle at 35% 35%, #6BA3D8, #2A5FA0, #0D3060);
-      box-shadow: 0 0 18px rgba(107,163,216,0.25);
-    }
-    .onboard-lang-glyph.en {
-      background: radial-gradient(circle at 35% 35%, #B0C8E8, #4878B0, #1A3A60);
-      box-shadow: 0 0 18px rgba(72,120,176,0.25);
-    }
-    .onboard-lang-glyph.fr {
-      background: radial-gradient(circle at 35% 35%, #F0C0D0, #C05070, #702040);
-      box-shadow: 0 0 18px rgba(192,80,112,0.25);
-    }
-    .onboard-lang-glyph.zh {
-      background: radial-gradient(circle at 35% 35%, #FFD060, #D83030, #8B0000);
-      box-shadow: 0 0 18px rgba(216,48,48,0.25);
-    }
-    .onboard-lang-glyph.ja {
-      background: radial-gradient(circle at 35% 35%, #FFEEEE, #E02020, #880000);
-      box-shadow: 0 0 18px rgba(224,32,32,0.25);
-    }
-
-    .onboard-lang-info { flex: 1; }
-    .onboard-lang-name {
-      font-family: var(--serif); font-size: 1.25rem;
-      color: var(--ink); line-height: 1;
-    }
-    .onboard-lang-sub {
-      font-family: var(--mono); font-size: 12px;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: var(--inkSoft); margin-top: 4px;
-    }
+    .onboard-dot.on { background: rgba(240,236,224,0.85); transform: scale(1.4); }
 
     /* ── Language dropdown (settings) ── */
     .settings-lang-dropdown {
@@ -1051,65 +1030,11 @@
 
     <!-- ═══ Screen: Onboarding (language selection) ═══ -->
     <div id="screen-onboarding" class="hidden">
-      <p class="onboard-tagline">Que língua queres<br>explorar hoje?</p>
-      <div class="onboard-langs">
-        <button class="onboard-lang-btn" data-lang="es">
-          <div class="onboard-lang-glyph es">E</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">Español</div>
-            <div class="onboard-lang-sub">Castelhano · 31 vozes</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="pt">
-          <div class="onboard-lang-glyph pt">P</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">Português</div>
-            <div class="onboard-lang-sub">Brasil + Portugal · 5 vozes</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="ar">
-          <div class="onboard-lang-glyph ar">ع</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">العربية</div>
-            <div class="onboard-lang-sub">١٦ دولة · ٣٢ صوتاً</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="ru">
-          <div class="onboard-lang-glyph ru">Р</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">Русский</div>
-            <div class="onboard-lang-sub">Россия · 2 голоса</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="en">
-          <div class="onboard-lang-glyph en">E</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">English</div>
-            <div class="onboard-lang-sub">10 countries · 10 voices</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="fr">
-          <div class="onboard-lang-glyph fr">F</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">Français</div>
-            <div class="onboard-lang-sub">4 pays · 6 voix</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="zh">
-          <div class="onboard-lang-glyph zh">中</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">中文</div>
-            <div class="onboard-lang-sub">2 国 · 6 声音</div>
-          </div>
-        </button>
-        <button class="onboard-lang-btn" data-lang="ja">
-          <div class="onboard-lang-glyph ja">日</div>
-          <div class="onboard-lang-info">
-            <div class="onboard-lang-name">日本語</div>
-            <div class="onboard-lang-sub">日本 · 2 声</div>
-          </div>
-        </button>
+      <div class="onboard-carousel-wrap" id="onboard-carousel">
+        <div class="onboard-carousel-track" id="onboard-track"></div>
       </div>
+      <div class="onboard-lang-label" id="onboard-lang-label">Español</div>
+      <div class="onboard-dots" id="onboard-dots"></div>
     </div>
 
     <!-- ═══ Screen: Conversation ═══ -->
@@ -4581,18 +4506,142 @@ applyUIStrings();
 
 // ── Onboarding — show on first use (no app_lang set) ────────
 (function initOnboarding() {
-  const screen = document.getElementById('screen-onboarding');
+  const obScreen = document.getElementById('screen-onboarding');
   if (!localStorage.getItem('app_lang')) {
-    screen.classList.remove('hidden');
-    screen.querySelectorAll('.onboard-lang-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        localStorage.setItem('app_lang', btn.dataset.lang);
-        screen.style.transition = 'opacity 0.5s';
-        screen.style.opacity = '0';
-        setTimeout(() => location.reload(), ONBOARD_FADE_MS);
-      });
+    obScreen.classList.remove('hidden');
+  } else { return; }
+
+  const OB_LANGS = [
+    { id:'es', name:'Español',   col:[212,168,48],  spec:{cx:90, cy:54,rx:46,ry:28}, glr:26 },
+    { id:'en', name:'English',   col:[72,136,212],  spec:{cx:62, cy:54,rx:38,ry:24}, glr:20 },
+    { id:'pt', name:'Português', col:[48,172,100],  spec:{cx:118,cy:54,rx:38,ry:24}, glr:20 },
+    { id:'fr', name:'Français',  col:[200,72,110],  spec:{cx:48, cy:54,rx:28,ry:18}, glr:16 },
+    { id:'ar', name:'العربية',   col:[210,88,110],  spec:{cx:132,cy:54,rx:28,ry:18}, glr:16 },
+    { id:'zh', name:'中文',      col:[210,52,52],   spec:{cx:36, cy:54,rx:16,ry:11}, glr:12 },
+    { id:'ru', name:'Русский',   col:[72,130,212],  spec:{cx:144,cy:54,rx:16,ry:11}, glr:12 },
+    { id:'ja', name:'日本語',    col:[140,24,24],   spec:null,                        glr:6  },
+  ];
+  const N_OB = OB_LANGS.length;
+  let obCur = 0;
+
+  function obRgba(col, a) { return `rgba(${col[0]},${col[1]},${col[2]},${a})`; }
+
+  function buildObSphere(lang) {
+    const { id, col, spec, glr } = lang;
+    const C=90, R=88;
+    const tCx = spec ? `${(spec.cx/180*100).toFixed(0)}%` : '50%';
+    const tOp = spec ? 0.13 : 0.03;
+    const specHtml = spec ? `
+      <ellipse cx="${spec.cx}" cy="${spec.cy}" rx="${spec.rx}" ry="${spec.ry}"
+               fill="white" opacity="0.22" filter="url(#obs-${id})"/>
+      <ellipse cx="${spec.cx-3}" cy="${spec.cy-3}"
+               rx="${Math.round(spec.rx*.38)}" ry="${Math.round(spec.ry*.42)}"
+               fill="white" opacity="0.40" filter="url(#obs2-${id})"/>` :
+      `<ellipse cx="${C}" cy="52" rx="34" ry="20"
+               fill="white" opacity="0.04" filter="url(#obs-${id})"/>`;
+    return `
+<div class="onboard-sphere" style="filter:drop-shadow(0 0 ${glr}px ${obRgba(col,0.38)}) drop-shadow(0 0 ${glr*2}px ${obRgba(col,0.12)})">
+  <div class="onboard-glass-face"></div>
+  <svg class="onboard-sphere-svg" viewBox="0 0 180 180">
+    <defs>
+      <radialGradient id="obt-${id}" cx="${tCx}" cy="42%" r="52%">
+        <stop offset="0%"  stop-color="rgb(${col})" stop-opacity="${tOp}"/>
+        <stop offset="70%" stop-color="rgb(${col})" stop-opacity="${(tOp*.25).toFixed(3)}"/>
+        <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="obdk-${id}" cx="50%" cy="75%" r="48%">
+        <stop offset="0%"  stop-color="black" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+      </radialGradient>
+      <filter id="obs-${id}"><feGaussianBlur stdDeviation="11"/></filter>
+      <filter id="obs2-${id}"><feGaussianBlur stdDeviation="3.5"/></filter>
+      <clipPath id="obcl-${id}"><circle cx="${C}" cy="${C}" r="${R}"/></clipPath>
+    </defs>
+    <circle cx="${C}" cy="${C}" r="${R}" fill="url(#obt-${id})"  clip-path="url(#obcl-${id})"/>
+    <g clip-path="url(#obcl-${id})">${specHtml}</g>
+    <circle cx="${C}" cy="${C}" r="${R}" fill="url(#obdk-${id})" clip-path="url(#obcl-${id})"/>
+  </svg>
+  <div class="onboard-sphere-border"></div>
+</div>`;
+  }
+
+  // Build slides
+  const obTrack = document.getElementById('onboard-track');
+  OB_LANGS.forEach((lang, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'onboard-slide';
+    slide.dataset.i = i;
+    slide.innerHTML = buildObSphere(lang);
+    obTrack.appendChild(slide);
+  });
+
+  // Build dots
+  const obDotsEl = document.getElementById('onboard-dots');
+  OB_LANGS.forEach(_ => {
+    const d = document.createElement('div');
+    d.className = 'onboard-dot';
+    obDotsEl.appendChild(d);
+  });
+
+  function obUpdate(animated=true) {
+    const slides = obTrack.children;
+    const dots   = obDotsEl.children;
+    document.getElementById('onboard-lang-label').textContent = OB_LANGS[obCur].name;
+    [...dots].forEach((d,i) => d.classList.toggle('on', i===obCur));
+    [...slides].forEach((s,i) => {
+      const raw = ((i - obCur) % N_OB + N_OB) % N_OB;
+      const adj = raw > N_OB/2 ? raw - N_OB : raw;
+      const tx  = adj * 214;
+      const sc  = adj===0 ? 1 : Math.max(0.35, 0.62 - Math.abs(adj)*0.12);
+      const op  = adj===0 ? 1 : Math.max(0,    0.52 - Math.abs(adj)*0.16);
+      if (!animated) {
+        s.style.transition = 'none';
+        requestAnimationFrame(() => { s.style.transition = ''; });
+      }
+      s.style.setProperty('--tx', tx+'px');
+      s.style.setProperty('--sc', sc);
+      s.style.setProperty('--op', op);
+      s.style.visibility = Math.abs(adj) <= 2 ? 'visible' : 'hidden';
+      s.style.zIndex = 10 - Math.abs(adj);
     });
   }
+
+  // Swipe / drag
+  let obX0=null, obMoved=false;
+  const obCarousel = document.getElementById('onboard-carousel');
+  function obStart(x) { obX0=x; obMoved=false; }
+  function obMove(x)  { if(obX0!==null && Math.abs(x-obX0)>8) obMoved=true; }
+  function obEnd(x) {
+    if (obX0===null) return;
+    const dx = x - obX0;
+    if (Math.abs(dx) > 48) {
+      obCur = dx < 0 ? (obCur+1)%N_OB : (obCur-1+N_OB)%N_OB;
+      obUpdate();
+    }
+    obX0=null;
+  }
+  obCarousel.addEventListener('touchstart', e=>obStart(e.touches[0].clientX),{passive:true});
+  obCarousel.addEventListener('touchmove',  e=>obMove(e.touches[0].clientX), {passive:true});
+  obCarousel.addEventListener('touchend',   e=>obEnd(e.changedTouches[0].clientX));
+  obCarousel.addEventListener('mousedown',  e=>obStart(e.clientX));
+  window.addEventListener('mousemove', e=>{ if(!obX0) return; obMove(e.clientX); });
+  window.addEventListener('mouseup',   e=>obEnd(e.clientX));
+
+  // Click side sphere → navigate; click centre sphere → confirm selection
+  obTrack.addEventListener('click', e => {
+    if (obMoved) return;
+    const s = e.target.closest('.onboard-slide');
+    if (!s) return;
+    const i = parseInt(s.dataset.i);
+    if (i !== obCur) { obCur=i; obUpdate(); return; }
+    // Centre tapped → save and reload
+    localStorage.setItem('app_lang', OB_LANGS[obCur].id);
+    obScreen.style.transition = 'opacity 0.5s';
+    obScreen.style.opacity = '0';
+    setTimeout(() => location.reload(), ONBOARD_FADE_MS);
+  });
+
+  obUpdate(false);
 })();
 
 // ── Language chips (settings) ────────────────────────────────
