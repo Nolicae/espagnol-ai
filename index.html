@@ -3129,6 +3129,10 @@ let userSpokeRecently = false;
 // Web Speech API final transcript — accumulated until triggerProcessing consumes it
 let pendingWSTranscript = '';
 
+// Pre-warmed greeting — generated in background before the user presses the orb
+// { text: string, blobPromises: Promise<Blob>[], voiceKey: string, lang: string }
+let prewarmedGreeting = null;
+
 // TTS interruption
 let ttsSource  = null;  // current <audio> element
 let speakToken = 0;
@@ -3390,7 +3394,7 @@ async function startSession() {
     } else {
       setState('session');
       startRecognition();
-      setTimeout(aiGreeting, 600);
+      setTimeout(aiGreeting, 100);
     }
   } catch (e) {
     console.error('[mic]', e.message);
@@ -3403,6 +3407,9 @@ function stopSession() {
   clearSilenceTimer();
   stopTTSNow();
   stopRecognition();
+  // Pre-warm next greeting 2s after session ends (voice/difficulty may have changed)
+  prewarmedGreeting = null;
+  setTimeout(prewarmGreeting, 2000);
   if (recorder && recorder.state !== 'inactive') {
     recorder.stop();
     recorder.stream.getTracks().forEach(t => t.stop());
@@ -3611,10 +3618,27 @@ async function aiGreeting() {
   setState('ai-speaking');
   try {
     const myToken = speakToken;
-    const messages = [{ role: 'system', content: activeSystem() }, { role: 'user', content: ui('sessionStart') }];
-    const greeting = await streamAndSpeak(messages, myToken);
+    let greeting = '';
+
+    const pw = prewarmedGreeting;
+    prewarmedGreeting = null;
+    const validPrewarm = pw && pw.voiceKey === getVoiceKey() && pw.lang === currentLang;
+
+    if (validPrewarm) {
+      // Fast path: play pre-fetched blobs (network already done)
+      for (const blobP of pw.blobPromises) {
+        if (speakToken !== myToken) break;
+        const blob = await blobP;   // usually already resolved
+        await playBlob(blob);
+      }
+      greeting = pw.text;
+    } else {
+      // Fallback: generate normally
+      const messages = [{ role: 'system', content: activeSystem() }, { role: 'user', content: ui('sessionStart') }];
+      greeting = await streamAndSpeak(messages, myToken);
+    }
+
     if (greeting.trim()) history.push({ role: 'assistant', content: greeting });
-    // Timer starts after greeting finishes, not before
     if (sessionActive) startSilenceTimer(SILENCE_TIMEOUT_MS);
   } catch (e) {
     console.error('[greeting]', e.message);
@@ -3622,6 +3646,35 @@ async function aiGreeting() {
     aiSpeaking = false;
     processing  = false;
     if (sessionActive) setState('session');
+  }
+}
+
+// ── Pre-warm greeting — runs silently before the user presses the orb ──────
+async function prewarmGreeting() {
+  if (sessionActive) return;
+  const voiceSnap = getVoiceKey();
+  const langSnap  = currentLang;
+
+  const pw = { text: '', blobPromises: [], voiceKey: voiceSnap, lang: langSnap };
+
+  try {
+    const messages = [
+      { role: 'system', content: activeSystem() },
+      { role: 'user',   content: ui('sessionStart') },
+    ];
+    let buf = '';
+    for await (const delta of streamLLM(messages)) {
+      if (sessionActive) return;   // session started while prewarming — abort
+      pw.text += delta;
+      buf += delta;
+      const { sentences, remainder } = extractSentences(buf);
+      buf = remainder;
+      for (const s of sentences) pw.blobPromises.push(fetchTTSBlob(s));
+    }
+    if (buf.trim()) pw.blobPromises.push(fetchTTSBlob(buf.trim()));
+    prewarmedGreeting = pw;
+  } catch (e) {
+    console.warn('[prewarm]', e.message);
   }
 }
 
@@ -4620,6 +4673,9 @@ function applyUIStrings() {
   setState(appState || 'inactive');
 }
 applyUIStrings();
+
+// Pre-warm greeting as soon as the page is ready (skip if onboarding will show)
+if (localStorage.getItem('app_lang')) setTimeout(prewarmGreeting, 500);
 
 // ── Onboarding — show on first use (no app_lang set) ────────
 (function initOnboarding() {
