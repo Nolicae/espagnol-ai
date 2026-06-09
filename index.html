@@ -3490,8 +3490,14 @@ document.getElementById('exam-file-input').addEventListener('change', e => {
 // Web Speech recognition
 // ──────────────────────────────────────────────────────────────
 function startRecognition() {
+  // Branch 1: Capacitor native runtime (iOS App Store build)
+  if (window.Capacitor?.isNativePlatform()) {
+    startCapacitorRecognition();
+    return;
+  }
+  // Branch 2: Web Speech API (Chrome, Edge, Safari PWA) — existing code unchanged
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return;
+  if (!SR) return; // Branch 3: no SR → Groq Whisper fallback via triggerProcessing()
   recognition = new SR();
   recognition.continuous     = true;
   recognition.interimResults = true;
@@ -3501,7 +3507,6 @@ function startRecognition() {
   recognition.onerror = e => { if (e.error !== 'no-speech') console.warn('[SR]', e.error); };
   recognition.onend = () => {
     if (!sessionActive) return;
-    // Always do a full reinit on end — simple restart can silently fail after ~4min
     setTimeout(() => {
       if (!sessionActive) return;
       stopRecognition();
@@ -3511,7 +3516,48 @@ function startRecognition() {
   recognition.start();
 }
 
+function startCapacitorRecognition() {
+  const { SpeechRecognition } = window.Capacitor.Plugins;
+  let lastPartial = '';
+
+  SpeechRecognition.requestPermissions().then(() => {
+    SpeechRecognition.start({
+      language: LANGUAGES[currentLang]?.srLang || 'es-ES',
+      partialResults: true,
+      maxResults: 1,
+      popup: false,
+    });
+  });
+
+  SpeechRecognition.addListener('partialResults', (data) => {
+    if (!sessionActive) return;
+    lastPartial = (data.matches?.[0] || '').trim();
+    if (lastPartial) {
+      clearSilenceTimer();
+      userSpokeRecently = true;
+      if (aiSpeaking) interruptTTS();
+    }
+  });
+
+  SpeechRecognition.addListener('listeningState', (data) => {
+    if (data.status === 'stopped' && lastPartial) {
+      pendingWSTranscript = (pendingWSTranscript + ' ' + lastPartial).trim();
+      lastPartial = '';
+      triggerProcessing();
+    }
+    if (sessionActive && data.status === 'stopped') {
+      setTimeout(() => { if (sessionActive) startCapacitorRecognition(); }, 150);
+    }
+  });
+}
+
 function stopRecognition() {
+  if (window.Capacitor?.isNativePlatform()) {
+    const { SpeechRecognition } = window.Capacitor.Plugins;
+    SpeechRecognition.stop().catch(() => {});
+    SpeechRecognition.removeAllListeners();
+    return;
+  }
   if (!recognition) return;
   recognition.onend = null;
   try { recognition.stop(); } catch (_) {}
