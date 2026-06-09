@@ -16,21 +16,19 @@ html,body { height:100%; overflow:hidden; }
 
 /* ── Background: subtle diagonal texture gives glass something to refract ── */
 body {
+  /* Same atmosphere as the conversation screen */
   background:
-    radial-gradient(65% 45% at 50% 46%,
-      hsla(220,90%,68%,0.22) 0%,
-      hsla(225,75%,55%,0.10) 50%,
-      transparent 100%),
     radial-gradient(140% 100% at 50% 0%,
-      hsla(220,65%,62%,0.12) 0%,
+      hsla(220,65%,62%,0.10) 0%,
       hsla(220,60%,50%,0.05) 45%,
-      #090a0d 100%),
+      #0d0f1a 100%),
+    radial-gradient(140% 100% at 50% 0%,
+      #2a2e48 0%, #181b2d 45%, #0d0f1a 100%),
     repeating-linear-gradient(
       -45deg,
       rgba(255,255,255,0.010) 0px, rgba(255,255,255,0.010) 1px,
       transparent 1px, transparent 9px
-    ),
-    #090a0d;
+    );
   display:flex; align-items:center; justify-content:center;
   font-family: var(--serif);
   user-select: none;
@@ -74,15 +72,15 @@ body {
 .ob-sphere::after {
   content: '';
   position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 195deg at 50% 50%,
-    rgba(0,230,255,0.20)   0deg,
-    rgba(160,0,255,0.16)  55deg,
-    rgba(255,180,0,0.14) 110deg,
-    rgba(0,255,190,0.16) 165deg,
-    rgba(255,50,180,0.15) 220deg,
-    rgba(60,200,255,0.18) 275deg,
-    rgba(255,255,160,0.13) 320deg,
-    rgba(0,230,255,0.20)  360deg
+  /* Arc from ~10 o'clock → top → ~2 o'clock, transparent everywhere else */
+  background: conic-gradient(from 300deg at 50% 50%,
+    transparent                   0deg,
+    rgba(0,230,255,0.22)         15deg,
+    rgba(160,0,255,0.18)         45deg,
+    rgba(255,180,0,0.16)         75deg,
+    rgba(0,255,190,0.18)        100deg,
+    transparent                 130deg,
+    transparent                 360deg
   );
   -webkit-mask: radial-gradient(circle,
     transparent 61%, rgba(0,0,0,0.75) 67%, transparent 78%);
