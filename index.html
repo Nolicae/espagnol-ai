@@ -4228,7 +4228,29 @@ function initVoicesMap() {
       hit.setAttribute('class', 'voice-hit');
       g.appendChild(hit);
 
-      g.addEventListener('click', () => selectVoice(v, true));
+      g.addEventListener('click', () => {
+        selectVoice(v, true);
+        // Ripple rings (3 concentric, staggered)
+        for (let ri = 0; ri < 3; ri++) {
+          const rip = document.createElementNS(NS, 'circle');
+          rip.setAttribute('cx', v.x); rip.setAttribute('cy', v.y);
+          rip.setAttribute('fill', 'none');
+          rip.setAttribute('stroke', v.color);
+          rip.setAttribute('stroke-width', (1 / mapState.zoom).toFixed(2));
+          rip.style.pointerEvents = 'none';
+          mapGroup.appendChild(rip);
+          const t0 = performance.now() + ri * 160, dur = 900;
+          const r0 = 4 / mapState.zoom, rMax = 28 / mapState.zoom;
+          (function animate(now) {
+            if (now < t0) { requestAnimationFrame(animate); return; }
+            const t = Math.min((now - t0) / dur, 1);
+            const e = 1 - (1-t)*(1-t);
+            rip.setAttribute('r', (r0 + e*(rMax - r0)).toFixed(2));
+            rip.setAttribute('stroke-opacity', (0.65*(1-t)).toFixed(2));
+            if (t < 1) requestAnimationFrame(animate); else rip.remove();
+          })(performance.now());
+        }
+      });
       mapGroup.appendChild(g);
     }
   }
@@ -4675,6 +4697,12 @@ function applyUIStrings() {
 }
 applyUIStrings();
 
+// Re-open settings if the user changed language from within settings
+if (localStorage.getItem('reopen_settings')) {
+  localStorage.removeItem('reopen_settings');
+  document.getElementById('screen-settings').classList.remove('hidden');
+}
+
 // Pre-warm greeting as soon as the page is ready (skip if onboarding will show)
 if (localStorage.getItem('app_lang')) setTimeout(prewarmGreeting, 500);
 
@@ -4888,6 +4916,7 @@ document.querySelectorAll('.lang-chip').forEach(chip => {
       return;
     }
     localStorage.setItem('app_lang', chip.dataset.lang);
+    localStorage.setItem('reopen_settings', '1');
     location.reload();
   });
 });
