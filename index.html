@@ -909,6 +909,63 @@
     }
     #screen-onboarding.hidden { display: none; }
 
+    /* ── Tutorial screen (shown once, between onboarding and conversation) ── */
+    #screen-tutorial {
+      position: absolute; inset: 0; z-index: 45;
+      background:
+        radial-gradient(140% 100% at 50% 0%,
+          hsla(220,65%,62%,0.10) 0%, hsla(220,60%,50%,0.05) 45%, var(--bg3) 100%),
+        radial-gradient(140% 100% at 50% 0%,
+          var(--bg1) 0%, var(--bg2) 45%, var(--bg3) 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 28px;
+      opacity: 0; transition: opacity 0.7s ease;
+      pointer-events: none;
+      user-select: none;
+    }
+    #screen-tutorial.tut-in  { opacity: 1; pointer-events: auto; }
+    #screen-tutorial.hidden  { display: none; }
+
+    .tut-orb-wrap {
+      width: 88px; height: 88px; border-radius: 50%; position: relative;
+      background: radial-gradient(circle at 38% 36%,
+        rgba(230,240,255,0.92) 0%, rgba(150,190,255,0.45) 55%, rgba(80,130,230,0.12) 100%);
+      box-shadow:
+        0 0 32px rgba(150,195,255,0.55),
+        0 0 72px rgba(100,155,255,0.25),
+        inset 0 2px 4px rgba(255,255,255,0.70);
+      animation: tutPulse 2.6s ease-in-out infinite;
+    }
+    @keyframes tutPulse {
+      0%,100% { box-shadow: 0 0 32px rgba(150,195,255,0.55), 0 0 72px rgba(100,155,255,0.25), inset 0 2px 4px rgba(255,255,255,0.70); }
+      50%      { box-shadow: 0 0 50px rgba(150,195,255,0.75), 0 0 110px rgba(100,155,255,0.40), inset 0 2px 4px rgba(255,255,255,0.70); }
+    }
+    /* Ripple hint ring */
+    .tut-orb-wrap::after {
+      content: ''; position: absolute; inset: -14px; border-radius: 50%;
+      border: 1px solid rgba(180,210,255,0.30);
+      animation: tutRing 2.6s ease-in-out infinite;
+    }
+    @keyframes tutRing {
+      0%,100% { opacity: 0.30; transform: scale(1);    }
+      50%      { opacity: 0.08; transform: scale(1.18); }
+    }
+    .tut-lang-name {
+      font-family: var(--serif); font-size: 1.7rem;
+      color: var(--ink); letter-spacing: 0.02em;
+    }
+    .tut-hint {
+      font-family: var(--mono); font-size: 0.68rem;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: rgba(240,236,224,0.48);
+    }
+    .tut-skip {
+      position: absolute; bottom: 32px;
+      font-family: var(--mono); font-size: 0.60rem;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: rgba(240,236,224,0.22);
+    }
+
     /* ── Per-element entry animations (staggered reveal) ── */
     @keyframes obEntryUp {
       from { opacity: 0; transform: translateY(32px); }
@@ -1098,6 +1155,14 @@
 
 <div id="app">
   <div class="app-container">
+
+    <!-- ═══ Screen: Tutorial (shown once after onboarding) ═══ -->
+    <div id="screen-tutorial" class="hidden">
+      <div class="tut-orb-wrap"></div>
+      <div class="tut-lang-name" id="tut-lang-name"></div>
+      <div class="tut-hint" id="tut-hint"></div>
+      <span class="tut-skip" id="tut-skip"></span>
+    </div>
 
     <!-- ═══ Screen: Onboarding (language selection) ═══ -->
     <div id="screen-onboarding" class="hidden">
@@ -1369,7 +1434,7 @@ const lk = {
 // ──────────────────────────────────────────────────────────────
 const LANGUAGES = {
   es: {
-    defaultVoice: 'es-ES-ElviraNeural',
+    defaultVoice: 'es-CU-BelkysNeural',
     srLang: 'es-ES',
     map: { lonMin: -125, lonMax: 15, latMax: 50, latMin: -45, w: 360, h: 296 },
     voices: null,
@@ -1505,6 +1570,8 @@ const UI_STRINGS = {
     summaryError:       'Resumen no disponible.',
     silencePrompt:      '[silencio]',
     sessionStart:       '[inicio de sesión]',
+    tutorialHint:       'Toca el orbe · habla · escucha',
+    tutorialSkip:       'Toca para empezar',
     fallbackGreeting:   '¡Hola! ¿De qué quieres hablar hoy?',
     examSystemFn: (content) =>
       `Eres un profesor de español y examinador estricto pero justo.
@@ -1556,6 +1623,8 @@ Si recibes "[inicio de sesión]", preséntate como examinador en una frase y lan
     summaryError:       'Resumo não disponível.',
     silencePrompt:      '[silêncio]',
     sessionStart:       '[início de sessão]',
+    tutorialHint:       'Toca o orbe · fala · escuta',
+    tutorialSkip:       'Toca para começar',
     fallbackGreeting:   'Olá! Sobre o que queres falar hoje?',
     examSystemFn: (content) =>
       `És um professor de português e examinador exigente mas justo.
@@ -1607,6 +1676,8 @@ Se recebes "[início de sessão]", apresenta-te como examinador numa frase e lan
     summaryError:       'الملخص غير متاح.',
     silencePrompt:      '[صمت]',
     sessionStart:       '[بداية الجلسة]',
+    tutorialHint:       'اضغط الكرة · تكلّم · استمع',
+    tutorialSkip:       'اضغط للبدء',
     fallbackGreeting:   'مرحباً! عمّ تريد أن تتحدث اليوم؟',
     examSystemFn: (content) =>
       `أنت أستاذ لغة عربية ومحقق صارم لكن عادل.
@@ -1658,6 +1729,8 @@ ${content}
     summaryError:       'Резюме недоступно.',
     silencePrompt:      '[тишина]',
     sessionStart:       '[начало сеанса]',
+    tutorialHint:       'Нажми орб · говори · слушай',
+    tutorialSkip:       'Нажми чтобы начать',
     fallbackGreeting:   'Привет! О чём ты хочешь поговорить сегодня?',
     examSystemFn: (content) =>
       `Ты учитель русского языка и строгий, но справедливый экзаменатор.
@@ -1709,6 +1782,8 @@ ${content}
     summaryError:       'Summary unavailable.',
     silencePrompt:      '[silence]',
     sessionStart:       '[session start]',
+    tutorialHint:       'Tap the orb · speak · listen',
+    tutorialSkip:       'Tap to begin',
     fallbackGreeting:   'Hello! What would you like to talk about today?',
     examSystemFn: (content) =>
       `You are an English teacher and a fair but demanding examiner.
@@ -1760,6 +1835,8 @@ If you receive "[session start]", introduce yourself as the examiner in one sent
     summaryError:       'Résumé non disponible.',
     silencePrompt:      '[silence]',
     sessionStart:       '[début de session]',
+    tutorialHint:       "Touche l'orbe · parle · écoute",
+    tutorialSkip:       'Touche pour commencer',
     fallbackGreeting:   "Bonjour ! De quoi voulez-vous parler aujourd'hui ?",
     examSystemFn: (content) =>
       `Tu es un professeur de français et un examinateur exigeant mais bienveillant.
@@ -1811,6 +1888,8 @@ Si tu reçois "[début de session]", présente-toi comme examinateur en une phra
     summaryError:       '摘要不可用。',
     silencePrompt:      '[沉默]',
     sessionStart:       '[课程开始]',
+    tutorialHint:       '触摸球体 · 说话 · 聆听',
+    tutorialSkip:       '触摸开始',
     fallbackGreeting:   '你好！今天想聊什么？',
     examSystemFn: (content) =>
       `你是一位要求严格但温和的中文老师和考官。
@@ -1862,6 +1941,8 @@ ${content}
     summaryError:       'まとめを利用できません。',
     silencePrompt:      '[沈黙]',
     sessionStart:       '[セッション開始]',
+    tutorialHint:       'オーブをタップ · 話す · 聞く',
+    tutorialSkip:       'タップして開始',
     fallbackGreeting:   'こんにちは！今日は何について話しましょうか？',
     examSystemFn: (content) =>
       `あなたは厳しいが温かい日本語の先生であり、試験官です。
@@ -4198,8 +4279,8 @@ function initVoicesMap() {
       if (isSel) {
         const ring = document.createElementNS(NS, 'circle');
         ring.setAttribute('cx', v.x); ring.setAttribute('cy', v.y);
-        ring.setAttribute('r', '12');
-        ring.setAttribute('data-base-r', '12');
+        ring.setAttribute('r', '8');
+        ring.setAttribute('data-base-r', '8');
         ring.setAttribute('data-base-sw', '1');
         ring.setAttribute('fill', 'none');
         ring.setAttribute('stroke', v.color);
@@ -4211,8 +4292,8 @@ function initVoicesMap() {
 
       const dot = document.createElementNS(NS, 'circle');
       dot.setAttribute('cx', v.x); dot.setAttribute('cy', v.y);
-      dot.setAttribute('r', isSel ? '6' : '4');
-      dot.setAttribute('data-base-r', isSel ? '6' : '4');
+      dot.setAttribute('r', isSel ? '3' : '2');
+      dot.setAttribute('data-base-r', isSel ? '3' : '2');
       dot.setAttribute('fill', isSel ? v.color : v.color.replace(/^#/, '') && `${v.color}66`);
       if (isSel) dot.setAttribute('filter', `drop-shadow(0 0 5px ${v.color})`);
       dot.setAttribute('class', 'voice-dot');
@@ -4676,6 +4757,33 @@ applyUIStrings();
 
 // Pre-warm greeting as soon as the page is ready (skip if onboarding will show)
 if (localStorage.getItem('app_lang')) setTimeout(prewarmGreeting, 500);
+
+// ── Tutorial (shown once, right after the first onboarding) ─────────────────
+(function initTutorial() {
+  if (!localStorage.getItem('app_lang'))       return; // still on onboarding
+  if (localStorage.getItem('tutorial_shown'))  return; // already seen it
+
+  const scr   = document.getElementById('screen-tutorial');
+  const U     = UI_STRINGS[currentLang] || UI_STRINGS.es;
+  const names = { es:'Español', pt:'Português', ar:'العربية', ru:'Русский',
+                  en:'English', fr:'Français', zh:'中文', ja:'日本語' };
+
+  document.getElementById('tut-lang-name').textContent = names[currentLang] || '';
+  document.getElementById('tut-hint').textContent      = U.tutorialHint || '';
+  document.getElementById('tut-skip').textContent      = U.tutorialSkip  || '';
+
+  scr.classList.remove('hidden');
+  requestAnimationFrame(() => requestAnimationFrame(() => scr.classList.add('tut-in')));
+
+  function dismiss() {
+    scr.classList.remove('tut-in');
+    localStorage.setItem('tutorial_shown', '1');
+    setTimeout(() => scr.classList.add('hidden'), 750);
+  }
+
+  const autoTimer = setTimeout(dismiss, 4300); // 4.3s visible + 0.7s fade = 5s total
+  scr.addEventListener('click', () => { clearTimeout(autoTimer); dismiss(); }, { once: true });
+})();
 
 // ── Onboarding — show on first use (no app_lang set) ────────
 (function initOnboarding() {
