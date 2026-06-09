@@ -3126,6 +3126,9 @@ let recorderInitChunk = null;
 // Set to true the moment any speech is detected; cleared when triggerProcessing runs
 let userSpokeRecently = false;
 
+// Web Speech API final transcript — accumulated until triggerProcessing consumes it
+let pendingWSTranscript = '';
+
 // TTS interruption
 let ttsSource  = null;  // current <audio> element
 let speakToken = 0;
@@ -3481,7 +3484,7 @@ function startRecognition() {
   recognition.interimResults = true;
   recognition.lang           = LANGUAGES[currentLang]?.srLang || 'es-ES';
   recognition.onresult    = handleSpeechResult;
-  recognition.onspeechend = () => setTimeout(triggerProcessing, 300);
+  recognition.onspeechend = () => setTimeout(triggerProcessing, 50);
   recognition.onerror = e => { if (e.error !== 'no-speech') console.warn('[SR]', e.error); };
   recognition.onend = () => {
     if (!sessionActive) return;
@@ -3511,18 +3514,23 @@ setInterval(() => {
 }, SR_WATCHDOG_MS);
 
 function handleSpeechResult(e) {
-  let hasFinal = false;
+  let finalText = '';
   let hasInterim = false;
   for (let i = e.resultIndex; i < e.results.length; i++) {
-    if (e.results[i].isFinal) hasFinal = true;
+    if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
     else hasInterim = true;
   }
-  if (hasInterim || hasFinal) {
+  finalText = finalText.trim();
+  if (hasInterim || finalText) {
     clearSilenceTimer();
     userSpokeRecently = true;
-    if (aiSpeaking) interruptTTS(); // user is speaking → stop AI immediately
+    if (aiSpeaking) interruptTTS();
   }
-  if (hasFinal) triggerProcessing();
+  if (finalText) {
+    // Accumulate final transcript — consumed by triggerProcessing (bypasses Groq STT)
+    pendingWSTranscript = (pendingWSTranscript + ' ' + finalText).trim();
+    triggerProcessing();
+  }
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -3543,19 +3551,33 @@ async function triggerProcessing() {
   clearSilenceTimer();
   userSpokeRecently = false;
 
+  // Fast path: Web Speech API transcript already available (0ms STT)
+  const wsTranscript = pendingWSTranscript.trim();
+  pendingWSTranscript = '';
+
+  // Also drain audio chunks either way (prevent stale audio on next turn)
   const chunks = audioChunks.splice(0);
-  if (chunks.length === 0) return;
+
+  if (!wsTranscript && chunks.length === 0) return;
 
   processing = true;
-  const type = (recorder && recorder.mimeType) || mimeType || 'audio/webm';
-  // Prepend init segment if this isn't the first blob — without it WebM is undecodable
-  const blobParts = (recorderInitChunk && chunks[0] !== recorderInitChunk)
-    ? [recorderInitChunk, ...chunks]
-    : chunks;
-  const blob = new Blob(blobParts, { type });
 
   try {
-    const transcript = await stt(blob, type);
+    let transcript;
+    if (wsTranscript) {
+      // Use Web Speech transcript directly — no network round-trip
+      transcript = wsTranscript;
+    } else {
+      // Fallback: Groq Whisper (when Web Speech returned nothing)
+      const type = (recorder && recorder.mimeType) || mimeType || 'audio/webm';
+      // Prepend init segment if needed — without it WebM is undecodable
+      const blobParts = (recorderInitChunk && chunks[0] !== recorderInitChunk)
+        ? [recorderInitChunk, ...chunks]
+        : chunks;
+      const blob = new Blob(blobParts, { type });
+      transcript = await stt(blob, type);
+    }
+
     if (!transcript.trim()) return;
     history.push({ role: 'user', content: transcript });
     if (history.length > HIST_MAX * 2) history = history.slice(-HIST_MAX * 2);
@@ -3680,9 +3702,21 @@ async function* streamLLM(messages) {
 }
 
 // Shared helper: stream LLM response and speak sentence-by-sentence
+// Lookahead queue — fetch TTS for sentence N+1 while sentence N is playing
 async function streamAndSpeak(messages, myToken) {
   let full = '';
   let buf  = '';
+  let playChain = Promise.resolve();  // sequential playback chain
+
+  function enqueueSpeak(text) {
+    const blobP = fetchTTSBlob(text); // fire fetch immediately (non-blocking)
+    playChain = playChain.then(async () => {
+      if (speakToken !== myToken) return;
+      const blob = await blobP;       // already resolved in most cases
+      await playBlob(blob);
+    });
+  }
+
   for await (const delta of streamLLM(messages)) {
     if (speakToken !== myToken) break;
     full += delta;
@@ -3691,10 +3725,11 @@ async function streamAndSpeak(messages, myToken) {
     buf = remainder;
     for (const s of sentences) {
       if (speakToken !== myToken) break;
-      await speakChunk(s);
+      enqueueSpeak(s);
     }
   }
-  if (buf.trim() && speakToken === myToken) await speakChunk(buf.trim());
+  if (buf.trim() && speakToken === myToken) enqueueSpeak(buf.trim());
+  await playChain;
   return full;
 }
 
@@ -3757,7 +3792,8 @@ function splitText(text, max = 180) {
   return out;
 }
 
-async function speakChunk(text) {
+// Fetch TTS audio → Blob (network only, no playback)
+async function fetchTTSBlob(text) {
   const voice = getVoiceKey();
   let blob;
   if (currentLang === 'en') {
@@ -3810,14 +3846,24 @@ async function speakChunk(text) {
     if (!r.ok) throw new Error(`TTS ${r.status}`);
     blob = await r.blob();
   }
+  return blob;
+}
+
+// Play a TTS blob → resolves when audio ends
+async function playBlob(blob) {
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   ttsSource = audio;
   return new Promise((resolve, reject) => {
     audio.onended = () => { URL.revokeObjectURL(url); if (ttsSource === audio) ttsSource = null; resolve(); };
-    audio.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+    audio.onerror = e => { URL.revokeObjectURL(url); reject(e); };
     audio.play().catch(reject);
   });
+}
+
+// Legacy wrapper (used by speak())
+async function speakChunk(text) {
+  return playBlob(await fetchTTSBlob(text));
 }
 
 async function speak(text) {
