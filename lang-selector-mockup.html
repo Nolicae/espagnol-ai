@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Langue · Mockup v3</title>
+<title>Langue · Mockup v4</title>
 <style>
 :root {
   --ink:  #f0ece0;
@@ -14,12 +14,12 @@
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 html,body { height:100%; overflow:hidden; }
 
-/* ── Background with subtle texture so glass has something to refract ── */
+/* ── Background: subtle diagonal texture gives glass something to refract ── */
 body {
   background:
     repeating-linear-gradient(
       -45deg,
-      rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px,
+      rgba(255,255,255,0.010) 0px, rgba(255,255,255,0.010) 1px,
       transparent 1px, transparent 9px
     ),
     radial-gradient(ellipse at 50% 38%, #181b22 0%, #090a0d 100%);
@@ -35,208 +35,155 @@ body {
   position: relative;
 }
 
-.tagline { display:none; }
-
 /* ── Carousel ── */
 .carousel-wrap {
-  width: 100%;
-  height: 192px;
-  position: relative;
-  flex-shrink: 0;
+  width: 100%; height: 140px;
+  position: relative; flex-shrink: 0;
   cursor: grab;
+  overflow: visible;
 }
 .carousel-wrap:active { cursor: grabbing; }
-.carousel-track {
-  position: absolute; inset: 0;
-}
+.carousel-track { position: absolute; inset: 0; overflow: visible; }
 
 .slide {
-  position: absolute;
-  top: 50%; left: 50%;
-  /* JS sets: --tx (px), --sc (unitless), --op (unitless) */
-  transform: translate(calc(-50% + var(--tx, 0px)), -50%) scale(var(--sc, 1));
-  opacity: var(--op, 1);
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(calc(-50% + var(--tx,0px)), -50%) scale(var(--sc,1));
+  opacity: var(--op,1);
   transition: transform 0.4s cubic-bezier(0.35,1.1,0.65,1), opacity 0.32s ease;
   will-change: transform, opacity;
+  cursor: pointer;
 }
 
-/* ── Glass sphere ── */
-.sphere {
-  width: 180px; height: 180px;
-  border-radius: 50%;
-  position: relative;
+/* ── Liquid glass sphere ── */
+.ob-sphere {
+  width: 110px; height: 110px;
+  border-radius: 50%; position: relative;
 }
-
-/* The actual glass base — backdrop blurs the diagonal lines behind it */
-.glass-face {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  backdrop-filter: blur(22px) saturate(250%) brightness(1.10);
-  -webkit-backdrop-filter: blur(22px) saturate(250%) brightness(1.10);
-  /* very slight white base so the sphere reads against the dark bg */
-  background: rgba(255,255,255,0.055);
+.ob-glass-face {
+  position: absolute; inset: 0; border-radius: 50%;
+  backdrop-filter: blur(3px) brightness(1.24) saturate(1.55) contrast(0.92);
+  -webkit-backdrop-filter: blur(3px) brightness(1.24) saturate(1.55) contrast(0.92);
+  background: rgba(255,255,255,0.07);
 }
-
-/* SVG: highlights, tint, phase */
-.sphere-svg {
+.ob-svg {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  border-radius: 50%;
-  overflow: hidden; /* clip svg gradients to circle */
+  border-radius: 50%; overflow: hidden;
 }
-
-/* Glass border — thin white top, very faint bottom */
-.sphere-border {
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.22);
+/* Rim: bright edge + top inner light + bottom depth */
+.ob-rim {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.52);
   box-shadow:
-    inset 0  1px 0  rgba(255,255,255,0.28),
-    inset 0 -2px 6px rgba(0,0,0,0.35);
+    inset 0  0  0  1.5px rgba(255,255,255,0.28),
+    inset 0  2px 3px  rgba(255,255,255,0.65),
+    inset 0 -4px 10px rgba(0,0,0,0.22),
+    0 2px 20px rgba(0,0,0,0.22),
+    0 0 0 0.5px rgba(255,255,255,0.22);
   pointer-events: none;
 }
 
-/* ── Language info ── */
-.lang-info {
-  text-align: center; flex-shrink:0;
-  display:flex; flex-direction:column; align-items:center;
+/* Ripple rings on selection */
+@keyframes rippleExpand {
+  0%   { transform: translate(-50%,-50%) scale(1);   opacity: 0.65; }
+  100% { transform: translate(-50%,-50%) scale(2.8); opacity: 0;    }
 }
+.ob-ripple {
+  position: absolute; top: 50%; left: 50%;
+  width: 110px; height: 110px;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.55);
+  pointer-events: none;
+  animation: rippleExpand 1.0s ease-out forwards;
+}
+
+/* ── Language name ── */
 .lang-name {
-  font-family: var(--serif);
-  font-size: 1.65rem; color: var(--ink);
-  transition: opacity 0.18s;
+  font-family: var(--serif); font-size: 1.55rem;
+  color: var(--ink); text-align: center; flex-shrink: 0;
 }
-.lang-sub { display:none; }
 
 /* ── Dots ── */
-.dots {
-  display:flex; gap:7px; flex-shrink:0;
-}
+.dots { display: flex; gap: 7px; flex-shrink: 0; }
 .dot {
-  width:5px; height:5px; border-radius:50%;
+  width: 5px; height: 5px; border-radius: 50%;
   background: rgba(240,236,224,0.25);
   transition: background 0.3s, transform 0.3s;
 }
 .dot.on { background: rgba(240,236,224,0.85); transform: scale(1.4); }
-
-.start-btn { display:none; }
 </style>
 </head>
 <body>
 <div class="screen">
-  <p class="tagline">Quelle langue<br>veux-tu explorer ?</p>
-
   <div class="carousel-wrap" id="carousel">
     <div class="carousel-track" id="track"></div>
   </div>
-
-  <div class="lang-info">
-    <div class="lang-name" id="lang-name"></div>
-    <div class="lang-sub"  id="lang-sub"></div>
-  </div>
-
+  <div class="lang-name" id="lang-name"></div>
   <div class="dots" id="dots"></div>
-
-  <button class="start-btn" id="start-btn">Commencer</button>
 </div>
 
 <script>
 /*
-  Liquid glass moon spheres.
+  Phase → white specular position (viewBox 110×110, sphere center 55,55)
+  cx = lit-side X position; narrower rx = thinner crescent
 
-  Phase = where the specular highlight sits (suggests the "lit side"):
-    full:           centred                spec cx≈90  wide
-    waxing-gibbous: right, large           spec cx≈115
-    first-quarter:  right, half            spec cx≈130
-    waxing-crescent:right, thin sliver     spec cx≈148
-    waning-gibbous: left, large            spec cx≈65
-    last-quarter:   left, half             spec cx≈50
-    waning-crescent:left, thin sliver      spec cx≈32
-    new-moon:       none / ghost           spec hidden
+  es  full            → cx=55  wide
+  en  waning-gibbous  → cx=37  left
+  pt  waxing-gibbous  → cx=73  right
+  fr  last-quarter    → cx=27  narrow left
+  ar  first-quarter   → cx=83  narrow right
+  zh  waning-crescent → cx=17  sliver left
+  ru  waxing-crescent → cx=93  sliver right
+  ja  new-moon        → ghost
 */
-
 const LANGS = [
-  // id, name, subtitle, phase, specular (SVG 180×180), lang-color rgb, glow-radius
-  { id:'es', name:'Español',  sub:'Castilla · 31 voces',         phase:'full',
-    spec:{cx:90, cy:54, rx:46, ry:28}, col:[212,168,48],  glr:26 },
-  { id:'en', name:'English',  sub:'10 countries · 10 voices',    phase:'waning-gibbous',
-    spec:{cx:62, cy:54, rx:38, ry:24}, col:[72,136,212],  glr:20 },
-  { id:'pt', name:'Português',sub:'Brasil + Portugal · 5 vozes', phase:'waxing-gibbous',
-    spec:{cx:118,cy:54, rx:38, ry:24}, col:[48,172,100],  glr:20 },
-  { id:'fr', name:'Français', sub:'4 pays · 6 voix',             phase:'last-quarter',
-    spec:{cx:48, cy:54, rx:28, ry:18}, col:[200,72,110],  glr:16 },
-  { id:'ar', name:'العربية',  sub:'١٦ دولة · ٣٢ صوتاً',         phase:'first-quarter',
-    spec:{cx:132,cy:54, rx:28, ry:18}, col:[210,88,110],  glr:16 },
-  { id:'zh', name:'中文',     sub:'2 国 · 6 声音',               phase:'waning-crescent',
-    spec:{cx:36, cy:54, rx:16, ry:11}, col:[210,52,52],   glr:12 },
-  { id:'ru', name:'Русский',  sub:'Россия · 2 голоса',           phase:'waxing-crescent',
-    spec:{cx:144,cy:54, rx:16, ry:11}, col:[72,130,212],  glr:12 },
-  { id:'ja', name:'日本語',   sub:'日本 · 2 声',                 phase:'new-moon',
-    spec:null, col:[140,24,24], glr:6 },
+  { id:'es', name:'Español',   spec:{cx:55, cy:21, rx:28, ry:17} },
+  { id:'en', name:'English',   spec:{cx:37, cy:21, rx:22, ry:15} },
+  { id:'pt', name:'Português', spec:{cx:73, cy:21, rx:22, ry:15} },
+  { id:'fr', name:'Français',  spec:{cx:27, cy:21, rx:16, ry:12} },
+  { id:'ar', name:'العربية',   spec:{cx:83, cy:21, rx:16, ry:12} },
+  { id:'zh', name:'中文',      spec:{cx:17, cy:21, rx: 9, ry: 7} },
+  { id:'ru', name:'Русский',   spec:{cx:93, cy:21, rx: 9, ry: 7} },
+  { id:'ja', name:'日本語',    spec:null                           },
 ];
 
 const N = LANGS.length;
 let cur = 0;
 
-function rgba(col, a) { return `rgba(${col[0]},${col[1]},${col[2]},${a})`; }
+const TX = [0, 100, 172, 248, 320];
+const SC = [1, 0.65, 0.42, 0.28, 0.20];
+const OP = [1, 0.72, 0.48, 0.25, 0.10];
 
 function buildSphere(lang) {
-  const { id, col, spec, glr } = lang;
-  const C = 90, R = 88; // SVG viewBox 0 0 180 180
+  const { id, spec } = lang;
+  const C=55, R=52;
 
-  // Tint: very subtle colored glow at the specular position (the "lit area warmth")
-  const tCx = spec ? `${(spec.cx/180*100).toFixed(0)}%` : '50%';
-  const tCy = '42%';
-  const tOp = spec ? 0.13 : 0.03;
-
-  // Specular: two ellipses (soft outer + sharp inner)
   const specHtml = spec ? `
-    <!-- Primary specular (diffuse glow) -->
-    <ellipse cx="${spec.cx}" cy="${spec.cy}"
-             rx="${spec.rx}" ry="${spec.ry}"
-             fill="white" opacity="0.22"
-             filter="url(#bs-${id})"/>
-    <!-- Secondary specular (crisp core) -->
-    <ellipse cx="${spec.cx-3}" cy="${spec.cy-3}"
-             rx="${Math.round(spec.rx*.38)}" ry="${Math.round(spec.ry*.42)}"
-             fill="white" opacity="0.40"
-             filter="url(#bs2-${id})"/>` :
-    `<!-- New moon ghost -->
-    <ellipse cx="${C}" cy="52" rx="34" ry="20"
-             fill="white" opacity="0.04"
-             filter="url(#bs-${id})"/>`;
+    <ellipse cx="${spec.cx}" cy="${spec.cy}" rx="${spec.rx}" ry="${spec.ry}"
+             fill="white" opacity="0.38" filter="url(#bs-${id})"/>
+    <ellipse cx="${spec.cx-1}" cy="${spec.cy-2}"
+             rx="${Math.round(spec.rx*.42)}" ry="${Math.round(spec.ry*.46)}"
+             fill="white" opacity="0.58" filter="url(#bs2-${id})"/>` :
+    `<ellipse cx="${C}" cy="21" rx="22" ry="13"
+             fill="white" opacity="0.05" filter="url(#bs-${id})"/>`;
 
   return `
-<div class="sphere"
-     style="filter:drop-shadow(0 0 ${glr}px ${rgba(col,0.38)}) drop-shadow(0 0 ${glr*2}px ${rgba(col,0.12)})">
-  <div class="glass-face"></div>
-  <svg class="sphere-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+<div class="ob-sphere">
+  <div class="ob-glass-face"></div>
+  <svg class="ob-svg" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <!-- Colour tint: localised to lit side -->
-      <radialGradient id="tint-${id}" cx="${tCx}" cy="${tCy}" r="52%">
-        <stop offset="0%"  stop-color="rgb(${col})" stop-opacity="${tOp}"/>
-        <stop offset="70%" stop-color="rgb(${col})" stop-opacity="${(tOp*0.25).toFixed(3)}"/>
+      <radialGradient id="dk-${id}" cx="50%" cy="80%" r="42%">
+        <stop offset="0%"  stop-color="black" stop-opacity="0.18"/>
         <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
       </radialGradient>
-      <!-- Dark bottom (depth) -->
-      <radialGradient id="dk-${id}" cx="50%" cy="75%" r="48%">
-        <stop offset="0%"  stop-color="black" stop-opacity="0.28"/>
-        <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
-      </radialGradient>
-      <filter id="bs-${id}"><feGaussianBlur stdDeviation="11"/></filter>
-      <filter id="bs2-${id}"><feGaussianBlur stdDeviation="3.5"/></filter>
+      <filter id="bs-${id}"><feGaussianBlur stdDeviation="5"/></filter>
+      <filter id="bs2-${id}"><feGaussianBlur stdDeviation="1.8"/></filter>
       <clipPath id="cl-${id}"><circle cx="${C}" cy="${C}" r="${R}"/></clipPath>
     </defs>
-
-    <!-- Colour tint (very subtle, phase-localised) -->
-    <circle cx="${C}" cy="${C}" r="${R}" fill="url(#tint-${id})" clip-path="url(#cl-${id})"/>
-
-    <!-- Speculars -->
     <g clip-path="url(#cl-${id})">${specHtml}</g>
-
-    <!-- Bottom depth shadow (gives sphere volume) -->
     <circle cx="${C}" cy="${C}" r="${R}" fill="url(#dk-${id})" clip-path="url(#cl-${id})"/>
   </svg>
-  <div class="sphere-border"></div>
+  <div class="ob-rim"></div>
 </div>`;
 }
 
@@ -261,25 +208,15 @@ LANGS.forEach(_ => {
 function update(animated=true) {
   const slides = track.children;
   const dots   = dotsEl.children;
-  const lang   = LANGS[cur];
-
-  // info
-  document.getElementById('lang-name').textContent = lang.name;
-  document.getElementById('lang-sub').textContent  = lang.sub;
-
-  // dots
+  document.getElementById('lang-name').textContent = LANGS[cur].name;
   [...dots].forEach((d,i) => d.classList.toggle('on', i===cur));
-
-  // slides
   [...slides].forEach((s,i) => {
-    const raw = ((i - cur) % N + N) % N;
-    const adj = raw > N/2 ? raw - N : raw; // −3..+4
-
-    const tx  = adj * 214;
-    const sc  = adj===0 ? 1 : Math.max(0.35, 0.62 - Math.abs(adj)*0.12);
-    const op  = adj===0 ? 1 : Math.max(0,    0.52 - Math.abs(adj)*0.16);
-    const vis = Math.abs(adj) <= 2;
-
+    const raw    = ((i - cur) % N + N) % N;
+    const adj    = raw > N/2 ? raw - N : raw;
+    const absAdj = Math.abs(adj);
+    const tx  = (adj<0?-1:1) * (TX[absAdj] ?? 400);
+    const sc  = SC[absAdj] ?? 0.15;
+    const op  = OP[absAdj] ?? 0;
     if (!animated) {
       s.style.transition = 'none';
       requestAnimationFrame(() => { s.style.transition = ''; });
@@ -287,50 +224,52 @@ function update(animated=true) {
     s.style.setProperty('--tx', tx+'px');
     s.style.setProperty('--sc', sc);
     s.style.setProperty('--op', op);
-    s.style.visibility = vis ? 'visible' : 'hidden';
-    s.style.zIndex = 10 - Math.abs(adj);
+    s.style.visibility = absAdj <= 2 ? 'visible' : 'hidden';
+    s.style.zIndex = 10 - absAdj;
   });
 }
 
 // ── Swipe / drag ──
 let x0=null, moved=false;
 const carousel = document.getElementById('carousel');
-
 function onStart(x) { x0=x; moved=false; }
 function onMove(x)  { if(x0!==null && Math.abs(x-x0)>8) moved=true; }
 function onEnd(x) {
-  if (x0===null) return;
+  if(x0===null) return;
   const dx = x - x0;
-  if (Math.abs(dx) > 48) {
-    cur = dx < 0 ? (cur+1)%N : (cur-1+N)%N;
-    update();
-  }
+  if(Math.abs(dx) > 44) { cur = dx<0 ? (cur+1)%N : (cur-1+N)%N; update(); }
   x0=null;
 }
-
 carousel.addEventListener('touchstart', e=>onStart(e.touches[0].clientX),{passive:true});
 carousel.addEventListener('touchmove',  e=>onMove(e.touches[0].clientX), {passive:true});
 carousel.addEventListener('touchend',   e=>onEnd(e.changedTouches[0].clientX));
 carousel.addEventListener('mousedown',  e=>onStart(e.clientX));
-window.addEventListener('mousemove',    e=>onMove(e.clientX));
-window.addEventListener('mouseup',      e=>{ onEnd(e.clientX); });
+window.addEventListener('mousemove', e=>{ if(!x0) return; onMove(e.clientX); });
+window.addEventListener('mouseup',   e=>onEnd(e.clientX));
 
-// Click inactive slide → navigate
+// Click: side → navigate, centre → ripple demo
 track.addEventListener('click', e => {
-  if (moved) return;
+  if(moved) return;
   const s = e.target.closest('.slide');
-  if (!s) return;
+  if(!s) return;
   const i = parseInt(s.dataset.i);
-  if (i !== cur) { cur=i; update(); }
+  if(i !== cur) { cur=i; update(); return; }
+  // Ripple demo
+  for(let r=0; r<3; r++) {
+    const ring = document.createElement('div');
+    ring.className = 'ob-ripple';
+    ring.style.animationDelay = `${r*190}ms`;
+    s.appendChild(ring);
+    setTimeout(()=>ring.remove(), 1600);
+  }
 });
 
-// ── Keyboard arrows ──
+// Keyboard
 window.addEventListener('keydown', e => {
-  if (e.key==='ArrowRight') { cur=(cur+1)%N;     update(); }
-  if (e.key==='ArrowLeft')  { cur=(cur-1+N)%N;   update(); }
+  if(e.key==='ArrowRight') { cur=(cur+1)%N; update(); }
+  if(e.key==='ArrowLeft')  { cur=(cur-1+N)%N; update(); }
 });
 
-// Init
 update(false);
 </script>
 </body>
