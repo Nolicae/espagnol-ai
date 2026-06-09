@@ -904,15 +904,28 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       gap: 20px;
-      animation: onboardFade 1.2s ease both;
       -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
     #screen-onboarding.hidden { display: none; }
 
-    @keyframes onboardFade {
+    /* ── Per-element entry animations (staggered reveal) ── */
+    @keyframes obEntryUp {
+      from { opacity: 0; transform: translateY(32px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+    @keyframes obEntryFade {
       from { opacity: 0; }
       to   { opacity: 1; }
+    }
+    .onboard-carousel-wrap {
+      animation: obEntryUp 1.1s cubic-bezier(0.22,1,0.36,1) 0.10s both;
+    }
+    .onboard-lang-label {
+      animation: obEntryFade 0.8s ease 0.55s both;
+    }
+    .onboard-dots {
+      animation: obEntryFade 0.7s ease 0.85s both;
     }
 
     .onboard-carousel-wrap {
@@ -946,21 +959,21 @@
     .ob-sphere::after {
       content: '';
       position: absolute; inset: 0; border-radius: 50%;
-      /* Arc from ~10 o'clock → top → ~2 o'clock, transparent everywhere else */
+      /* Prismatic arc: 10 o'clock → top → 2 o'clock — one bright side only */
       background: conic-gradient(from 300deg at 50% 50%,
         transparent                   0deg,
-        rgba(0,230,255,0.22)         15deg,
-        rgba(160,0,255,0.18)         45deg,
-        rgba(255,180,0,0.16)         75deg,
-        rgba(0,255,190,0.18)        100deg,
-        transparent                 130deg,
+        rgba(0,230,255,0.70)         15deg,
+        rgba(160,0,255,0.58)         45deg,
+        rgba(255,160,0,0.55)         75deg,
+        rgba(0,255,190,0.60)        100deg,
+        transparent                 140deg,
         transparent                 360deg
       );
-      /* Visible only at the glass edge (62-78% of radius) */
+      /* Annulus at the glass rim — slightly wider for maximum punch */
       -webkit-mask: radial-gradient(circle,
-        transparent 61%, rgba(0,0,0,0.75) 67%, transparent 78%);
+        transparent 59%, rgba(0,0,0,1) 65%, transparent 81%);
       mask: radial-gradient(circle,
-        transparent 61%, rgba(0,0,0,0.75) 67%, transparent 78%);
+        transparent 59%, rgba(0,0,0,1) 65%, transparent 81%);
       pointer-events: none;
     }
     /* Glass face: true backdrop-filter — minimal blur so background shows clearly */
@@ -4712,13 +4725,33 @@ applyUIStrings();
       setTimeout(() => ring.remove(), 1600);
     }
 
-    // After first ring peaks, fade the whole screen out
+    // Save lang immediately so the app can init when it reloads
+    localStorage.setItem('app_lang', lang);
+
+    // Staggered exit: dots → label → carousel → background
+    const obLabel    = obScreen.querySelector('.onboard-lang-label');
+    const obDots     = obScreen.querySelector('.onboard-dots');
+    const obCarouselEl = obScreen.querySelector('.onboard-carousel-wrap');
+    const ease = 'cubic-bezier(0.4,0,0.2,1)';
+
     setTimeout(() => {
-      localStorage.setItem('app_lang', lang);
-      obScreen.style.transition = 'opacity 0.65s cubic-bezier(0.4,0,0.2,1)';
-      obScreen.style.opacity = '0';
-      setTimeout(() => location.reload(), 700);
-    }, 320);
+      obDots.style.transition    = `opacity 0.30s ${ease}`;
+      obDots.style.opacity       = '0';
+    }, 280);
+    setTimeout(() => {
+      obLabel.style.transition   = `opacity 0.35s ${ease}`;
+      obLabel.style.opacity      = '0';
+    }, 380);
+    setTimeout(() => {
+      obCarouselEl.style.transition = `opacity 0.50s ${ease}, transform 0.50s ${ease}`;
+      obCarouselEl.style.opacity    = '0';
+      obCarouselEl.style.transform  = 'translateY(-20px)';
+    }, 490);
+    setTimeout(() => {
+      obScreen.style.transition  = `opacity 0.75s ${ease}`;
+      obScreen.style.opacity     = '0';
+      setTimeout(() => location.reload(), 800);
+    }, 640);
   });
 
   obUpdate(false);
