@@ -4732,19 +4732,21 @@ function playChime(slotIdx) {
     });
   } catch(e) {}
 }
-// Wii cursor "bwip" — sine pur avec micro-sweep de pitch (pas de bruit)
+// Tick neutre — rafale de bruit blanc très courte et très douce
 function playScrollTick() {
   try {
-    const ctx = getSfxCtx(), now = ctx.currentTime;
-    const osc = ctx.createOscillator(), g = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(760, now);
-    osc.frequency.exponentialRampToValueAtTime(1080, now + 0.038);
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.045, now + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
-    osc.connect(g); g.connect(ctx.destination);
-    osc.start(now); osc.stop(now + 0.055);
+    const ctx = getSfxCtx(), now = ctx.currentTime, dur = 0.030;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = 'bandpass'; bpf.frequency.value = 3200; bpf.Q.value = 0.7;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.038, now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    src.connect(bpf); bpf.connect(g); g.connect(ctx.destination);
+    src.start(now); src.stop(now + dur);
   } catch(e) {}
 }
 
