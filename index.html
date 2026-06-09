@@ -4719,16 +4719,16 @@ function playChime(slotIdx) {
   try {
     const ctx = getSfxCtx(), now = ctx.currentTime;
     const base = OB_CHIME_FREQS[slotIdx % OB_CHIME_FREQS.length] || 1047;
-    // Fundamental + quinte (très doux, pas d'harmonique agressive)
-    [[1, 0.07], [1.498, 0.025]].forEach(([mult, amp]) => {
+    // Fundamental + quinte (très doux, queue longue = résonance)
+    [[1, 0.065], [1.498, 0.026]].forEach(([mult, amp]) => {
       const osc = ctx.createOscillator(), g = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = base * mult;
       g.gain.setValueAtTime(0, now);
       g.gain.linearRampToValueAtTime(amp, now + 0.006);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
       osc.connect(g); g.connect(ctx.destination);
-      osc.start(now); osc.stop(now + 0.38);
+      osc.start(now); osc.stop(now + 0.85);
     });
   } catch(e) {}
 }
@@ -4738,13 +4738,13 @@ function playScrollTick() {
     const ctx = getSfxCtx(), now = ctx.currentTime;
     const osc = ctx.createOscillator(), g = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(820, now);
-    osc.frequency.exponentialRampToValueAtTime(1260, now + 0.022);
+    osc.frequency.setValueAtTime(760, now);
+    osc.frequency.exponentialRampToValueAtTime(1080, now + 0.038);
     g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.055, now + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.032);
+    g.gain.linearRampToValueAtTime(0.045, now + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
     osc.connect(g); g.connect(ctx.destination);
-    osc.start(now); osc.stop(now + 0.032);
+    osc.start(now); osc.stop(now + 0.055);
   } catch(e) {}
 }
 
