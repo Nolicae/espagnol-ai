@@ -93,9 +93,15 @@ jobs:
       - name: Build AAB
         working-directory: twa
         run: |
-          # Bubblewrap asks multiple Y/n prompts (JDK, Android SDK, etc.).
-          # `yes` answers Y to every prompt automatically.
-          yes | bubblewrap build --skipPwaValidation
+          # Bubblewrap has 4 interactive prompts:
+          #   1. Install JDK? → Y
+          #   2. Install Android SDK? → Y
+          #   3. Version name? → answered by --versionName flag (skipped)
+          #   4. Version code? → answered by --versionCode flag (skipped)
+          printf "Y\nY\n" | bubblewrap build \
+            --skipPwaValidation \
+            --versionName 1.0.0 \
+            --versionCode 1
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
