@@ -1,0 +1,96 @@
+name: Build Android TWA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Restore signing keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > lun-ai-keystore.p12
+
+      - name: Create TWA manifest
+        run: |
+          mkdir -p twa
+          cat > twa/twa-manifest.json << 'EOF'
+          {
+            "packageId": "ai.lun.app",
+            "host": "lun-ai.vercel.app",
+            "name": "Lun.ai",
+            "launchUrl": "/",
+            "themeColor": "#181b2d",
+            "navigationColor": "#0d0f1a",
+            "navigationColorDark": "#0d0f1a",
+            "navigationDividerColor": "#181b2d",
+            "navigationDividerColorDark": "#181b2d",
+            "backgroundColor": "#0d0f1a",
+            "enableNotifications": false,
+            "startUrl": "/index.html",
+            "iconUrl": "https://lun-ai.vercel.app/icons/icon-512.png",
+            "maskableIconUrl": "https://lun-ai.vercel.app/icons/icon-maskable.png",
+            "monochromeIconUrl": "https://lun-ai.vercel.app/icons/icon-512.png",
+            "splashScreenFadeOutDuration": 300,
+            "signingKey": {
+              "path": "../lun-ai-keystore.p12",
+              "alias": "lunai"
+            },
+            "appVersionCode": 1,
+            "appVersionName": "1.0.0",
+            "shortcuts": [],
+            "generatorApp": "pwa-builder",
+            "webManifestUrl": "https://lun-ai.vercel.app/manifest.json",
+            "isChromeOSOnly": false,
+            "isMetaQuest": false,
+            "fullScopeUrl": "https://lun-ai.vercel.app/",
+            "minSdkVersion": 19,
+            "orientation": "portrait",
+            "fingerprints": [
+              {
+                "name": "prod",
+                "value": "7E:5D:87:E0:D2:0B:C4:55:EF:4C:38:63:B7:15:E9:6A:D9:B6:38:B2:75:8E:56:1C:D6:87:CD:DB:71:F3:D8:D7"
+              }
+            ],
+            "features": {},
+            "alphaDependencies": { "enabled": false },
+            "enableSiteSettingsShortcut": true,
+            "isTrustedWebActivity": true,
+            "serviceAccountJsonFile": null,
+            "fallbackType": "customtabs",
+            "additionalTrustedOrigins": [],
+            "retainedBundles": []
+          }
+          EOF
+
+      - name: Build AAB
+        working-directory: twa
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          bubblewrap build \
+            --skipPwaValidation \
+            --keystorePassword "$BUBBLEWRAP_KEYSTORE_PASSWORD" \
+            --keyPassword "$BUBBLEWRAP_KEY_PASSWORD"
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: lun-ai-android-aab
+          path: twa/app-release-bundle.aab
+          retention-days: 30

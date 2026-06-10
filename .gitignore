@@ -1,1 +1,6 @@
 .vercel
+
+# Android signing key (secret — stored in GitHub secrets)
+.github/lun-ai-signing.key
+.github/lun-ai-signing.crt
+.github/lun-ai-keystore.p12
