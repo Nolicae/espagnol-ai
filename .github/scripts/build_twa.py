@@ -32,6 +32,8 @@ prompts = [
     (b"install the JDK", b"Y\n"),
     (b"install the Android SDK", b"Y\n"),
     (b"Do you agree to the Android SDK terms", b"Yes\n"),
+    (b"application versionName", b"1.0.0\n"),
+    (b"application versionCode", b"1\n"),
 ]
 idx = 0
 buf = b""
