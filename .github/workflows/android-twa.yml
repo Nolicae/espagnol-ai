@@ -92,7 +92,7 @@ jobs:
 
       - name: Build AAB
         working-directory: twa
-        run: echo "n" | bubblewrap build --skipPwaValidation
+        run: printf "n\n$JAVA_HOME\n" | bubblewrap build --skipPwaValidation
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
