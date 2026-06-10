@@ -93,52 +93,7 @@ jobs:
       - name: Build AAB
         working-directory: twa
         timeout-minutes: 40
-        run: |
-          # PTY wrapper: answers bubblewrap prompts at the exact moment they appear.
-          # Pipe approach fails because all echo'd values are consumed before the
-          # Android SDK prompt appears (~2 min after JDK download completes).
-          cat > /tmp/build_twa.py << 'PYEOF'
-import pty, os, select, sys, subprocess, time
-
-master_fd, slave_fd = pty.openpty()
-proc = subprocess.Popen(
-    ['bubblewrap', 'build', '--skipPwaValidation'],
-    stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
-    close_fds=True
-)
-os.close(slave_fd)
-
-prompts = [
-    (b'install the JDK', b'Y\n'),
-    (b'install the Android SDK', b'Y\n'),
-]
-idx = 0
-buf = b''
-
-while True:
-    r, _, _ = select.select([master_fd], [], [], 1.0)
-    if r:
-        try:
-            chunk = os.read(master_fd, 4096)
-        except OSError:
-            break
-        sys.stdout.buffer.write(chunk)
-        sys.stdout.buffer.flush()
-        buf += chunk
-        if idx < len(prompts):
-            kw, ans = prompts[idx]
-            if kw in buf:
-                time.sleep(0.5)
-                os.write(master_fd, ans)
-                idx += 1
-                buf = b''
-    elif proc.poll() is not None:
-        break
-
-proc.wait()
-sys.exit(proc.returncode)
-PYEOF
-          python3 /tmp/build_twa.py
+        run: python3 "$GITHUB_WORKSPACE/.github/scripts/build_twa.py"
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
