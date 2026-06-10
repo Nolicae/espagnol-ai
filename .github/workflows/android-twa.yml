@@ -92,7 +92,7 @@ jobs:
 
       - name: Build AAB
         working-directory: twa
-        timeout-minutes: 40
+        timeout-minutes: 90
         run: python3 "$GITHUB_WORKSPACE/.github/scripts/build_twa.py"
 
       - name: Upload AAB
