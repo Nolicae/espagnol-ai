@@ -26,10 +26,12 @@ proc = subprocess.Popen(
 os.close(slave_fd)
 
 # JDK download ~2 min, Android SDK download ~5 min — each triggers a Y/n prompt.
+# Android SDK also shows a license agreement prompt before downloading.
 # Version info is already in twa-manifest.json so no version prompts appear.
 prompts = [
     (b"install the JDK", b"Y\n"),
     (b"install the Android SDK", b"Y\n"),
+    (b"Do you agree to the Android SDK terms", b"Yes\n"),
 ]
 idx = 0
 buf = b""
