@@ -36,12 +36,11 @@ jobs:
       - name: Restore keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > lun-ai-keystore.p12
 
-      - name: Download icons
+      - name: Copy icons
         run: |
-          curl -fsSL -o /tmp/icon512.png https://lun-ai.vercel.app/icons/icon-512.png
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
             mkdir -p android/app/src/main/res/mipmap-$d
-            cp /tmp/icon512.png android/app/src/main/res/mipmap-$d/ic_launcher.png
+            cp icons/icon-512.png android/app/src/main/res/mipmap-$d/ic_launcher.png
           done
 
       - name: Build AAB
