@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 130
+    timeout-minutes: 160
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
       - name: Speed up Gradle
         run: |
           mkdir -p ~/.gradle
-          printf 'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8\norg.gradle.parallel=true\norg.gradle.caching=true\n' >> ~/.gradle/gradle.properties
+          printf 'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8\norg.gradle.parallel=true\norg.gradle.caching=true\norg.gradle.console=plain\nsystemProp.http.socketTimeout=120000\nsystemProp.http.connectionTimeout=30000\n' >> ~/.gradle/gradle.properties
 
       - name: Install bubblewrap
         run: npm install -g @bubblewrap/cli
@@ -113,7 +113,7 @@ jobs:
 
       - name: Build AAB
         working-directory: twa
-        timeout-minutes: 120
+        timeout-minutes: 150
         run: python3 "$GITHUB_WORKSPACE/.github/scripts/build_twa.py"
 
       - name: Upload AAB

@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-"""
-PTY-based bubblewrap interaction: answers JDK and Android SDK install prompts
-at the exact moment they appear, regardless of download duration.
-
-Pipe approach fails because all buffered stdin is consumed immediately at
-process start, leaving subsequent prompts unanswered when they appear
-minutes later after downloads complete.
-"""
 import pty
 import os
 import select
 import sys
 import subprocess
 import time
+import threading
 
 master_fd, slave_fd = pty.openpty()
 
@@ -25,9 +18,6 @@ proc = subprocess.Popen(
 )
 os.close(slave_fd)
 
-# JDK download ~2 min, Android SDK download ~5 min — each triggers a Y/n prompt.
-# Android SDK also shows a license agreement prompt before downloading.
-# Version info is already in twa-manifest.json so no version prompts appear.
 prompts = [
     (b"install the JDK", b"Y\n"),
     (b"install the Android SDK", b"Y\n"),
@@ -37,6 +27,15 @@ prompts = [
 ]
 idx = 0
 buf = b""
+start = time.time()
+done = threading.Event()
+
+def heartbeat():
+    while not done.wait(60):
+        elapsed = int(time.time() - start)
+        print(f"[heartbeat] {elapsed}s elapsed, build still running (pid {proc.pid})", flush=True)
+
+threading.Thread(target=heartbeat, daemon=True).start()
 
 while True:
     r, _, _ = select.select([master_fd], [], [], 1.0)
@@ -58,6 +57,7 @@ while True:
     elif proc.poll() is not None:
         break
 
+done.set()
 proc.wait()
-print(f"\nbubblewrap exited with code {proc.returncode}", flush=True)
+print(f"\nbubblewrap exited with code {proc.returncode} after {int(time.time()-start)}s", flush=True)
 sys.exit(proc.returncode)
