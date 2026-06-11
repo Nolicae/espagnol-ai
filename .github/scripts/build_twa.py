@@ -29,8 +29,9 @@ os.close(slave_fd)
 # Android SDK also shows a license agreement prompt before downloading.
 # Version info is already in twa-manifest.json so no version prompts appear.
 prompts = [
-    (b"install the JDK", b"n\n"),           # use pre-installed JDK 17 via JAVA_HOME
-    (b"install the Android SDK", b"n\n"),    # use pre-installed SDK via ANDROID_SDK_ROOT
+    (b"install the JDK", b"Y\n"),
+    (b"install the Android SDK", b"Y\n"),
+    (b"Do you agree to the Android SDK terms", b"Yes\n"),
     (b"application versionName", b"1.0.0\n"),
     (b"application versionCode", b"1\n"),
 ]
