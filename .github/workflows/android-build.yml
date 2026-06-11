@@ -1,6 +1,9 @@
 name: Build Android AAB
 
 on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android-build.yml']
   workflow_dispatch:
 
 jobs:
