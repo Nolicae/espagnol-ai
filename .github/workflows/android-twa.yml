@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 130
 
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +34,11 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('twa/**/*.gradle*') }}
           restore-keys: gradle-${{ runner.os }}-
+
+      - name: Speed up Gradle
+        run: |
+          mkdir -p ~/.gradle
+          printf 'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8\norg.gradle.parallel=true\norg.gradle.caching=true\n' >> ~/.gradle/gradle.properties
 
       - name: Install bubblewrap
         run: npm install -g @bubblewrap/cli
@@ -108,7 +113,7 @@ jobs:
 
       - name: Build AAB
         working-directory: twa
-        timeout-minutes: 80
+        timeout-minutes: 120
         run: python3 "$GITHUB_WORKSPACE/.github/scripts/build_twa.py"
 
       - name: Upload AAB
