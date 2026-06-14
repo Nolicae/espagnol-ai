@@ -3817,8 +3817,12 @@ async function streamAndSpeak(messages, myToken) {
     const blobP = fetchTTSBlob(text); // fire fetch immediately (non-blocking)
     playChain = playChain.then(async () => {
       if (speakToken !== myToken) return;
-      const blob = await blobP;       // already resolved in most cases
-      await playBlob(blob);
+      try {
+        const blob = await blobP;
+        await playBlob(blob);
+      } catch (e) {
+        console.warn('[TTS chunk skipped]', e.message);
+      }
     });
   }
 
